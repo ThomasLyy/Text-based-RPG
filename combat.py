@@ -1,99 +1,13 @@
 from rich import print
-from rich.panel import Panel
-from rich.text import Text
 from rich.progress import Progress, BarColumn, TextColumn
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt
 from rich.console import Console
 from rich.table import Table
-from dataclasses import dataclass, field
 import random
 import time  # Pour ajouter un délai entre les tours
 
-@dataclass
-class Player:
-    name: str = ""
-    level: int = 1
-    experience: int = 0
-    health: int = 100
-    maxHealth: int = 100
-    strength: int = 10
-    speed: int = 10
-    intelligence: int = 10
-    perception: int = 10
-    mana: int = 100
-    maxMana: int = 100  # Ajout de l'attribut max_mana
+from spell import fireball, heal
 
-    # Equipment slots
-    mainHand: str = None
-    offHand: str = None
-    head: str = None
-    chest: str = None
-    waist: str = None
-    legs: str = None
-    feet: str = None
-    neck: str = None
-    ringLeft: str = None
-    ringRight: str = None
-
-
-    # Consumables inventory (a list to start)
-    consumables: list = field(default_factory=list)
-
-    def attack(self, enemy):
-        damage = self.strength + random.randint(1, 6)  # Simulate dice roll
-        enemy.health = max(0, enemy.health - damage)  # Ensure health doesn't go below 0
-        print(f"You hit the {enemy.name} for {damage} damage!")
-
-    # Method to useSpell on target
-    def useSpell(self, spell, target):
-        if spell.mana_cost > self.mana:
-            print("Not enough mana!")
-            return
-
-        self.mana -= spell.mana_cost
-
-        if spell.damage > 0:  # Offensive spell
-            target.health -= spell.damage
-            print(f"You cast {spell.name} on the {target.name} for {spell.damage} damage!")
-        else:  # Healing spell
-            healing = -spell.damage  # Convertir les dégâts négatifs en soin positif
-            target.health = min(target.health + healing, target.maxHealth)  # Limiter la santé au maximum
-            print(f"You cast {spell.name} on the {target.name} for {healing} health!")
-
-    def flee(self):
-        # Flee logic (to be developed)
-        pass
-
-
-@dataclass
-class Enemy:
-    name: str
-    health: int
-    maxHealth: int
-    strength: int
-    speed: int
-    xpReward: int
-    # ... (attributs et méthodes)
-
-
-class Niveau:
-    print()
-    # ... (attributs et méthodes)
-
-
-class Objet:
-    print()
-    # ... (attributs et méthodes)
-
-
-@dataclass
-class Spell:
-    name: str
-    damage: int
-    mana_cost: int
-
-
-# Combat function
 def combat(player, enemy):
     print(f"\n[bold red]{enemy.name} attacks![/bold red]")
 
@@ -179,24 +93,3 @@ def combat(player, enemy):
         print(f"[bold green]You defeated the {enemy.name}![/bold green]")
         player.experience += enemy.xpReward
         print(f"You gained {enemy.xpReward} experience points.")
-
-
-# ... (autres classes)
-
-# Basic Rat enemy
-rat = Enemy(name="Rat", health=30, maxHealth=30, strength=2, speed=8, xpReward=5)
-
-# Basic spells
-fireball = Spell("Fireball", 15, 10)
-heal = Spell("Heal", -10, 5)  # Negative damage for healing
-
-def main():
-    player = Player(name="Heracles")  # Create a player named "Heracles"
-
-    combat(player, rat)  # Start the combat
-
-    quitInput = input("\nPress \"Enter\" to quit.")
-
-# Call the main function to start the game
-if __name__ == "__main__":
-    main()
