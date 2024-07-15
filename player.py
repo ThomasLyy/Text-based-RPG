@@ -38,18 +38,18 @@ class Player:
 
     # Method to useSpell on target
     def useSpell(self, spell, target):
-        if spell.mana_cost > self.mana:
+        if spell.manaCost > self.mana:
             print("Not enough mana!")
             return
 
-        self.mana -= spell.mana_cost
+        self.mana -= spell.manaCost
 
         if spell.damage > 0:  # Offensive spell
-            target.health -= spell.damage
+            target.health = max(0, target.health - spell.damage)  # Limite la santé à 0
             print(f"You cast {spell.name} on the {target.name} for {spell.damage} damage!")
         else:  # Healing spell
             healing = -spell.damage  # Convertir les dégâts négatifs en soin positif
-            target.health = min(target.health + healing, target.maxHealth)  # Limiter la santé au maximum
+            target.health = min(target.health + healing, target.maxHealth) # Ensure health doesn't go below 0
             print(f"You cast {spell.name} on the {target.name} for {healing} health!")
 
     def flee(self):
