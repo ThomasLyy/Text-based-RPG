@@ -6,7 +6,8 @@ from rich.table import Table
 import random
 import time  # Pour ajouter un délai entre les tours
 
-from spell import fireball, heal
+from enemy import enemies  # Importer la liste d'ennemis
+from spell import spells  # Importer la liste de sorts
 
 def combat(player, enemy):
     print(f"\n[bold red]{enemy.name} attacks![/bold red]")
@@ -38,15 +39,15 @@ def combat(player, enemy):
         table.add_column("Damage/Heal", style="magenta")
         table.add_column("Mana Cost", style="green")
 
-        for spell in [fireball, heal]:
+        for spell in spells:
             table.add_row(spell.name, str(spell.damage), str(spell.mana_cost))
 
         console.print(table)
 
-        spell_choice = Prompt.ask("Choose a spell (or type 'attack' or 'flee')", choices=[spell.name for spell in [fireball, heal]] + ["attack", "flee"])
+        spell_choice = Prompt.ask("Choose a spell (or type 'attack' or 'flee')", choices=[spell.name for spell in spells] + ["attack", "flee"])
 
-        if spell_choice in [spell.name for spell in [fireball, heal]]:
-            spell_to_cast = next(spell for spell in [fireball, heal] if spell.name == spell_choice)
+        if spell_choice in [spell.name for spell in spells]:
+            spell_to_cast = next(spell for spell in spells if spell.name == spell_choice)
             if spell_to_cast.damage > 0:  # Offensive spell
                 target_choice = Prompt.ask("Choose a target", choices=[enemy.name])
                 if target_choice == enemy.name:
