@@ -13,3 +13,6 @@ class Consumable(Equipment):
 
 healthPotionMinor = Consumable("Minor Health Potion", EquipmentType.CONSUMABLE, None, 1, 10, healthRecovery=20)  # Utiliser healthRecovery
 manaPotionMinor = Consumable("Minor Mana Potion", EquipmentType.CONSUMABLE, None, 1, 12, manaRecovery=15)  # Utiliser manaRecovery
+
+# Liste de consommables
+consumables = [healthPotionMinor, manaPotionMinor]
