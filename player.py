@@ -36,6 +36,7 @@ class Player:
     })  # Emplacements d'équipement (dictionnaire)
     consumables: list = field(default_factory=list)  # Inventaire de consommables (liste)
 
+
     def equip(self, item):
         if item.equipmentType == EquipmentType.WEAPON:
             if item.subType == WeaponSubType.SWORD or item.subType == WeaponSubType.AXE or item.subType == WeaponSubType.MACE:
@@ -131,3 +132,13 @@ class Player:
             "health": totalHealth,
             "mana": totalMana
         }
+    
+    def displayStats(self):
+        totalStats = self.calculateTotalStats()
+        print("\nPlayer Stats:")
+        print(f"  Health: {self.health}/{self.maxHealth} ({totalStats['health']})")
+        print(f"  Strength: {self.strength} ({totalStats['strength']})")
+        print(f"  Speed: {self.speed} ({totalStats['speed']})")
+        print(f"  Intelligence: {self.intelligence} ({totalStats['intelligence']})")
+        print(f"  Perception: {self.perception} ({totalStats['perception']})")
+        print(f"  Mana: {self.mana}/{self.maxMana} ({totalStats['mana']})")
