@@ -8,7 +8,7 @@ import time
 import random
 
 from spell import smallSpell
-from player import Player
+from reward import chooseReward
 
 def combat(player, enemies, floor):
     # Affichage des ennemis rencontrés au début du combat
@@ -215,6 +215,5 @@ def combat(player, enemies, floor):
 
         # Choix de récompense (si ce n'est pas le boss)
         if floor < 5:
-            from reward import choose_reward
-            choose_reward(player, floor)
+            chooseReward(player, floor)
             player.displayStats()  #

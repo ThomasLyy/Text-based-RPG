@@ -4,7 +4,7 @@ from rich import print
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-def get_reward_for_floor(floor):
+def getRewardForFloor(floor):
     # Logique pour déterminer les récompenses en fonction de l'étage
     if floor == 1:
         return [
@@ -27,8 +27,8 @@ def get_reward_for_floor(floor):
             Consumable("Medium Health Potion", EquipmentType.CONSUMABLE, None, 2, 35, healthRecovery=50),
         ]
 
-def choose_reward(player, floor):
-    available_rewards = get_reward_for_floor(floor)
+def chooseReward(player, floor):
+    available_rewards = getRewardForFloor(floor)
     if not available_rewards:  # Gérer le cas où il n'y a pas de récompenses
         print("There are no rewards available on this floor.")
         return  # Quitter la fonction si aucune récompense n'est trouvée
