@@ -21,15 +21,6 @@ Ce projet est un roguelike textuel développé en Python, utilisant la biblioth�
     * Affichage de l'équipement du joueur dans des panneaux séparés pour chaque emplacement.
     * Menu interactif pour choisir les actions du joueur pendant le combat, avec affichage des sorts disponibles, de leur élément, de leur effet et de leur coût en mana.
     * Affichage de l'inventaire des consommables.
-* **Équipement :**
-    * Les équipements sont divisés en 5 tiers, de 1 (faible) à 5 (puissant).
-    * Les armes peuvent avoir un élément associé (feu, eau, etc.).
-    * Le joueur peut équiper des armes et des armures. Les équipements équipés sont liés au joueur jusqu'à ce qu'ils soient remplacés.
-    * Les bonus de statistiques des équipements sont ajoutés aux statistiques du joueur.
-* **Consommables :**
-    * Les consommables sont des objets qui peuvent être utilisés pour soigner le joueur ou lui donner des bonus temporaires.
-    * Le joueur a un inventaire limité de 5 emplacements pour les consommables.
-    * Les consommables sont supprimés de l'inventaire après utilisation.
 
 ## Technologies utilisées
 
@@ -39,30 +30,36 @@ Ce projet est un roguelike textuel développé en Python, utilisant la biblioth�
 
 ## Améliorations futures
 
+* **Combat :**
+    * **Effets de sorts :** Implémenter les effets spécifiques de chaque sort (dégâts, soins, buffs, debuffs, effets de statut).
+    * **Sorts combinés :** Permettre au joueur de combiner des sorts de différents éléments pour créer de nouveaux effets.
+    * **IA ennemie :** Développer une IA plus sophistiquée, prenant en compte les faiblesses et résistances élémentaires, utilisant des sorts et des compétences de manière stratégique.
+    * **Coups critiques :** Implémenter une chance de coup critique basée sur la perception du joueur.
+    * **Variété d'attaques :** Permettre au joueur de choisir entre différents types d'attaques (coup puissant, coup rapide, etc.).
+* **Génération de niveau :**
+    * **Algorithmes avancés :** Utiliser des algorithmes plus complexes pour créer des niveaux plus intéressants et variés (salles, couloirs, obstacles, étages).
+    * **Salles spéciales :** Ajouter des salles avec des événements ou récompenses uniques (trésor, pièges, rencontres, autels).
+    * **Niveaux de boss :** Concevoir des niveaux spécifiques pour les combats de boss.
+* **Objets et équipement :**
+    * **Génération aléatoire :** Créer un système pour générer des équipements aléatoires en fonction du niveau et de la difficulté.
+    * **Amélioration :** Permettre au joueur d'améliorer ses équipements.
+    * **Enchantements :** Ajouter des enchantements aux armes et armures.
+* **Autres fonctionnalités :**
+    * **Système de quêtes :** Ajouter des quêtes secondaires.
+    * **Compétences et talents :** Permettre au joueur de développer des compétences et talents.
+    * **Événements aléatoires :** Intégrer des événements aléatoires (pièges, rencontres, trésors).
+    * **Magasins :** Ajouter des niveaux pour acheter et vendre des équipements et consommables.
 * **Interface graphique :**
     * **Explorer l'utilisation de Pygame ou Arcade** pour créer une interface graphique plus immersive et interactive.
-* **Effets de sorts :**
-    * Implémenter les effets spécifiques de chaque sort (dégâts, soins, buffs, debuffs).
-    * Gérer les effets de statut qui durent plusieurs tours.
-    * Permettre au joueur de combiner des sorts de différents éléments.
-* **Arbre de compétences :**
-    * Créer un arbre de compétences pour débloquer et améliorer les sorts.
-* **Génération de niveau :**
-    * Implémenter la génération aléatoire d'équipements en fonction du niveau et de la difficulté du combat.
-    * Ajouter des magasins pour acheter et vendre des équipements.
-* **Ennemis :**
-    * Développer une IA plus élaborée pour les ennemis.
-* **Autres :**
-    * Ajouter des résistances et des faiblesses élémentaires aux ennemis.
-    * Implémenter la possibilité de choisir un nouvel équipement après chaque combat.
-    * Implémenter la génération aléatoire d'équipements en fonction du niveau et de la difficulté du combat.
-    * Ajouter des magasins pour acheter et vendre des équipements.
+    * **Couleurs et styles :** Utiliser davantage les fonctionnalités de Rich.
+    * **Menus élaborés :** Créer des menus plus complexes et interactifs.
+    * **Affichage du niveau :** Afficher une représentation visuelle du niveau (mini-carte, grille).
 
 ## Comment exécuter le jeu
 
 1. Assurez-vous d'avoir Python installé sur votre système.
 2. Installez la bibliothèque Rich : `pip install rich`
-3. Exécutez le script Python : `python main.py`
+3. Exécutez le script Python : `python -m main`
 
 ## Contribution
 
