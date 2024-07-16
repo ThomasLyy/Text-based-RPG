@@ -5,7 +5,7 @@ from rich.panel import Panel
 from enemy import enemies
 from combat import combat
 
-from reward import choose_reward
+from reward import chooseReward
 
 def gameLoop(player):
     for floor in range(1, 6):
@@ -35,7 +35,7 @@ def gameLoop(player):
 
         # Récompenses (étages 1 à 4) :
         if floor < 5:  # Pas de récompense après le boss (étage 5)
-            choose_reward(player, floor)
+            chooseReward(player, floor)
 
         # Forge
         if floor == 3:
