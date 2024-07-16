@@ -7,19 +7,22 @@ from rich.table import Table
 import time
 import random
 
-from spell import smallSpell  # Importation de smallSpell
+from spell import smallSpell
+from player import Player
 
-def combat(player, enemies):
+def combat(player, enemies, floor):
     # Affichage des ennemis rencontrés au début du combat
     enemy_counts = {}
     for enemy in enemies:
         enemy_counts[enemy.name] = enemy_counts.get(enemy.name, 0) + 1
     print("\nYou encounter:")
     for enemy_name, count in enemy_counts.items():
-        print(
-            f"- {count} {enemy_name}{'s' if count > 1 else ''}"
-        )  # Affiche le pluriel si nécessaire
+        print(f"- {count} {enemy_name}{'s' if count > 1 else ''}")  # Affiche le pluriel si nécessaire
 
+    # Affichage des statistiques du joueur
+    player.displayStats()
+
+    # Affichage de l'équipement du joueur
     print("\nYour equipment:")
     for slot, item in player.equipped.items():
         if item:
@@ -52,7 +55,8 @@ def combat(player, enemies):
         )
         enemyProgressBars[i] = (enemyProgress, enemyHealthTask)  # Use index as key
 
-    while player.health > 0 and any(enemy.health > 0 for enemy in enemies):
+    all_enemies_defeated = False  # Variable pour suivre si tous les ennemis sont vaincus
+    while player.health > 0 and not all_enemies_defeated:
         # Player's turn
         console = Console()
         table = Table(title="Available Actions")
@@ -61,7 +65,7 @@ def combat(player, enemies):
         table.add_column("Effect", justify="center")
         table.add_column("Cost", justify="center")
 
-        for spell in smallSpell:  # Utiliser smallSpell au lieu de spells
+        for spell in smallSpell:
             table.add_row(spell.name, spell.element, spell.effect, str(spell.manaCost))
 
         table.add_row("Attack", "", "", "")
@@ -71,26 +75,25 @@ def combat(player, enemies):
 
         validActions = [spell.name.lower() for spell in smallSpell] + ["attack", "flee", "use item"]
         actionChoice = ""
-        
         while actionChoice not in validActions:
             actionChoice = Prompt.ask("Choose an action").lower()
             if actionChoice not in validActions:
                 print("Invalid action. Please choose from the available actions.")
 
         if actionChoice in [spell.name.lower() for spell in smallSpell]:
-            spellToCast = next(
-                spell for spell in smallSpell if spell.name.lower() == actionChoice
-            )
+            spellToCast = next(spell for spell in smallSpell if spell.name.lower() == actionChoice)
 
-            # Affichage des ennemis disponibles pour le ciblage
-            print("\nEnemies:")
-            for i, enemy in enumerate(enemies):
-                if enemy.health > 0:
-                    print(
-                        f"{i+1}. {enemy.name} (Health: {enemy.health}/{enemy.maxHealth})"
-                    )
+            # Ciblage automatique du dernier ennemi si cible unique et un seul ennemi restant
+            if spellToCast.targetType == "single" and sum(1 for enemy in enemies if enemy.health > 0) == 1:
+                target = next(enemy for enemy in enemies if enemy.health > 0)
+                print(f"Automatically targeting the last enemy: {target.name}")
+            else:
+                # Affichage des ennemis disponibles pour le ciblage
+                print("\nEnemies:")
+                for i, enemy in enumerate(enemies):
+                    if enemy.health > 0:
+                        print(f"{i+1}. {enemy.name} (Health: {enemy.health}/{enemy.maxHealth})")
 
-            if spellToCast.targetType == "single":
                 targetIndex = int(Prompt.ask("Choose a target (by number)")) - 1
                 while (
                     targetIndex < 0
@@ -100,11 +103,8 @@ def combat(player, enemies):
                     print("Invalid target. Please choose a valid number.")
                     targetIndex = int(Prompt.ask("Choose a target (by number)")) - 1
                 target = enemies[targetIndex]
-                player.useSpell(spellToCast, target)
-            else:  # Zone spell
-                for enemy in enemies:
-                    if enemy.health > 0:
-                        player.useSpell(spellToCast, enemy)
+
+            player.useSpell(spellToCast, target)
 
         elif actionChoice == "use item":
             if not player.consumables:
@@ -113,7 +113,7 @@ def combat(player, enemies):
                 print("\nConsumables:")
                 for i, item in enumerate(player.consumables):
                     print(f"{i+1}. {item}")
-                
+
                 # Récupération des noms des consommables du joueur
                 consumableNames = [item.name for item in player.consumables]
 
@@ -134,30 +134,30 @@ def combat(player, enemies):
                 player.useConsumable(player.consumables[itemIndex])
 
         elif actionChoice == "attack":
-            # Affichage des ennemis disponibles pour le ciblage
-            print("\nEnemies:")
-            for i, enemy in enumerate(enemies):
-                if enemy.health > 0:
-                    print(
-                        f"{i+1}. {enemy.name} (Health: {enemy.health}/{enemy.maxHealth})"
-                    )
+            # Ciblage automatique du dernier ennemi si un seul ennemi restant
+            if sum(1 for enemy in enemies if enemy.health > 0) == 1:
+                target = next(enemy for enemy in enemies if enemy.health > 0)
+                print(f"Automatically targeting the last enemy: {target.name}")
+            else:
+                # Affichage des ennemis disponibles pour le ciblage
+                print("\nEnemies:")
+                for i, enemy in enumerate(enemies):
+                    if enemy.health > 0:
+                        print(f"{i+1}. {enemy.name} (Health: {enemy.health}/{enemy.maxHealth})")
 
-            targetIndex = int(Prompt.ask("Choose a target (by number)")) - 1
-            while (
-                targetIndex < 0
-                or targetIndex >= len(enemies)
-                or enemies[targetIndex].health <= 0
-            ):
-                print("Invalid target. Please choose a valid number.")
                 targetIndex = int(Prompt.ask("Choose a target (by number)")) - 1
-            target = enemies[targetIndex]
-            totalStats = (
-                player.calculateTotalStats()
-            )  # Calcul des stats avec équipement
-            damage = totalStats["strength"] + random.randint(
-                1, 6
-            )  # Dégâts basés sur la force totale
-            target.health = max(0, target.health - damage)  # Limite la santé à 0
+                while (
+                    targetIndex < 0
+                    or targetIndex >= len(enemies)
+                    or enemies[targetIndex].health <= 0
+                ):
+                    print("Invalid target. Please choose a valid number.")
+                    targetIndex = int(Prompt.ask("Choose a target (by number)")) - 1
+                target = enemies[targetIndex]
+
+            totalStats = player.calculateTotalStats()
+            damage = totalStats["strength"] + random.randint(1, 6)
+            target.health = max(0, target.health - damage)
             print(f"You hit the {target.name} for {damage} damage!")
         elif actionChoice == "flee":
             player.flee()
@@ -183,7 +183,7 @@ def combat(player, enemies):
         # Enemy's turn
         for i, enemy in enumerate(enemies):
             if enemy.health > 0:
-                damage = enemy.strength + random.randint(1, 4)  # Simulate dice roll
+                damage = enemy.strength + random.randint(1, 4)
                 player.health -= damage
                 print(f"The {enemy.name} hits you for {damage} damage!")
 
@@ -196,20 +196,25 @@ def combat(player, enemies):
                 print(playerProgress)
                 for j, (progress, _) in enemyProgressBars.items():
                     if enemies[j].health <= 0:
-                        progress.update(
-                            task, description=f"[red]{enemy.name} Defeated[/red]"
-                        )
+                        progress.update(task, description=f"[red]{enemy.name} Defeated[/red]")
                     print(progress)
 
                 time.sleep(1)
 
-    # Combat result
+        # Vérifier si tous les ennemis sont vaincus après le tour des ennemis
+        all_enemies_defeated = all(enemy.health <= 0 for enemy in enemies)
+
+    # Combat result (déplacé en dehors de la boucle)
     if player.health <= 0:
         print("[bold red]You have been defeated![/bold red]")
-    else:
+    elif all_enemies_defeated:  # Vérifier si tous les ennemis sont vaincus
         print("[bold green]You defeated all enemies![/bold green]")
         for enemy in enemies:
             player.experience += enemy.xpReward
-        print(
-            f"You gained {sum(enemy.xpReward for enemy in enemies)} experience points."
-        )
+        print(f"You gained {sum(enemy.xpReward for enemy in enemies)} experience points.")
+
+        # Choix de récompense (si ce n'est pas le boss)
+        if floor < 5:
+            from reward import choose_reward
+            choose_reward(player, floor)
+            player.displayStats()  #
