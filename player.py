@@ -15,6 +15,7 @@ class Player:
     perception: int = 10
     mana: int = 100
     maxMana: int = 100  # Ajout de l'attribut max_mana
+    xpToNextLevel: int = 100
 
     # Equipment slots
     mainHand: str = None
