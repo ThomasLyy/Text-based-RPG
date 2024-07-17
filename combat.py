@@ -7,7 +7,7 @@ from rich.table import Table
 from rich.progress import Progress, BarColumn, TextColumn
 from rich.text import Text
 from rich.prompt import Prompt
-from rich.console import Console
+from rich.console import Console, Group
 
 from spell import smallSpell
 from reward import chooseReward
@@ -64,7 +64,7 @@ def handleItemUse(player, console):
         print(f"[red]{e}[/red]")
 
 
-def combat(player, enemies, floor, console=Console()):
+def combat(player, enemies, floor, console=Console(width=160, height=40)):
     """Manages a combat encounter between the player and a list of enemies."""
 
     def updateHealthBars():
@@ -77,11 +77,12 @@ def combat(player, enemies, floor, console=Console()):
         playerManaBar.update(completed=player.mana)
 
     # --- UI ELEMENTS ---
-    mainLayout = layout.Layout()
-    enemyLayout = layout.Layout(name="Enemies", size=7)
+    mainLayout = Layout()
 
     # Enemy Layout (with health bars)
+    enemyLayout = Layout(name="Enemies")
     enemyPanels = []  # (Panel, ProgressBar) tuples
+    enemyGrid = Table.grid(expand=True)
     for enemy in enemies:
         healthBar = Progress(
             "[progress.percentage]{task.percentage:>3.0f}%",
@@ -89,12 +90,13 @@ def combat(player, enemies, floor, console=Console()):
             TextColumn("{task.description}"),
         )
         healthBar.add_task(f"[bold]{enemy.name}[/]", total=enemy.maxHealth)
-        enemyPanel = Panel(healthBar, title="Enemies", style="on black")
-        enemyLayout.add_split(enemyPanel)
+        enemyPanel = Panel(healthBar, title=enemy.name, style="on black")
+        enemyGrid.add_row(enemyPanel)
         enemyPanels.append((enemyPanel, healthBar))
+    enemyLayout.update(Panel(enemyGrid, title="Enemies"))
 
     # Player Stats Table
-    statsTable = Table(show_header=False, box=None, padding=(0, 1))
+    statsTable = Table(show_header=False, box=None, padding=(0, 1), expand=True)
     for statName in ["Health", "Strength", "Speed", "Intelligence", "Perception", "Mana"]:
         statValue = player.get_stat(statName)  # Get the stat value
         statsTable.add_row(f"[{statName.lower()}]{statName}[/]: {statValue}")
@@ -126,15 +128,21 @@ def combat(player, enemies, floor, console=Console()):
     healthPanel = Panel(playerHealthBar, title="Health")
     manaPanel = Panel(playerManaBar, title="Mana")
 
-    # Main Layout
-    mainLayout.split_column(  # Split the main area into rows
-        enemyLayout,  # Enemies on the left
-        Layout(name="Player").split_column(  # Player info on the right, split into columns
-            statsPanel,
-            actionsPanel,
-            Layout(name="HealthMana").split_row(healthPanel, manaPanel),  # Health and mana in one row
-        ),
+    # Player Layout
+    playerLayout = Layout(name="Player")
+    healthManaLayout = Layout(name="HealthMana")
+    healthManaLayout.split_row(
+        Layout(healthPanel, name="Health"),
+        Layout(manaPanel, name="Mana")
     )
+    playerGroup = Group(statsPanel, actionsPanel, healthManaLayout)
+    playerPanel = Panel(playerGroup, title="Player")
+    playerLayout.update(playerPanel)
+
+    # Main Layout
+    enemySection = Layout(enemyLayout, name="EnemySection", size=7)
+    playerSection = Layout(playerLayout, name="PlayerSection")
+    mainLayout.split_column(enemySection, playerSection)
 
     # --- COMBAT LOOP ---
     while player.health > 0 and any(e.health > 0 for e in enemies):
@@ -178,7 +186,7 @@ def combat(player, enemies, floor, console=Console()):
                 updateHealthBars()
                 time.sleep(0.5)  # Slight delay for enemy attacks
 
-# --- END OF COMBAT ---
+    # --- END OF COMBAT ---
     if player.health <= 0:
         print("[bold red]You have been defeated![/bold red]")
     elif all(enemy.health <= 0 for enemy in enemies):
@@ -188,9 +196,10 @@ def combat(player, enemies, floor, console=Console()):
         print(f"You gained {totalXpGained} experience points.")
 
     # Level Up Check
-    if player.experience >= player.xpToNextLevel:
-        player.level_up()  # Call the level_up method if available in your player class
-        print(f"[bold cyan]You leveled up! You are now level {player.level}.[/bold cyan]")
+    if hasattr(player, 'xpToNextLevel'):
+        if player.experience >= player.xpToNextLevel:
+            player.level_up()
+            print(f"[bold cyan]You leveled up! You are now level {player.level}.[/bold cyan]")
 
     # Reward Selection
     if floor < 5:  # Assuming floor 5 is the final boss
