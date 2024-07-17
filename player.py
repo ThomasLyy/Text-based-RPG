@@ -142,3 +142,10 @@ class Player:
         print(f"  Intelligence: {self.intelligence} ({totalStats['intelligence']})")
         print(f"  Perception: {self.perception} ({totalStats['perception']})")
         print(f"  Mana: {self.mana}/{self.maxMana} ({totalStats['mana']})")
+
+    def get_stat(self, stat_name):
+        """Retrieves the value of a specific stat."""
+        try:
+            return getattr(self, stat_name.lower())
+        except AttributeError:
+            raise ValueError(f"Invalid stat name: {stat_name}")

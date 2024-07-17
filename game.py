@@ -9,8 +9,7 @@ from reward import chooseReward
 
 def gameLoop(player):
     for floor in range(1, 6):
-        print(Panel(f"[bold]Floor {floor}[/bold]"))
-        print(f"You are on floor {floor} of 5")
+        print(Panel(f"[bold]Floor {floor} out of 5[/bold]"))
 
         # Difficulté croissante en fonction de l'étage
         maxEnemies = min(3, floor)
