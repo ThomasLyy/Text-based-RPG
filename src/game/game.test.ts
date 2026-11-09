@@ -61,6 +61,19 @@ test("two rats in one fight have their own health", async () => {
   expect(player.health).toBeLessThan(100); // the second rat survived the fireball and hit back
 });
 
+test("area spells hit every living enemy for one mana cost", async () => {
+  const rolls = [0, 0, 0.99, 0, 0]; // 2 rats on floor 2
+  vi.spyOn(Math, "random").mockImplementation(() => rolls.shift() ?? 0);
+  await play(["Fireball", "1.", "Flame Wall"]);
+  const { player, run } = await newGame();
+  const { io } = await import("./io");
+  let fight: { health: number }[] = [];
+  io.render = (v) => void (fight = v.enemies);
+  await expect(run()).rejects.toThrow("script ended");
+  expect(fight.map((e) => e.health)).toEqual([7, 7]); // 12 - 5 each
+  expect(player.mana).toBe(85); // fireball 10 + flame wall 5
+});
+
 test("failed flee: the enemy hits back", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0.99); // goblin, flee roll fails, max damage roll
   const log = await play(["Flee"]);

@@ -62,16 +62,18 @@ export class Player {
     io.print(`You hit the ${enemy.name} for ${damage} damage!`);
   }
 
-  useSpell(spell: Spell, target: Target) {
+  useSpell(spell: Spell, targets: Target[]) {
     if (spell.manaCost > this.mana) return io.print("Not enough mana!");
-    this.mana -= spell.manaCost;
-    if (spell.damage > 0) {
-      target.health = Math.max(0, target.health - spell.damage);
-      io.print(`You cast ${spell.name} on the ${target.name} for ${spell.damage} damage!`);
-    } else {
-      const healing = -spell.damage;
-      target.health = Math.min(target.health + healing, target.maxHealth);
-      io.print(`You cast ${spell.name} on the ${target.name} for ${healing} health!`);
+    this.mana -= spell.manaCost; // once per cast, however many targets
+    for (const target of targets) {
+      if (spell.damage > 0) {
+        target.health = Math.max(0, target.health - spell.damage);
+        io.print(`You cast ${spell.name} on the ${target.name} for ${spell.damage} damage!`);
+      } else {
+        const healing = -spell.damage;
+        target.health = Math.min(target.health + healing, target.maxHealth);
+        io.print(`You cast ${spell.name} on the ${target.name} for ${healing} health!`);
+      }
     }
   }
 

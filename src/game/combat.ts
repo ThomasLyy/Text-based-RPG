@@ -47,8 +47,8 @@ export async function combat(player: Player, enemies: Enemy[]) {
 
     const spellToCast = smallSpell.find((s) => s.name.toLowerCase() === action);
     if (spellToCast) {
-      const target = await handleTargeting(spellToCast, enemies);
-      player.useSpell(spellToCast, target);
+      const targets = spellToCast.targetType === "multiple" ? enemies.filter((e) => e.health > 0) : [await handleTargeting(spellToCast, enemies)];
+      player.useSpell(spellToCast, targets);
       updateHealthBars();
     } else if (action === "attack") {
       player.attack(await handleTargeting(null, enemies));
