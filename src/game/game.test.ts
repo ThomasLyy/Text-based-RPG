@@ -53,8 +53,35 @@ test("smoke: a seeded run plays to the end (win or game over) without crashing",
   io.ask = async (_q, options) => Math.max(0, options.findIndex((o) => o.startsWith("Fireball")));
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
-  await gameLoop(new Player());
-  expect(log.some((l) => l.includes("Game Over") || l.includes("conquered the Spire"))).toBe(true);
+  const summary = await gameLoop(new Player());
+  expect(summary.floor).toBeGreaterThan(1);
+  expect(log.at(-1)).toMatch(/^Level \d+ · \d+ enemies defeated\.$/);
+});
+
+test("death screen names the floor and the killer (here: poison)", async () => {
+  await play(["Defend"]);
+  rolls(); // floor 1: Slime, starting on its Acid move
+  const { Player } = await import("./player");
+  const { gameLoop } = await import("./game");
+  const p = new Player();
+  p.health = 1;
+  expect(await gameLoop(p)).toEqual({ won: false, floor: 1, level: 1, kills: 0, killedBy: "Slime's poison" });
+});
+
+test("level-up: 3 different boosts offered, XP carries over, each level needs 10 more", async () => {
+  await play(["+15 Max Health"]);
+  rolls();
+  const { Player } = await import("./player");
+  const { levelUps } = await import("./game");
+  const { io } = await import("./io");
+  let offered: string[] = [];
+  const ask = io.ask;
+  io.ask = (q, o) => ((offered = o), ask(q, o));
+  const p = new Player();
+  p.experience = 25;
+  await levelUps(p);
+  expect(offered).toEqual(["+4 Perception", "+3 Speed", "+15 Max Health"]);
+  expect([p.level, p.experience, p.xpToNextLevel, p.maxHealth, p.health]).toEqual([2, 5, 30, 115, 115]);
 });
 
 test("encounters: bosses on floors 5, 10, 15; floor 1 is a single enemy; templates untouched", async () => {

@@ -60,7 +60,16 @@ io.render = (v: CombatView) => {
     </fieldset>`;
 };
 
-gameLoop(new Player({ name: "Hero" })).catch((e: unknown) => {
+async function runForever() {
+  for (;;) {
+    $("log").replaceChildren();
+    $("board").replaceChildren();
+    await gameLoop(new Player({ name: "Hero" }));
+    await io.ask("Run over", ["New run"]);
+  }
+}
+
+runForever().catch((e: unknown) => {
   io.print(`[bold red]Crash: ${e instanceof Error ? e.message : String(e)}[/]`);
   console.error(e);
   io.ask("The game crashed.", ["Restart"]).then(() => location.reload());

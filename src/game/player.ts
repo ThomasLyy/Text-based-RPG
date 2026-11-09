@@ -19,7 +19,7 @@ export class Player {
   perception = 10;
   mana = 100;
   maxMana = 100;
-  xpToNextLevel = 100;
+  xpToNextLevel = 20; // experience counts toward the next level and resets on level-up
   defending = false; // this round only
   poisoned = { damage: 0, turns: 0, source: "" };
   lastHitBy = "";
