@@ -52,7 +52,7 @@ async function shrine(player: Player) {
   const upgradable = player.spells.filter((k) => k.rank < RANK_NAME.length);
   const options = [
     ...(upgradable.length ? ["Pray: one of your spells gains a rank"] : []),
-    "Blood offering: lose 20% of max HP, gain +3 to a random stat",
+    "Blood offering: lose 20% of your current health (heals back as usual), gain +3 to a random stat",
     "Meditate: restore all mana and 40% of your health",
   ];
   const choice = options[await io.ask("Choose a blessing", options)];
@@ -63,9 +63,9 @@ async function shrine(player: Player) {
   } else if (choice.startsWith("Blood")) {
     const stats: Stat[] = ["strength", "agility", "intelligence", "perception"];
     const stat = stats[randint(0, 3)];
-    player.health = Math.max(1, player.health - Math.round(player.maxHealth * 0.2));
+    player.health = Math.max(1, player.health - Math.round(player.health * 0.2)); // current health only: never lowers max HP
     player.base[stat] += 3;
-    io.print(`Your blood hisses on the stone. +3 ${stat}.`);
+    io.print(`Your blood hisses on the stone. +3 ${stat}. Health ${player.health}/${player.maxHealth}.`);
   } else {
     player.mana = player.maxMana;
     player.health = Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * 0.4));

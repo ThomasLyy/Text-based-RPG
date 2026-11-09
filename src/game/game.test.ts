@@ -587,3 +587,15 @@ test("each act has 2 different events", async () => {
   const { actEvents } = await import("./events");
   for (let i = 0; i < 20; i++) expect(new Set(actEvents()).size).toBe(2);
 });
+
+test("shrine blood offering costs 20% of current health, never max HP, and gives +3 to a stat", async () => {
+  const { player } = await setup();
+  const { runEvent } = await import("./events");
+  await play(["Blood offering"]);
+  rolls(0); // the stat roll picks strength
+  player.health = 80;
+  const max = player.maxHealth;
+  await runEvent("shrine", player, 0);
+  expect([player.health, player.base.strength]).toEqual([64, 13]);
+  expect(player.maxHealth).toBeGreaterThanOrEqual(max); // strength even adds a little max HP
+});
