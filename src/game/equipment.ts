@@ -1,4 +1,4 @@
-import { io } from "./io";
+﻿import { io } from "./io";
 
 export enum EquipmentType {
   WEAPON = "Weapon",
@@ -29,7 +29,7 @@ type Fields<T> = { [K in keyof T as T[K] extends Function ? never : K]?: T[K] };
 export class Equipment {
   name!: string;
   equipmentType!: EquipmentType;
-  tier!: number | null; // 1 to 5
+  tier!: number; // 1 to 5
   value!: number;
   strengthBonus = 0;
   speedBonus = 0;
@@ -49,8 +49,8 @@ export class Equipment {
   }
 
   upgrade() {
-    if (this.tier! < 5) {
-      this.tier! += 1;
+    if (this.tier < 5) {
+      this.tier += 1;
       this.strengthBonus += 2;
       this.healthBonus += 5;
       io.print(`You upgraded ${this.name} to Tier ${this.tier}!`);

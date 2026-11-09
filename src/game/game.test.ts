@@ -130,9 +130,9 @@ test("a bow fills both hands but its bonus counts once", async () => {
   expect(p.calculateTotalStats().perception).toBe(15);
 });
 
-test("potions keep the shifted Python fields", async () => {
+test("potions have a real tier and value, and no stat bonus", async () => {
   const { getRewardForFloor } = await import("./reward");
   const potion = getRewardForFloor(1)![1];
-  expect(String(potion)).toBe("Tier null Small Health Potion (Consumable)"); // audit #11 (Python showed "None")
-  expect(potion.strengthBonus).toBe(20);
+  expect(String(potion)).toBe("Tier 1 Small Health Potion (Consumable)");
+  expect([potion.value, potion.strengthBonus]).toEqual([20, 0]);
 });

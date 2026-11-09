@@ -7,13 +7,12 @@ export function getRewardForFloor(floor: number): Equipment[] | undefined {
   if (floor === 1) {
     return [
       new Equipment({ name: "Sharp Dagger", equipmentType: EquipmentType.WEAPON, subType: WeaponSubType.SWORD, tier: 1, value: 15, strengthBonus: 4 }),
-      // audit #11: positional args shifted, ported as-is
-      new Consumable({ name: "Small Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: null, value: 1, strengthBonus: 20, healthRecovery: 30 }),
+      new Consumable({ name: "Small Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 1, value: 20, healthRecovery: 30 }),
     ];
   } else if (floor === 2) {
     return [
       new Equipment({ name: "Sturdy Shield", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.SHIELD, tier: 1, value: 20, healthBonus: 10 }),
-      new Consumable({ name: "Small Mana Potion", equipmentType: EquipmentType.CONSUMABLE, tier: null, value: 1, strengthBonus: 25, manaRecovery: 20 }),
+      new Consumable({ name: "Small Mana Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 1, value: 25, manaRecovery: 20 }),
     ];
   } else if (floor === 3) {
     return [
@@ -23,7 +22,7 @@ export function getRewardForFloor(floor: number): Equipment[] | undefined {
   } else if (floor === 4) {
     return [
       new Equipment({ name: "Steel Breastplate", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.CHEST, tier: 2, value: 40, strengthBonus: 6, healthBonus: 20 }),
-      new Consumable({ name: "Medium Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: null, value: 2, strengthBonus: 35, healthRecovery: 50 }),
+      new Consumable({ name: "Medium Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 2, value: 35, healthRecovery: 50 }),
     ];
   }
 }

@@ -1,4 +1,4 @@
-import { Equipment, EquipmentType } from "./equipment";
+﻿import { Equipment, EquipmentType } from "./equipment";
 import { io } from "./io";
 import type { Player } from "./player";
 
@@ -19,9 +19,7 @@ export class Consumable extends Equipment {
     io.print(`You used ${this.name} and recovered ${this.healthRecovery} health and ${this.manaRecovery} mana.`);
   }
 }
-
-// audit #11: ported as-is, the Python positional args land in tier=None, value, strengthBonus
-export const healthPotionMinor = new Consumable({ name: "Minor Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: null, value: 1, strengthBonus: 10, healthRecovery: 20 });
-export const manaPotionMinor = new Consumable({ name: "Minor Mana Potion", equipmentType: EquipmentType.CONSUMABLE, tier: null, value: 1, strengthBonus: 12, manaRecovery: 15 });
+export const healthPotionMinor = new Consumable({ name: "Minor Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 1, value: 10, healthRecovery: 20 });
+export const manaPotionMinor = new Consumable({ name: "Minor Mana Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 1, value: 12, manaRecovery: 15 });
 
 export const consumables = [healthPotionMinor, manaPotionMinor];
