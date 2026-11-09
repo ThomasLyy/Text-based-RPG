@@ -33,7 +33,5 @@ export async function chooseReward(player: Player, floor: number) {
 
   io.print("[panel bold blue]Choose your reward:[/]");
   const choice = await io.ask("Enter your choice", availableRewards.map((r, i) => `${i + 1}. ${r}`));
-  const chosen = availableRewards[choice];
-  if (chosen.equipmentType === EquipmentType.CONSUMABLE) player.consumables.push(chosen as Consumable); // audit #14
-  else player.equip(chosen);
+  player.equip(availableRewards[choice]); // equip() also handles consumables and the 5-slot pouch
 }

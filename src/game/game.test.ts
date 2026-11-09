@@ -131,6 +131,17 @@ test("defeat: no reward, game over", async () => {
   expect(log).not.toContain("[panel bold blue]Choose your reward:[/]");
 });
 
+test("reward potions respect the 5-slot pouch", async () => {
+  const { Player } = await import("./player");
+  const { chooseReward, getRewardForFloor } = await import("./reward");
+  const log = await play(["2."]);
+  const p = new Player();
+  p.consumables = Array.from({ length: 5 }, () => getRewardForFloor(1)![1] as never);
+  await chooseReward(p, 1);
+  expect(p.consumables).toHaveLength(5);
+  expect(log).toContain("Your consumables pouch is full. Please discard a consumable first.");
+});
+
 test("rings fill both ring slots, shields go in the off hand", async () => {
   const { Player } = await import("./player");
   const { getRewardForFloor } = await import("./reward");
