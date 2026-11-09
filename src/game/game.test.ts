@@ -19,11 +19,12 @@ async function play(answers: string[]) {
   io.print = (m) => void log.push(m);
   io.render = () => {};
   io.sleep = async () => {};
-  io.ask = async (q, options) => {
+  io.ask = async (q, options, disabled) => {
     const a = answers.shift();
     if (a === undefined) throw new Error("script ended"); // reached the end of the script without a crash
     const i = options.findIndex((o) => o.startsWith(a));
     if (i === -1) throw new Error(`no scripted answer "${a}" for "${q}" in [${options}]`);
+    if (disabled?.[i]) throw new Error(`picked a disabled option: ${options[i]}`); // the UI does not allow it
     return i;
   };
   return { io, log };
@@ -588,14 +589,22 @@ test("each act has 2 different events", async () => {
   for (let i = 0; i < 20; i++) expect(new Set(actEvents()).size).toBe(2);
 });
 
-test("shrine blood offering costs 20% of current health, never max HP, and gives +3 to a stat", async () => {
+test("shrine blood offering: costs 20% of max HP from current health, greyed out if it would leave less than 1 HP", async () => {
   const { player } = await setup();
   const { runEvent } = await import("./events");
   await play(["Blood offering"]);
   rolls(0); // the stat roll picks strength
   player.health = 80;
-  const max = player.maxHealth;
   await runEvent("shrine", player, 0);
-  expect([player.health, player.base.strength]).toEqual([64, 13]);
-  expect(player.maxHealth).toBeGreaterThanOrEqual(max); // strength even adds a little max HP
+  expect([player.health, player.base.strength, player.baseMaxHealth]).toEqual([60, 13, 100]); // -20 (20% of 100), max HP unchanged
+
+  const { io } = await play([]);
+  let disabled: boolean[] | undefined;
+  let labels: string[] = [];
+  io.ask = async (_q, o, d) => ((labels = o), (disabled = d), o.length - 1); // look, then meditate
+  player.health = 21; // 21 - 21 (20% of 103 max HP) = 0: not allowed
+  await runEvent("shrine", player, 0);
+  const blood = labels.findIndex((l) => l.startsWith("Blood"));
+  expect(disabled?.[blood]).toBe(true);
+  expect(labels[blood]).toContain("not enough health");
 });

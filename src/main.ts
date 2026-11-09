@@ -23,7 +23,7 @@ io.print = (msg) => {
   stick();
 };
 
-io.ask = (question, options) =>
+io.ask = (question, options, disabled) =>
   new Promise((resolve) => {
     if (io.snapshot) io.render(io.snapshot());
     $("question").textContent = question;
@@ -31,6 +31,7 @@ io.ask = (question, options) =>
       ...options.map((label, i) => {
         const b = document.createElement("button");
         b.innerHTML = markup(label);
+        b.disabled = disabled?.[i] ?? false;
         b.onclick = () => {
           $("question").textContent = "";
           $("options").replaceChildren();

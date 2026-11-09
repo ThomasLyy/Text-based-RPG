@@ -62,7 +62,8 @@ button {
   min-height: 44px;
   cursor: pointer;
 }
-button:hover, button:focus-visible { border-color: var(--blue); }
+button:hover:not(:disabled), button:focus-visible { border-color: var(--blue); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .panel { display: block; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; margin: 6px 0; }
 .bold { font-weight: bold; }

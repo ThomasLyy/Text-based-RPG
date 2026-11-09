@@ -12,14 +12,14 @@ const seeded = (s: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-type Bot = (question: string, options: string[], view: CombatView | null) => number;
+type Bot = (question: string, options: string[], view: CombatView | null, disabled?: boolean[]) => number;
 type Build = "STR" | "AGI" | "INT";
 const BUILD_STAT: Record<Build, Stat> = { STR: "strength", AGI: "agility", INT: "intelligence" };
 const BUILD_WEIGHT: Record<Build, string> = { STR: "heavy", AGI: "medium", INT: "light" };
 const BOOST: Record<Build, string> = { STR: "+4 Strength", AGI: "+4 Agility", INT: "+4 Intelligence" };
 
 // Taps the first button every time: first starter, Attack, first target, first boost, first reward.
-const firstButton: Bot = () => 0;
+const firstButton: Bot = (_q, _o, _v, disabled) => Math.max(0, disabled?.indexOf(false) ?? 0);
 
 // Plays one build: takes gear of its stat and weight, blocks big announced hits, drinks potions when low,
 // focuses the weakest enemy; the INT build casts (area spell on 3+ enemies, big spell on tough ones).
@@ -102,7 +102,7 @@ async function simulate(runs: number, build?: Build) {
       grantStarterSpell(player);
       bot = sensibleBot(build, Object.fromEntries(SPELLS.map((s) => [s.name, s.shape])));
     }
-    io.ask = async (q, o) => ((turns += Number(q === "Your turn")), bot(q, o, view));
+    io.ask = async (q, o, d) => ((turns += Number(q === "Your turn")), bot(q, o, view, d));
     const s = await gameLoop(player);
     wins += Number(s.won);
     floors += s.floor;

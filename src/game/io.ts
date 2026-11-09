@@ -8,7 +8,8 @@ export interface CombatView {
 
 export const io = {
   print(_msg: string): void {},
-  ask(_prompt: string, _options: string[]): Promise<number> {
+  // disabled[i] = shown greyed out, cannot be picked
+  ask(_prompt: string, _options: string[], _disabled?: boolean[]): Promise<number> {
     throw new Error("io.ask not set");
   },
   render(_view: CombatView): void {},

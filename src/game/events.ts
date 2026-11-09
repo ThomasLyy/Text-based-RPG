@@ -46,16 +46,22 @@ async function forge(player: Player) {
   io.print(`Your ${describe(item)}.`);
 }
 
+// Blood offering: 20% of max HP, taken from current health. Only allowed if at least 1 HP would remain.
+export const bloodCost = (player: Player) => Math.round(player.maxHealth * 0.2);
+
 // Shrine: one blessing out of three.
 async function shrine(player: Player) {
   io.print("[panel bold yellow]A quiet shrine hums with old power.[/]");
   const upgradable = player.spells.filter((k) => k.rank < RANK_NAME.length);
+  const cost = bloodCost(player);
+  const canBleed = player.health - cost >= 1;
   const options = [
     ...(upgradable.length ? ["Pray: one of your spells gains a rank"] : []),
-    "Blood offering: lose 20% of your current health (heals back as usual), gain +3 to a random stat",
+    `Blood offering: lose ${cost} health (20% of max HP), gain +3 to a random stat${canBleed ? "" : " — not enough health"}`,
     "Meditate: restore all mana and 40% of your health",
   ];
-  const choice = options[await io.ask("Choose a blessing", options)];
+  const choice = options[await io.ask("Choose a blessing", options, options.map((o) => o.startsWith("Blood") && !canBleed))];
+  if (choice.startsWith("Blood") && !canBleed) return io.print("You are too weak to make an offering."); // the UI never allows this
   if (choice.startsWith("Pray")) {
     const k = upgradable[await io.ask("Choose a spell to upgrade", upgradable.map(spellName))];
     k.rank++;
@@ -63,7 +69,7 @@ async function shrine(player: Player) {
   } else if (choice.startsWith("Blood")) {
     const stats: Stat[] = ["strength", "agility", "intelligence", "perception"];
     const stat = stats[randint(0, 3)];
-    player.health = Math.max(1, player.health - Math.round(player.health * 0.2)); // current health only: never lowers max HP
+    player.health -= cost; // current health only: max HP never changes
     player.base[stat] += 3;
     io.print(`Your blood hisses on the stone. +3 ${stat}. Health ${player.health}/${player.maxHealth}.`);
   } else {
