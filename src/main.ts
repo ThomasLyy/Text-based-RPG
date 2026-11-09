@@ -50,7 +50,7 @@ io.render = (v: CombatView) => {
       ${v.enemies
         .map((e) =>
           e.health > 0
-            ? `<div class="unit"><div class="line"><b>${e.name}</b><span>${e.health} / ${e.maxHealth}</span></div>${bar(e.health, e.maxHealth, "red")}${e.intent ? `<div class="intent">Next: ${markup(e.intent)}</div>` : ""}</div>`
+            ? `<div class="unit"><div class="line"><b>${e.name}</b><span>${e.health} / ${e.maxHealth}</span></div>${bar(e.health, e.maxHealth, "red")}${e.intent ? `<div class="intent">Next: ${markup(e.intent)}</div>` : ""}${e.status.length ? `<div class="cyan">${e.status.join(" · ")}</div>` : ""}</div>`
             : `<div class="unit dim">${e.name} — defeated</div>`,
         )
         .join("")}

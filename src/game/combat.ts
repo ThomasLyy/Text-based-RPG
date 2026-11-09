@@ -1,33 +1,37 @@
 ﻿import { io, type CombatView } from "./io";
-import type { Spell } from "./spell";
+import { spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
-import { DEFEND_MANA, type Player } from "./player";
+import { DEFEND_MANA, SET_BONUS, type Player } from "./player";
 
-export const MANA_REGEN = 5; // per round
-
-export async function handleTargeting(spell: Spell | null, enemies: Enemy[]): Promise<Enemy> {
+export async function handleTargeting(question: string, enemies: Enemy[]): Promise<Enemy> {
   const alive = enemies.filter((e) => e.health > 0);
   if (alive.length === 1) return alive[0];
-
   const options = enemies.map((e, i) => ({ e, label: `${i + 1}. ${e.name} (${e.health}/${e.maxHealth})` })).filter((o) => o.e.health > 0);
-  const i = await io.ask(spell ? `Cast ${spell.name} on` : "Attack", options.map((o) => o.label));
-  return options[i].e;
+  return options[await io.ask(question, options.map((o) => o.label))].e;
 }
 
 // Built from live state on every render, so the screen never lags behind the game.
 export function combatView(player: Player, enemies: Enemy[], title: string): CombatView {
   const t = player.stats();
   const pct = (x: number) => `${Math.round(x * 100)}%`;
+  const set = player.setWeight();
   return {
     title,
-    enemies: enemies.map((e) => ({ name: e.name, health: e.health, maxHealth: e.maxHealth, intent: e.health > 0 ? e.intentText() : "" })),
+    enemies: enemies.map((e) => ({ name: e.name, health: e.health, maxHealth: e.maxHealth, intent: e.health > 0 ? e.intentText() : "", status: e.health > 0 ? e.statusText() : [] })),
     player: {
       health: player.health, maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
       level: player.level, xp: player.experience, xpNext: player.xpToNextLevel,
-      status: [...(player.defending ? ["Defending"] : []), ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turn${player.poisoned.turns === 1 ? "" : "s"}`] : [])],
+      status: [
+        ...(player.defending ? ["Defending"] : []),
+        ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turn${player.poisoned.turns === 1 ? "" : "s"}`] : []),
+        ...(set ? [`${SET_BONUS[set].name}: ${SET_BONUS[set].text}`] : []),
+      ],
       weapons: player.weapons().map(([w]) => `${w.name} ${w.min}–${w.max}`).join(" + "),
     },
-    stats: [["STR", t.strength], ["AGI", t.agility], ["INT", t.intelligence], ["PER", t.perception], ["Crit", pct(player.critChance())], ["Dodge", pct(player.dodgeChance())]],
+    stats: [
+      ["STR", t.strength], ["AGI", t.agility], ["INT", t.intelligence], ["PER", t.perception],
+      ["Crit", pct(player.critChance())], ["Dodge", pct(player.dodgeChance())], ["Armor", `${player.armorPct()}%`], ["Ward", `${player.wardPct()}%`],
+    ],
   };
 }
 
@@ -35,17 +39,18 @@ interface Turn { run: () => void; first?: boolean }
 
 // Choices (target, potion) are made now; run() happens on the hero's turn in agility order.
 async function chooseAction(player: Player, enemies: Enemy[]): Promise<Turn | "fled"> {
-  const spells = player.spells.filter((s) => player.spellCost(s) <= player.mana);
-  const actions = ["Attack", "Defend", ...spells.map((s) => `${s.name} (${player.spellCost(s)} MP)`), ...(player.potions.length ? ["Use Potion"] : []), ...(enemies.some((e) => e.boss) ? [] : ["Flee"])];
+  const spells = player.spells.filter((k) => player.spellCost(k) <= player.mana);
+  const label = (k: KnownSpell) => `${spellName(k)} (${player.spellCost(k)} MP)`;
+  const actions = ["Attack", "Defend", ...spells.map(label), ...(player.potions.length ? ["Use Potion"] : []), ...(enemies.some((e) => e.boss) ? [] : ["Flee"])];
   const action = actions[await io.ask("Your turn", actions)];
 
-  const spell = spells.find((s) => action.startsWith(s.name));
-  if (spell) {
-    const targets = spell.targetType === "multiple" ? enemies.filter((e) => e.health > 0) : [await handleTargeting(spell, enemies)];
-    return { run: () => player.useSpell(spell, targets) };
+  const known = spells.find((k) => action === label(k));
+  if (known) {
+    const targets = known.spell.shape === "all" ? enemies.filter((e) => e.health > 0) : [await handleTargeting(`Cast ${known.spell.name} on`, enemies)];
+    return { run: () => player.cast(known, targets, enemies) };
   }
   if (action === "Attack") {
-    const target = await handleTargeting(null, enemies);
+    const target = await handleTargeting("Attack", enemies);
     return { run: () => player.attack(target, enemies), first: player.weapons().some(([w]) => w.family.trait === "quick") };
   }
   if (action === "Defend") {
@@ -70,14 +75,16 @@ export async function combat(player: Player, enemies: Enemy[], title = ""): Prom
   const render = () => io.render(combatView(player, enemies, title));
   const over = () => player.health <= 0 || enemies.every((e) => e.health <= 0);
 
-  while (!over()) {
+  for (let round = 1; !over(); round++) {
     render();
     const turn = await chooseAction(player, enemies);
     if (turn === "fled") return "fled";
 
-    // Enemies faster than the hero's agility act before him, the rest after. Quick weapons always go first.
+    // Enemies faster than the hero's agility act before him, the rest after.
+    // Quick weapons, and the medium set on the first round, always go first.
     const agility = player.stat("agility");
-    const faster = turn.first ? [] : enemies.filter((e) => e.speed > agility);
+    const first = turn.first || (round === 1 && player.setWeight() === "medium");
+    const faster = first ? [] : enemies.filter((e) => e.speed > agility);
     const order = [...faster, "hero" as const, ...enemies.filter((e) => !faster.includes(e))];
     for (const who of order) {
       if (over()) break;
@@ -89,9 +96,10 @@ export async function combat(player: Player, enemies: Enemy[], title = ""): Prom
       render();
     }
 
-    if (!over()) player.tickPoison();
     player.defending = false;
-    player.mana = Math.min(player.maxMana, player.mana + MANA_REGEN);
+    if (over()) break;
+    for (const e of enemies) e.endOfRound(round);
+    player.endOfRound();
   }
 
   render();

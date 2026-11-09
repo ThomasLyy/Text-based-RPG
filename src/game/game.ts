@@ -3,13 +3,14 @@ import { ACTS, Enemy, FLOORS, FLOORS_PER_ACT } from "./enemy";
 import { combat } from "./combat";
 import { chooseReward } from "./reward";
 import { FAMILIES, describe, makeWeapon } from "./items";
+import { SPELLS, describeSpell } from "./spell";
 import type { Player } from "./player";
 
 const actOf = (floor: number) => ACTS[Math.floor((floor - 1) / FLOORS_PER_ACT)];
 const floorInAct = (floor: number) => ((floor - 1) % FLOORS_PER_ACT) + 1;
 
 // Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
-export const DIFFICULTY = [1.15, 1.45, 1.55];
+export const DIFFICULTY = [1.25, 1.55, 1.65];
 
 // Floor 1 of an act: 1 enemy, floor 2: 1-2, floor 3: 2, floor 4: 2-3, each floor 5% tougher. Last floor: the boss.
 export function encounter(floor: number): Enemy[] {
@@ -36,6 +37,15 @@ export async function chooseStarter(player: Player) {
   const offer = [0, 1, 2].map(() => makeWeapon(pool.splice(randint(0, pool.length - 1), 1)[0], 0, "Common"));
   io.print("[panel bold]Choose your weapon[/]");
   player.equipWeapon(offer[await io.ask("Choose your starting weapon", offer.map(describe))]);
+  grantStarterSpell(player);
+}
+
+// Every hero also starts with one random single-target spell.
+export function grantStarterSpell(player: Player) {
+  const singles = SPELLS.filter((s) => s.shape === "single");
+  const spell = singles[randint(0, singles.length - 1)];
+  player.spells.push({ spell, rank: 1 });
+  io.print(`You also know [cyan]${spell.name}[/] (${describeSpell(spell)}).`);
 }
 
 // Each level: +10 health and a choice of 3 different boosts out of 6. Each level needs 5 more XP.
@@ -61,7 +71,7 @@ export interface RunSummary {
 }
 
 export async function gameLoop(player: Player): Promise<RunSummary> {
-  await chooseStarter(player);
+  if (!player.mainHand) await chooseStarter(player); // already armed: a test set the build
   let kills = 0;
   let floor = 1;
   for (; floor <= FLOORS; floor++) {

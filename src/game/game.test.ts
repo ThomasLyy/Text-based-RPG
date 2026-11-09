@@ -33,6 +33,8 @@ const dummy = (o: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
   name: "Dummy", maxHealth: 50, speed: 1, xp: 5, pattern: [{ name: "Poke", kind: "attack", value: 5 }], ...o,
 });
 
+const known = async (name: string, rank = 1) => ({ spell: (await import("./spell")).SPELLS.find((s) => s.name === name)!, rank });
+
 async function setup() {
   const { Player } = await import("./player");
   const { Enemy } = await import("./enemy");
@@ -101,9 +103,9 @@ test("enemies follow their pattern and announce the next move", async () => {
   await play([]);
   rolls(0); // pattern starts at step 0
   const g = new Enemy(dummy({ pattern: [{ name: "Stab", kind: "attack", value: 6 }, { name: "Heavy swing", kind: "attack", value: 13 }] }));
-  expect(g.intentText()).toBe("Stab, 6 damage");
+  expect(g.intentText()).toBe("Stab, 6 physical damage");
   g.act(player, [g]);
-  expect(g.intentText()).toBe("Heavy swing, 13 damage");
+  expect(g.intentText()).toBe("Heavy swing, 13 physical damage");
   g.act(player, [g]);
   expect(player.health).toBe(100 - 6 - 13);
 });
@@ -118,7 +120,7 @@ test("buffs add damage; heals go to the most hurt ally", async () => {
   priest.act(player, [priest, brute]);
   expect(brute.health).toBe(30);
   brute.act(player, [priest, brute]);
-  expect(brute.intentText()).toBe("Hit, 8 damage");
+  expect(brute.intentText()).toBe("Hit, 8 physical damage");
   expect(log).toContain("The Priest uses Mend: the Brute heals 10.");
 });
 
@@ -131,35 +133,36 @@ test("scaled enemies are tougher", async () => {
 // --- hero ---
 
 test("Defend blocks 75% (rounded up); dodge avoids it; poison ticks and stacks", async () => {
-  const { player } = await setup();
+  const { player, Enemy } = await setup();
   await play([]);
+  const goblin = new Enemy(dummy({ name: "Goblin" }));
   rolls(0.5, 0); // first hit lands, second is dodged
   player.defending = true;
-  player.takeDamage(9, "Goblin");
+  player.takeDamage(9, goblin, false);
   expect(player.health).toBe(97); // ceil(9 * 0.25)
-  player.takeDamage(9, "Goblin");
+  player.takeDamage(9, goblin, false);
   expect(player.health).toBe(97);
 
   rolls();
   player.poison(3, 2, "Slime");
   player.poison(2, 1, "Slime");
   expect(player.poisoned).toMatchObject({ damage: 3, turns: 3 });
-  player.tickPoison();
+  player.endOfRound();
   expect([player.health, player.poisoned.turns, player.lastHitBy]).toEqual([94, 2, "Slime's poison"]);
 });
 
-test("crits deal 1.5x; intelligence scales spells", async () => {
+test("crits deal 1.5x; intelligence scales spells (grade B)", async () => {
   const { player, Enemy } = await setup();
-  const { fireball } = await import("./spell");
   await play([]);
+  const fireball = await known("Fireball");
   const target = new Enemy(dummy({ maxHealth: 100 }));
   rolls(0); // crit
-  player.useSpell(fireball, [target]);
-  expect(target.health).toBe(100 - 30); // 20 * 1.5
-  player.base.intelligence = 20; // +30%
+  player.cast(fireball, [target], [target]);
+  expect(target.health).toBe(100 - 20); // 13 * 1.5
+  player.base.intelligence = 20; // +60%
   rolls(0.9);
-  player.useSpell(fireball, [target]);
-  expect(target.health).toBe(70 - 26); // 20 * 1.3 from INT
+  player.cast(fireball, [target], [target]);
+  expect(target.health).toBe(80 - 21); // 13 * 1.6
   expect(player.mana).toBe(80);
 });
 
@@ -181,12 +184,13 @@ test("faster enemies act before the hero, slower ones after", async () => {
 test("area spells hit every living enemy for one mana cost; mana regenerates each round", async () => {
   const { player, Enemy, combat } = await setup();
   await play(["Flame Wall"]);
+  player.spells = [await known("Flame Wall")];
   rolls(0, 0);
   const a = new Enemy(dummy());
   const b = new Enemy(dummy());
   await expect(combat(player, [a, b])).rejects.toThrow("script ended");
-  expect([a.health, b.health]).toEqual([41, 41]);
-  expect(player.mana).toBe(93); // 100 - 12 + 5 regen
+  expect([a.health, b.health]).toEqual([41, 41]); // 7 each, then burn 2
+  expect(player.mana).toBe(89); // 100 - 16 + 5 regen
 });
 
 test("no fleeing from a boss", async () => {
@@ -203,7 +207,7 @@ test("no fleeing from a boss", async () => {
 
 test("fleeing a fight gives no reward", async () => {
   const { log } = await play(["[white]", "Flee"]);
-  rolls(0, 0, 0, 0, 0, 0); // 3 starter picks, floor 1 enemy, its pattern start, then the flee roll succeeds
+  rolls(0, 0, 0, 0, 0, 0, 0); // 3 starter picks, starter spell, floor 1 enemy, its pattern start, then the flee roll succeeds
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
   await expect(gameLoop(new Player())).rejects.toThrow("script ended"); // stops on floor 2
@@ -312,7 +316,7 @@ test("traits: cleave splashes, crush hits bosses harder, stagger cancels the nex
 test("traits: quick acts before faster enemies; keen adds crit; wand cuts spell cost; staff boosts spells; sword parries", async () => {
   const { player, Enemy, combat } = await setup();
   const { makeWeapon } = await import("./items");
-  const { fireball } = await import("./spell");
+  const fireball = await known("Fireball");
   const { log } = await play(["Attack"]);
   player.equipWeapon(makeWeapon(await family("Throwing Knives"), 0, "Common"));
   rolls(0);
@@ -331,7 +335,7 @@ test("traits: quick acts before faster enemies; keen adds crit; wand cuts spell 
   player.defending = true;
   player.health = 100;
   rolls();
-  player.takeDamage(20, "Ogre");
+  player.takeDamage(20, new Enemy(dummy({ name: "Ogre" })), false);
   expect(player.health).toBe(98); // 90% blocked
 });
 
@@ -341,9 +345,9 @@ test("armor: rings fill two slots, bonuses add to stats and max HP/MP", async ()
   const { player } = await setup();
   const { makeArmor } = await import("./items");
   await play([]);
-  player.equipArmor(makeArmor("ring", 0, "Common", "intelligence"));
-  player.equipArmor(makeArmor("ring", 0, "Rare", "intelligence")); // 3 × 1.3 = 4
-  player.equipArmor(makeArmor("amulet", 0, "Common", "agility"));
+  player.equipArmor(makeArmor("ring", 0, "Common", { stat: "intelligence" }));
+  player.equipArmor(makeArmor("ring", 0, "Rare", { stat: "intelligence", affixes: [] })); // 3 × 1.3 = 4
+  player.equipArmor(makeArmor("amulet", 0, "Common", { stat: "agility" }));
   expect([player.stat("intelligence"), player.stat("agility"), player.maxMana]).toEqual([17, 13, 110]);
   expect(player.armorIn("ring")?.name).toBe("Copper Ring"); // the next ring would replace this one
 });
@@ -362,7 +366,7 @@ test("starter: 3 Common weapons from different families", async () => {
   expect(p.mainHand).not.toBeNull();
 });
 
-test("rewards: 3 different offers plus Skip; boss rewards are Rare+ gear; a full pouch leaves the potion", async () => {
+test("rewards: 3 different offers; boss rewards are Rare+ gear or spells; a full pouch leaves the potion", async () => {
   const { player } = await setup();
   const { rewardOffers, take } = await import("./reward");
   const { makePotion } = await import("./items");
@@ -371,7 +375,7 @@ test("rewards: 3 different offers plus Skip; boss rewards are Rare+ gear; a full
     const offers = rewardOffers(player, 1);
     expect(new Set(offers.map((o) => o.kind + o.name)).size).toBe(3);
     const boss = rewardOffers(player, 1, true);
-    expect(boss.every((o) => o.kind !== "potion" && (o.quality === "Rare" || o.quality === "Epic"))).toBe(true);
+    expect(boss.every((o) => o.kind === "spell" || (o.kind !== "potion" && (o.quality === "Rare" || o.quality === "Epic")))).toBe(true);
   }
   for (let i = 0; i < 5; i++) player.addPotion(makePotion(0));
   await take(player, makePotion(0, true));
@@ -389,3 +393,114 @@ test("rewards: a one-hander asks which hand when you already hold one", async ()
   expect([player.mainHand?.name, player.offHand?.name]).toEqual(["Iron Sword", "Iron Axe"]);
 });
 
+
+// --- gear: weights, Armor vs Ward, sets, affixes ---
+
+test("Armor cuts physical hits, Ward cuts magic hits, both capped at 50%; heavy pieces cost Agility", async () => {
+  const { player, Enemy } = await setup();
+  const { makeArmor } = await import("./items");
+  await play([]);
+  player.equipArmor(makeArmor("chest", 0, "Common", { weight: "heavy" })); // 4 Armor, -2 AGI
+  player.equipArmor(makeArmor("head", 0, "Common", { weight: "light" })); // 2 Ward
+  expect([player.armorPct(), player.wardPct(), player.stat("agility")]).toEqual([4, 2, 8]);
+  const ogre = new Enemy(dummy({ name: "Ogre" }));
+  player.health = player.maxHealth; // gear raises max HP but does not heal
+  rolls();
+  player.takeDamage(50, ogre, false);
+  player.takeDamage(50, ogre, true);
+  expect(player.health).toBe(player.maxHealth - 48 - 49); // 50 × 0.96, 50 × 0.98
+});
+
+test("4 pieces of one weight give the set bonus", async () => {
+  const { player } = await setup();
+  const { makeArmor, BODY_SLOTS } = await import("./items");
+  await play([]);
+  for (const s of BODY_SLOTS.slice(0, 3)) player.equipArmor(makeArmor(s, 0, "Common", { weight: "heavy" }));
+  expect(player.setWeight()).toBeNull();
+  player.equipArmor(makeArmor("feet", 0, "Common", { weight: "heavy" }));
+  expect(player.setWeight()).toBe("heavy");
+  expect(player.armorPct()).toBe(2 + 4 + 3 + 2 + 10); // pieces + Bulwark
+  expect(player.stat("agility")).toBe(2); // 10 - 4 × 2
+});
+
+test("affixes: Rare has 1, Epic 2; thorns reflect, vampirism heals, regeneration ticks", async () => {
+  const { player, Enemy } = await setup();
+  const { makeArmor } = await import("./items");
+  await play([]);
+  expect(makeArmor("ring", 0, "Rare").affixes).toHaveLength(1);
+  expect(new Set(makeArmor("ring", 0, "Epic").affixes).size).toBe(2);
+  player.equipArmor(makeArmor("ring", 0, "Common", { affixes: ["thorns", "regeneration"] }));
+  player.equipArmor(makeArmor("ring", 0, "Common", { affixes: ["vampirism"] }));
+  const ogre = new Enemy(dummy({ name: "Ogre", maxHealth: 100 }));
+  rolls();
+  player.takeDamage(50, ogre, false);
+  expect(ogre.health).toBe(90); // 20% of 50 back
+  player.attack(ogre, [ogre]); // fists roll 4: heal 5% of 4 -> 0
+  player.endOfRound();
+  expect(player.health).toBe(100 - 50 + 2);
+});
+
+// --- spells: one signature effect per element ---
+
+test("Fire burns over 3 turns, Water chills enemy damage, Shadow curses for +25% damage taken", async () => {
+  const { player, Enemy } = await setup();
+  await play([]);
+  const e = new Enemy(dummy({ maxHealth: 200 }));
+  rolls(0.9, 0.9, 0.9);
+  player.cast(await known("Fireball"), [e], [e]); // 13, burn 4
+  e.endOfRound(1);
+  expect(e.health).toBe(200 - 13 - 4);
+  player.cast(await known("Water Whip"), [e], [e]); // 14, chill 2
+  expect(e.intentText()).toBe("Poke, 4 physical damage"); // 5 × 0.7
+  player.cast(await known("Shadow Bolt"), [e], [e]); // 13, curse
+  rolls(0.9);
+  player.attack(e, [e]); // fists roll 5 × 1.25 = 6
+  expect(e.health).toBe(183 - 14 - 13 - 6);
+});
+
+test("Earth stuns, Lightning chains, Light heals you", async () => {
+  const { player, Enemy } = await setup();
+  await play([]);
+  const a = new Enemy(dummy({ maxHealth: 200 }));
+  const b = new Enemy(dummy({ maxHealth: 200 }));
+  rolls(0.9);
+  player.cast(await known("Landslide"), [a], [a, b]); // always stuns
+  expect(a.stunned).toBe(true);
+  rolls(0.9);
+  player.cast(await known("Chain Lightning"), [a], [a, b]); // 29, 50% chains
+  expect(b.health).toBe(200 - 15);
+  player.health = 50;
+  rolls(0.9);
+  player.cast(await known("Ray of Light"), [b], [a, b]); // 13, heals 30% -> 4
+  expect(player.health).toBe(54);
+});
+
+test("spell ranks scale damage; the wand cuts cost", async () => {
+  const { player, Enemy } = await setup();
+  await play([]);
+  const e = new Enemy(dummy({ maxHealth: 200 }));
+  rolls(0.9);
+  player.cast(await known("Rock Throw", 4), [e], [e]); // 14 × 1.5
+  expect(e.health).toBe(200 - 21);
+});
+
+test("bosses enrage from round 8: +10% damage per round", async () => {
+  const { Enemy } = await setup();
+  await play([]);
+  const boss = new Enemy(dummy({ boss: true, pattern: [{ name: "Slam", kind: "attack", value: 20 }] }));
+  for (let round = 1; round <= 9; round++) boss.endOfRound(round);
+  expect(boss.intentText()).toBe("Slam, 24 physical damage");
+});
+
+test("spellbook: 4 slots, a 5th spell asks what to forget; known spells rank up", async () => {
+  const { player } = await setup();
+  const { take } = await import("./reward");
+  const { makeScroll } = await import("./items");
+  const { SPELLS } = await import("./spell");
+  await play(["Fireball I"]);
+  player.spells = await Promise.all(["Fireball", "Water Whip", "Rock Throw", "Lightning Bolt"].map((n) => known(n)));
+  await take(player, makeScroll(SPELLS.find((s) => s.name === "Judgment")!));
+  expect(player.spells.map((k) => k.spell.name)).toEqual(["Water Whip", "Rock Throw", "Lightning Bolt", "Judgment"]);
+  await take(player, makeScroll(SPELLS.find((s) => s.name === "Judgment")!, 2));
+  expect(player.knows("Judgment")?.rank).toBe(2);
+});

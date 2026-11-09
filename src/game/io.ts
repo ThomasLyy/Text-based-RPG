@@ -1,7 +1,7 @@
 // Seam between game logic and the outside world (UI in src/main.ts, or a test).
 export interface CombatView {
   title: string;
-  enemies: { name: string; health: number; maxHealth: number; intent: string }[];
+  enemies: { name: string; health: number; maxHealth: number; intent: string; status: string[] }[];
   player: { health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; status: string[]; weapons: string };
   stats: [string, string | number][];
 }
