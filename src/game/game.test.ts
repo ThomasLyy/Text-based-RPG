@@ -1,5 +1,4 @@
-﻿// Characterization tests: they pin the Python behaviour, audit bugs included.
-// When a bug is fixed on the fix branch, the matching expectation flips.
+﻿// Game tests: scripted taps through the real gameLoop, Math.random stubbed for fixed rolls.
 import { beforeEach, expect, test, vi } from "vitest";
 
 // Script the taps: each answer is the start of the button label to press.
@@ -30,6 +29,18 @@ async function newGame() {
   const player = new Player({ name: "Heracles" });
   return { player, run: () => gameLoop(player) };
 }
+
+test("smoke: a whole 5-floor run finishes without crashing", async () => {
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  const { io } = await import("./io");
+  const log = await play([]);
+  io.ask = async () => 0; // always tap the first button: Fireball, then the first reward
+  const { player, run } = await newGame();
+  await run();
+  expect(log).toContain("[panel bold green]Congratulations! You defeated the boss![/]");
+  expect(player.health).toBeGreaterThan(0);
+  expect(Object.values(player.equipped).filter(Boolean)).toHaveLength(4); // dagger, shield, helmet, breastplate
+});
 
 test("Fireball run: kills floor 1-2 rats, one reward per floor, reaches floor 2 rewards", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0); // always 1 enemy, always the rat
