@@ -1,14 +1,14 @@
 # Text-based RPG
 
-A turn-based text roguelite written in TypeScript. The same code runs in the browser (Vite) and on Android (Capacitor). Ported from the original Python/Rich version (see the git history before the `rework` branch).
+A turn-based text roguelike written in TypeScript, on its way to becoming a roguelite (progression between runs is planned, see the roadmap). The same code runs in the browser (Vite) and on Android (Capacitor). Ported from the original Python/Rich version (see the git history before the `rework` branch).
 
 ## The game
 
-A run takes 10 to 15 minutes: 15 floors in 3 acts (The Sewers, The Catacombs, The Spire), with a boss on floors 5, 10 and 15.
+Designed for 10 to 15 minute runs (not yet timed with real players): 15 floors in 3 acts (The Sewers, The Catacombs, The Spire), with a boss on floors 5, 10 and 15.
 
 * **One hero who adapts:** each run starts with a choice of 3 random weapons, plus one random single-target spell. The rest of the build comes from rewards.
-* **Readable combat:** every enemy announces its next move (physical or magic attack, poison, heal, buff). Actions: Attack, Defend (blocks 75%), spells, potions, Flee (not against bosses).
-* **4 stats:** Strength (melee weapons, max HP), Agility (daggers, throwing knives, bows, dodge, turn order), Intelligence (wands, staves, spell power), Perception (critical hits).
+* **Readable combat:** every enemy announces its next move (physical or magic attack, poison, heal, buff). Actions: Attack, Defend (blocks 75% of each hit this turn, 90% with a sword, and gives +10 mana), spells, potions, Flee (not against bosses).
+* **4 stats:** Strength (melee weapons, max HP), Agility (daggers, throwing knives, bows, dodge, turn order), Intelligence (wands, staves, spell power), Perception (critical hit chance and damage).
 * **9 weapon families**, each with a scaling grade and a trait (Parry, Cleave, Crush, Stagger, Twin strike, Quick, Keen, Arcane, Channel). One-handed weapons can be dual-wielded.
 * **Armor:** heavy (Armor against physical hits, -2 Agility per piece), medium (dodge), light (mana and Ward against magic). 4-piece set bonuses; Rare and Epic items roll affixes.
 * **18 spells:** 6 elements × (single target, all enemies, powerful), each element with a signature effect (burn, chill, stun, chain, heal, curse). Ranks I to IV, and a 4-slot spellbook.
@@ -20,6 +20,15 @@ A run takes 10 to 15 minutes: 15 floors in 3 acts (The Sewers, The Catacombs, Th
 
 `src/game/balance.test.ts` plays hundreds of simulated runs on every `npm test`. A "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, and no build (Strength, Agility, Intelligence) may be more than 15 points ahead of another. To see the numbers: `npx vitest run balance --reporter=verbose`.
 
+Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health and damage per act). All tuning so far comes from bots, not human players.
+
+## Roadmap
+
+* **Done:** port from Python; combat core (intents, Defend, stats, 15 floors, bosses, level-up, end-of-run screen); variety (weapons, armor, sets, affixes, spells, rewards, events, gold, enrage, build parity).
+* **Next:** a gear screen to see everything you wear during a run.
+* **Step 3, roguelite:** a currency earned per run, a camp between runs with permanent upgrades and unlocks, high scores, and saving a run in progress.
+* **Step 4, release:** first Android build and test on a real phone, Play Store release, installable web version (PWA) and hosting, settings screen, possibly optional ads. The game stays free.
+
 ## Code
 
 * `src/game/`: all the game logic, with no UI (`io.ts` connects it to the UI or to the tests).
@@ -28,10 +37,12 @@ A run takes 10 to 15 minutes: 15 floors in 3 acts (The Sewers, The Catacombs, Th
 
 ## Running the game
 
-1. Install Node.js (20+), then run `npm install`.
+Requirements: Node.js 22.12 or newer. For Android: Android Studio with JDK 21; the app targets Android 7.0 and newer.
+
+1. Run `npm install`.
 2. Web: `npm run dev`, then open the URL it prints. Build: `npm run build` (output in `dist/`).
 3. Tests: `npm test`.
-4. Android: install Android Studio (with JDK 21), then `npm run android` (builds, runs `cap sync` and opens Android Studio).
+4. Android (not yet tested): `npm run android` builds the web app, runs `cap sync` and opens Android Studio.
 
 ## Branches
 

@@ -1,8 +1,8 @@
 {
   "name": "text-based-rpg",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Roguelike textuel : web (Vite + TypeScript) et Android (Capacitor).",
+  "description": "Turn-based text roguelike: web (Vite + TypeScript) and Android (Capacitor).",
   "type": "module",
   "repository": {
     "type": "git",
