@@ -5,6 +5,8 @@ import { io, randint } from "./io";
 
 type Slot = "mainHand" | "offHand" | "head" | "chest" | "waist" | "legs" | "feet" | "neck" | "ringLeft" | "ringRight";
 interface Target { name: string; health: number; maxHealth: number }
+// armor types whose slot name differs from the type name; others use the lowercase type ("head", "chest"...)
+const ARMOR_SLOTS: Record<string, string[]> = { ring: ["ringLeft", "ringRight"], shield: ["offHand"] };
 
 export class Player {
   name = "";
@@ -56,10 +58,9 @@ export class Player {
         } else return io.print("Both hand slots are full. Please unequip an item first.");
       }
     } else if (item.equipmentType === EquipmentType.ARMOR) {
-      // audit #5/#6: "ring" / "shield" are not slots; Python raised KeyError, here we throw the same
-      const slot = item.subType!.toLowerCase();
-      if (!(slot in this.equipped)) throw new Error(`KeyError: '${slot}'`);
-      if (this.equipped[slot] === null) this.equipped[slot] = item;
+      const type = item.subType!.toLowerCase();
+      const slot = (ARMOR_SLOTS[type] ?? [type]).find((s) => this.equipped[s] === null);
+      if (slot) this.equipped[slot] = item;
       else return io.print(`${item.subType} slot is full. Please unequip an item first.`);
     } else if (item.equipmentType === EquipmentType.CONSUMABLE) {
       if (this.consumables.length < 5) this.consumables.push(item as Consumable);

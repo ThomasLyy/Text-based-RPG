@@ -80,6 +80,19 @@ test("Use Item drinks a potion", async () => {
   expect(player.consumables).toHaveLength(1);
 });
 
+test("rings fill both ring slots, shields go in the off hand", async () => {
+  const { Player } = await import("./player");
+  const { getRewardForFloor } = await import("./reward");
+  await play([]);
+  const p = new Player();
+  const ring = getRewardForFloor(3)![1];
+  p.equip(ring);
+  p.equip(ring);
+  p.equip(getRewardForFloor(2)![0]);
+  expect([p.equipped.ringLeft, p.equipped.ringRight].map((r) => r?.name)).toEqual(["Enchanted Ring", "Enchanted Ring"]);
+  expect(p.equipped.offHand?.name).toBe("Sturdy Shield");
+});
+
 test("potions keep the shifted Python fields", async () => {
   const { getRewardForFloor } = await import("./reward");
   const potion = getRewardForFloor(1)![1];
