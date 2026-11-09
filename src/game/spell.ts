@@ -1,4 +1,4 @@
-export interface Spell {
+﻿export interface Spell {
   name: string;
   damage: number;
   manaCost: number;
@@ -11,8 +11,8 @@ const spell = (name: string, damage: number, manaCost: number, element: string |
   ({ name, damage, manaCost, element, effect, targetType });
 
 // Fire
-export const fireball = spell("Fireball", 15, 10, "Fire", "damage");
-export const flameWall = spell("Flame Wall", 5, 5, "Fire", "damage", "multiple");
+export const fireball = spell("Fireball", 22, 10, "Fire", "damage");
+export const flameWall = spell("Flame Wall", 9, 12, "Fire", "damage", "multiple");
 export const combustion = spell("Combustion", 5, 15, "Fire", "debuff");
 export const fieryExplosion = spell("Fiery Explosion", 30, 25, "Fire", "damage", "multiple");
 export const fieryEmbrace = spell("Fiery Embrace", 0, 20, "Fire", "buff");

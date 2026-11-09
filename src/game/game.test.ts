@@ -68,8 +68,8 @@ test("death screen names the floor and the killer (here: poison)", async () => {
   expect(await gameLoop(p)).toEqual({ won: false, floor: 1, level: 1, kills: 0, killedBy: "Slime's poison" });
 });
 
-test("level-up: 3 different boosts offered, XP carries over, each level needs 10 more", async () => {
-  await play(["+15 Max Health"]);
+test("level-up: 3 different boosts offered, XP carries over, each level needs 5 more", async () => {
+  await play(["+20 Max Health"]);
   rolls();
   const { Player } = await import("./player");
   const { levelUps } = await import("./game");
@@ -80,8 +80,8 @@ test("level-up: 3 different boosts offered, XP carries over, each level needs 10
   const p = new Player();
   p.experience = 25;
   await levelUps(p);
-  expect(offered).toEqual(["+4 Perception", "+3 Speed", "+15 Max Health"]);
-  expect([p.level, p.experience, p.xpToNextLevel, p.maxHealth, p.health]).toEqual([2, 5, 30, 115, 115]);
+  expect(offered).toEqual(["+5 Perception", "+3 Speed", "+20 Max Health"]);
+  expect([p.level, p.experience, p.xpToNextLevel, p.maxHealth, p.health]).toEqual([2, 5, 25, 120, 120]);
 });
 
 test("encounters: bosses on floors 5, 10, 15; floor 1 is a single enemy; templates untouched", async () => {
@@ -130,22 +130,22 @@ test("scaled enemies are tougher", async () => {
 
 // --- hero ---
 
-test("Defend halves damage (rounded up); dodge avoids it; poison ticks and stacks", async () => {
+test("Defend blocks 75% (rounded up); dodge avoids it; poison ticks and stacks", async () => {
   const { player } = await setup();
   await play([]);
   rolls(0.5, 0); // first hit lands, second is dodged
   player.defending = true;
   player.takeDamage(9, "Goblin");
-  expect(player.health).toBe(95);
+  expect(player.health).toBe(97); // ceil(9 * 0.25)
   player.takeDamage(9, "Goblin");
-  expect(player.health).toBe(95);
+  expect(player.health).toBe(97);
 
   rolls();
   player.poison(3, 2, "Slime");
   player.poison(2, 1, "Slime");
   expect(player.poisoned).toMatchObject({ damage: 3, turns: 3 });
   player.tickPoison();
-  expect([player.health, player.poisoned.turns, player.lastHitBy]).toEqual([92, 2, "Slime's poison"]);
+  expect([player.health, player.poisoned.turns, player.lastHitBy]).toEqual([94, 2, "Slime's poison"]);
 });
 
 test("crits deal 1.5x; intelligence scales spells", async () => {
@@ -155,11 +155,11 @@ test("crits deal 1.5x; intelligence scales spells", async () => {
   const target = new Enemy(dummy({ maxHealth: 100 }));
   rolls(0); // crit
   player.useSpell(fireball, [target]);
-  expect(target.health).toBe(100 - 23); // round(15 * 1.5)
+  expect(target.health).toBe(100 - 33); // 22 * 1.5
   player.intelligence = 20; // +50%
   rolls(0.9);
   player.useSpell(fireball, [target]);
-  expect(target.health).toBe(77 - 23);
+  expect(target.health).toBe(67 - 33); // 22 * 1.5 from INT
   expect(player.mana).toBe(80);
 });
 
@@ -185,8 +185,8 @@ test("area spells hit every living enemy for one mana cost; mana regenerates eac
   const a = new Enemy(dummy());
   const b = new Enemy(dummy());
   await expect(combat(player, [a, b])).rejects.toThrow("script ended");
-  expect([a.health, b.health]).toEqual([45, 45]);
-  expect(player.mana).toBe(100); // 100 - 5 + 5 regen
+  expect([a.health, b.health]).toEqual([41, 41]);
+  expect(player.mana).toBe(93); // 100 - 12 + 5 regen
 });
 
 test("no fleeing from a boss", async () => {

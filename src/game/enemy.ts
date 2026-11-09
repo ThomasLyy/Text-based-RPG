@@ -1,4 +1,4 @@
-import type { Player } from "./player";
+﻿import type { Player } from "./player";
 import { io, randint } from "./io";
 
 // What an enemy will do on its next turn. Shown to the player in advance.
@@ -84,32 +84,32 @@ export const ACTS: Act[] = [
   {
     name: "The Sewers",
     enemies: [
-      { name: "Rat", maxHealth: 14, speed: 13, xp: 4, pattern: [attack("Bite", 4), attack("Bite", 4), attack("Frenzy", 7)] },
-      { name: "Goblin", maxHealth: 24, speed: 9, xp: 6, pattern: [attack("Stab", 6), attack("Stab", 6), attack("Heavy swing", 13)] },
+      { name: "Rat", maxHealth: 14, speed: 13, xp: 4, pattern: [attack("Bite", 4), attack("Bite", 4), attack("Frenzy", 9)] },
+      { name: "Goblin", maxHealth: 24, speed: 9, xp: 6, pattern: [attack("Stab", 6), attack("Stab", 6), attack("Heavy swing", 16)] },
       { name: "Slime", maxHealth: 30, speed: 4, xp: 6, pattern: [attack("Slam", 5), poison("Acid", 3, 3)] },
       { name: "Cultist", maxHealth: 20, speed: 8, xp: 7, pattern: [attack("Dark bolt", 5), heal("Mend", 8), attack("Dark bolt", 5)] },
     ],
-    boss: { name: "Goblin Warlord", maxHealth: 110, speed: 10, xp: 30, boss: true, pattern: [attack("Cleave", 10), buff("War cry", 3), attack("Cleave", 10), attack("Crushing blow", 22)] },
+    boss: { name: "Goblin Warlord", maxHealth: 110, speed: 10, xp: 30, boss: true, pattern: [attack("Cleave", 10), buff("War cry", 3), attack("Cleave", 10), attack("Crushing blow", 28)] },
   },
   {
     name: "The Catacombs",
     enemies: [
-      { name: "Skeleton", maxHealth: 34, speed: 10, xp: 9, pattern: [attack("Slash", 9), attack("Slash", 9), attack("Bone crush", 18)] },
-      { name: "Giant Spider", maxHealth: 30, speed: 14, xp: 9, pattern: [attack("Bite", 7), poison("Venom", 5, 3)] },
-      { name: "Ghoul", maxHealth: 46, speed: 6, xp: 10, pattern: [attack("Claw", 10), attack("Claw", 10), heal("Feast", 12)] },
+      { name: "Skeleton", maxHealth: 34, speed: 10, xp: 9, pattern: [attack("Slash", 8), attack("Slash", 8), attack("Bone crush", 20)] },
+      { name: "Giant Spider", maxHealth: 30, speed: 14, xp: 9, pattern: [attack("Bite", 7), poison("Venom", 4, 3)] },
+      { name: "Ghoul", maxHealth: 40, speed: 6, xp: 10, pattern: [attack("Claw", 10), attack("Claw", 10), heal("Feast", 12)] },
       { name: "Dark Acolyte", maxHealth: 30, speed: 9, xp: 10, pattern: [attack("Shadow bolt", 8), heal("Unholy mend", 14), buff("Dark rite", 3)] },
     ],
-    boss: { name: "Bone Colossus", maxHealth: 220, speed: 7, xp: 60, boss: true, pattern: [attack("Stomp", 16), attack("Stomp", 16), heal("Gather bones", 25), attack("Earthshatter", 34)] },
+    boss: { name: "Bone Colossus", maxHealth: 170, speed: 7, xp: 60, boss: true, pattern: [attack("Stomp", 13), attack("Stomp", 13), heal("Gather bones", 20), attack("Earthshatter", 36)] },
   },
   {
     name: "The Spire",
     enemies: [
-      { name: "Wraith", maxHealth: 44, speed: 15, xp: 13, pattern: [attack("Chill touch", 12), poison("Soul drain", 6, 3)] },
-      { name: "Troll", maxHealth: 75, speed: 6, xp: 14, pattern: [attack("Club", 15), heal("Regenerate", 18), attack("Smash", 28)] },
-      { name: "Fire Imp", maxHealth: 38, speed: 17, xp: 12, pattern: [attack("Firebolt", 11), attack("Firebolt", 11), poison("Ignite", 6, 3)] },
-      { name: "Dread Knight", maxHealth: 65, speed: 9, xp: 15, pattern: [attack("Strike", 14), buff("Battle focus", 4), attack("Execute", 30)] },
+      { name: "Wraith", maxHealth: 44, speed: 15, xp: 13, pattern: [attack("Chill touch", 10), poison("Soul drain", 5, 3)] },
+      { name: "Troll", maxHealth: 62, speed: 6, xp: 14, pattern: [attack("Club", 12), heal("Regenerate", 14), attack("Smash", 34)] },
+      { name: "Fire Imp", maxHealth: 38, speed: 17, xp: 12, pattern: [attack("Firebolt", 9), attack("Firebolt", 9), poison("Ignite", 5, 3)] },
+      { name: "Dread Knight", maxHealth: 55, speed: 9, xp: 15, pattern: [attack("Strike", 12), buff("Battle focus", 3), attack("Execute", 38)] },
     ],
-    boss: { name: "The Lich", maxHealth: 360, speed: 11, xp: 0, boss: true, pattern: [attack("Death bolt", 20), poison("Plague", 8, 4), heal("Raise dead", 35), attack("Doom", 45)] },
+    boss: { name: "The Lich", maxHealth: 280, speed: 11, xp: 0, boss: true, pattern: [attack("Death bolt", 16), poison("Plague", 6, 3), heal("Raise dead", 25), attack("Doom", 58)] },
   },
 ];
 

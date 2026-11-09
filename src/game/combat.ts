@@ -1,7 +1,7 @@
 ﻿import { io, type CombatView } from "./io";
 import { smallSpell, type Spell } from "./spell";
 import type { Enemy } from "./enemy";
-import type { Player } from "./player";
+import { DEFEND_MANA, type Player } from "./player";
 
 export const MANA_REGEN = 5; // per round
 
@@ -47,8 +47,8 @@ async function chooseAction(player: Player, enemies: Enemy[]): Promise<(() => vo
   }
   if (action === "Defend") {
     player.defending = true; // set now so it also covers faster enemies
-    io.print("You raise your guard.");
-    return () => {};
+    io.print("You raise your guard and focus.");
+    return () => void (player.mana = Math.min(player.maxMana, player.mana + DEFEND_MANA));
   }
   if (action === "Use Item") {
     const i = await io.ask("Choose a consumable", player.consumables.map((c, n) => `${n + 1}. ${c.name} - Health: ${c.healthRecovery}, Mana: ${c.manaRecovery}`));

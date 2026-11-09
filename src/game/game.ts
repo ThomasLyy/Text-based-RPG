@@ -7,29 +7,29 @@ import type { Player } from "./player";
 const actOf = (floor: number) => ACTS[Math.floor((floor - 1) / FLOORS_PER_ACT)];
 const floorInAct = (floor: number) => ((floor - 1) % FLOORS_PER_ACT) + 1;
 
-// Floor 1 of an act: 1 enemy, floor 2: 1-2, floors 3-4: 2-3, each floor 10% tougher. Last floor: the boss.
+// Floor 1 of an act: 1 enemy, floor 2: 1-2, floor 3: 2, floor 4: 2-3, each floor 5% tougher. Last floor: the boss.
 export function encounter(floor: number): Enemy[] {
   const act = actOf(floor);
   const f = floorInAct(floor);
   if (f === FLOORS_PER_ACT) return [new Enemy(act.boss)];
-  const count = f === 1 ? 1 : f === 2 ? randint(1, 2) : randint(2, 3);
-  return choices(act.enemies, count).map((t) => new Enemy(t, 1 + 0.1 * (f - 1)));
+  const count = f === 1 ? 1 : f === 2 ? randint(1, 2) : f === 3 ? 2 : randint(2, 3);
+  return choices(act.enemies, count).map((t) => new Enemy(t, 1 + 0.05 * (f - 1)));
 }
 
 const BOOSTS: { label: string; apply: (p: Player) => void }[] = [
-  { label: "+3 Strength", apply: (p) => void (p.strength += 3) },
-  { label: "+3 Intelligence", apply: (p) => void (p.intelligence += 3) },
+  { label: "+4 Strength", apply: (p) => void (p.strength += 4) },
+  { label: "+4 Intelligence", apply: (p) => void (p.intelligence += 4) },
   { label: "+3 Speed", apply: (p) => void (p.speed += 3) },
-  { label: "+4 Perception", apply: (p) => void (p.perception += 4) },
-  { label: "+15 Max Health", apply: (p) => void ((p.maxHealth += 15), (p.health += 15)) },
+  { label: "+5 Perception", apply: (p) => void (p.perception += 5) },
+  { label: "+20 Max Health", apply: (p) => void ((p.maxHealth += 20), (p.health += 20)) },
   { label: "+20 Max Mana", apply: (p) => void ((p.maxMana += 20), (p.mana += 20)) },
 ];
 
-// Each level: +10 health and a choice of 3 different boosts out of 6. Each level needs 10 more XP.
+// Each level: +10 health and a choice of 3 different boosts out of 6. Each level needs 5 more XP.
 export async function levelUps(player: Player) {
   while (player.experience >= player.xpToNextLevel) {
     player.experience -= player.xpToNextLevel;
-    player.xpToNextLevel += 10;
+    player.xpToNextLevel += 5;
     player.level++;
     player.health = Math.min(player.maxHealth, player.health + 10);
     io.print(`[panel bold cyan]Level ${player.level}![/]`);
@@ -64,11 +64,11 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
 
     await levelUps(player);
 
-    // Rest: a little health and mana after each floor, everything back after a boss.
-    const boss = enemies[0].boss;
-    player.health = boss ? player.maxHealth : Math.min(player.maxHealth, player.health + 15);
-    player.mana = boss ? player.maxMana : Math.min(player.maxMana, player.mana + 30);
-    io.print(`You rest. Health ${player.health}/${player.maxHealth}, mana ${player.mana}/${player.maxMana}.`);
+    // Rest: 20% health and 30 mana after each floor; a campfire (full heal) before each boss and after it.
+    const campfire = enemies[0].boss || floorInAct(floor + 1) === FLOORS_PER_ACT;
+    player.health = campfire ? player.maxHealth : Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * 0.2));
+    player.mana = campfire ? player.maxMana : Math.min(player.maxMana, player.mana + 30);
+    io.print(`${campfire ? "You rest at a campfire." : "You catch your breath."} Health ${player.health}/${player.maxHealth}, mana ${player.mana}/${player.maxMana}.`);
 
     if (outcome === "won") await chooseReward(player, floor); // no reward for running away
   }

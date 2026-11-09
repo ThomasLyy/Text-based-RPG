@@ -4,6 +4,8 @@ import type { Spell } from "./spell";
 import { io, randint } from "./io";
 
 interface Target { name: string; health: number; maxHealth: number }
+export const DEFEND_TAKEN = 0.25; // Defend blocks 75% of each hit this round
+export const DEFEND_MANA = 10; // and gives this much extra mana
 // armor types whose slot name differs from the type name; others use the lowercase type ("head", "chest"...)
 const ARMOR_SLOTS: Record<string, string[]> = { ring: ["ringLeft", "ringRight"], shield: ["offHand"] };
 
@@ -87,10 +89,10 @@ export class Player {
 
   takeDamage(amount: number, source: string) {
     if (Math.random() < this.dodgeChance()) return io.print(`You dodge the ${source}'s attack!`);
-    const damage = this.defending ? Math.ceil(amount / 2) : amount;
+    const damage = this.defending ? Math.ceil(amount * DEFEND_TAKEN) : amount;
     this.health = Math.max(0, this.health - damage);
     this.lastHitBy = source;
-    io.print(`The ${source} hits you for ${damage} damage${this.defending ? " (half blocked)" : ""}!`);
+    io.print(`The ${source} hits you for ${damage} damage${this.defending ? " (blocked)" : ""}!`);
   }
 
   // Poison stacks its turns and keeps the stronger damage. Dodge avoids it; Defend does not.
