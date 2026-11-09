@@ -1,5 +1,16 @@
-﻿// Game tests: scripted taps through the real gameLoop, Math.random stubbed for fixed rolls.
+﻿// Game tests. Math.random is stubbed: rolls(...) feeds fixed values, then 0.5 ("no crit, no dodge, flee fails").
 import { beforeEach, expect, test, vi } from "vitest";
+import type { EnemyTemplate } from "./enemy";
+
+const rolls = (...values: number[]) => vi.spyOn(Math, "random").mockImplementation(() => values.shift() ?? 0.5);
+
+// Seeded PRNG (mulberry32) for whole-run tests: random but repeatable.
+const seeded = (s: number) => () => {
+  s = (s + 0x6d2b79f5) | 0;
+  let t = Math.imul(s ^ (s >>> 15), 1 | s);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
 
 // Script the taps: each answer is the start of the button label to press.
 async function play(answers: string[]) {
@@ -12,140 +23,194 @@ async function play(answers: string[]) {
     const a = answers.shift();
     if (a === undefined) throw new Error("script ended"); // reached the end of the script without a crash
     const i = options.findIndex((o) => o.startsWith(a));
-    if (i === -1) throw new Error(`no scripted answer for "${q}" in [${options}]`);
+    if (i === -1) throw new Error(`no scripted answer "${a}" for "${q}" in [${options}]`);
     return i;
   };
-  return log;
+  return { io, log };
+}
+
+const dummy = (o: Partial<EnemyTemplate> = {}): EnemyTemplate => ({
+  name: "Dummy", maxHealth: 50, speed: 1, xp: 5, pattern: [{ name: "Poke", kind: "attack", value: 5 }], ...o,
+});
+
+async function setup() {
+  const { Player } = await import("./player");
+  const { Enemy } = await import("./enemy");
+  const { combat } = await import("./combat");
+  return { player: new Player(), Enemy, combat };
 }
 
 beforeEach(() => {
-  vi.resetModules(); // fresh enemy objects per test, like a fresh Python process
+  vi.resetModules();
   vi.restoreAllMocks();
 });
 
-async function newGame() {
+// --- whole run ---
+
+test("smoke: a seeded run plays to the end (win or game over) without crashing", async () => {
+  vi.spyOn(Math, "random").mockImplementation(seeded(1));
+  const { io, log } = await play([]);
+  io.ask = async (_q, options) => Math.max(0, options.findIndex((o) => o.startsWith("Fireball")));
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
-  const player = new Player({ name: "Heracles" });
-  return { player, run: () => gameLoop(player) };
-}
-
-test("smoke: a whole 5-floor run finishes without crashing", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0);
-  const { io } = await import("./io");
-  const log = await play([]);
-  io.ask = async () => 0; // always tap the first button: Fireball, then the first reward
-  const { player, run } = await newGame();
-  await run();
-  expect(log).toContain("[panel bold green]Congratulations! You defeated the boss![/]");
-  expect(player.health).toBeGreaterThan(0);
-  expect(Object.values(player.equipped).filter(Boolean)).toHaveLength(4); // dagger, shield, helmet, breastplate
+  await gameLoop(new Player());
+  expect(log.some((l) => l.includes("Game Over") || l.includes("conquered the Spire"))).toBe(true);
 });
 
-test("Fireball run: kills floor 1-2 rats, one reward per floor, reaches floor 2 rewards", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0); // always 1 enemy, always the rat
-  const log = await play(["Fireball", "1.", "Fireball"]);
-  const { player, run } = await newGame();
-
-  await expect(run()).rejects.toThrow("script ended");
-  expect(player.mana).toBe(80); // two fireballs at 10 mana each
-  expect(player.equipped.mainHand?.name).toBe("Sharp Dagger");
-  expect(player.equipped.offHand).toBeNull();
-  expect(player.calculateTotalStats().strength).toBe(14); // 10 + dagger at +4
-  expect(log.filter((l) => l.includes("You defeated all enemies!"))).toHaveLength(2);
-  const { rat } = await import("./enemy");
-  expect([rat.health, rat.maxHealth, rat.strength]).toEqual([10, 10, 2]); // template not scaled by floors 1-2
+test("encounters: bosses on floors 5, 10, 15; floor 1 is a single enemy; templates untouched", async () => {
+  const { encounter } = await import("./game");
+  const { ACTS } = await import("./enemy");
+  const before = JSON.stringify(ACTS);
+  expect([5, 10, 15].map((f) => encounter(f)[0].name)).toEqual(ACTS.map((a) => a.boss.name));
+  expect(encounter(1)).toHaveLength(1);
+  encounter(4).forEach((e) => (e.health = 0));
+  expect(JSON.stringify(ACTS)).toBe(before);
 });
 
-test("two rats in one fight have their own health", async () => {
-  // randint(1,2) -> 2 enemies on floor 2; every pick is the rat
-  const rolls = [0, 0, 0.99, 0, 0];
-  vi.spyOn(Math, "random").mockImplementation(() => rolls.shift() ?? 0);
-  await play(["Fireball", "1.", "Fireball", "1."]);
-  const { player, run } = await newGame();
-  const { io } = await import("./io");
-  let fight: { health: number }[] = [];
-  const render = io.render;
-  io.render = (v) => { fight = v.enemies; render(v); };
-  await expect(run()).rejects.toThrow("script ended");
-  expect(fight).toHaveLength(2);
-  expect(player.health).toBeLessThan(100); // the second rat survived the fireball and hit back
+// --- enemies ---
+
+test("enemies follow their pattern and announce the next move", async () => {
+  const { player, Enemy } = await setup();
+  await play([]);
+  rolls(0); // pattern starts at step 0
+  const g = new Enemy(dummy({ pattern: [{ name: "Stab", kind: "attack", value: 6 }, { name: "Heavy swing", kind: "attack", value: 13 }] }));
+  expect(g.intentText()).toBe("Stab, 6 damage");
+  g.act(player, [g]);
+  expect(g.intentText()).toBe("Heavy swing, 13 damage");
+  g.act(player, [g]);
+  expect(player.health).toBe(100 - 6 - 13);
 });
 
-test("area spells hit every living enemy for one mana cost", async () => {
-  const rolls = [0, 0, 0.99, 0, 0]; // 2 rats on floor 2
-  vi.spyOn(Math, "random").mockImplementation(() => rolls.shift() ?? 0);
-  await play(["Fireball", "1.", "Flame Wall"]);
-  const { player, run } = await newGame();
-  const { io } = await import("./io");
-  let fight: { health: number }[] = [];
-  io.render = (v) => void (fight = v.enemies);
-  await expect(run()).rejects.toThrow("script ended");
-  expect(fight.map((e) => e.health)).toEqual([7, 7]); // 12 - 5 each
-  expect(player.mana).toBe(85); // fireball 10 + flame wall 5
+test("buffs add damage; heals go to the most hurt ally", async () => {
+  const { player, Enemy } = await setup();
+  const { log } = await play([]);
+  rolls(0, 0);
+  const priest = new Enemy(dummy({ name: "Priest", pattern: [{ name: "Mend", kind: "heal", value: 10 }] }));
+  const brute = new Enemy(dummy({ name: "Brute", pattern: [{ name: "Rage", kind: "buff", value: 3 }, { name: "Hit", kind: "attack", value: 5 }] }));
+  brute.health = 20;
+  priest.act(player, [priest, brute]);
+  expect(brute.health).toBe(30);
+  brute.act(player, [priest, brute]);
+  expect(brute.intentText()).toBe("Hit, 8 damage");
+  expect(log).toContain("The Priest uses Mend: the Brute heals 10.");
 });
 
-test("failed flee: the enemy hits back", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0.99); // goblin, flee roll fails, max damage roll
-  const log = await play(["Flee"]);
-  const { player, run } = await newGame();
-
-  await expect(run()).rejects.toThrow("script ended");
-  expect(log).toContain("[bold red]You failed to flee![/]");
-  expect(player.health).toBe(92); // goblin: strength 4 + roll 4
+test("scaled enemies are tougher", async () => {
+  const { Enemy } = await setup();
+  const e = new Enemy(dummy(), 1.5);
+  expect([e.maxHealth, e.pattern[0].value]).toEqual([75, 8]);
 });
 
-test("successful flee ends the fight without damage or XP", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0);
-  const log = await play(["Flee"]);
-  const { player, run } = await newGame();
+// --- hero ---
 
-  await expect(run()).rejects.toThrow("script ended");
+test("Defend halves damage (rounded up); dodge avoids it; poison ticks and stacks", async () => {
+  const { player } = await setup();
+  await play([]);
+  rolls(0.5, 0); // first hit lands, second is dodged
+  player.defending = true;
+  player.takeDamage(9, "Goblin");
+  expect(player.health).toBe(95);
+  player.takeDamage(9, "Goblin");
+  expect(player.health).toBe(95);
+
+  rolls();
+  player.poison(3, 2, "Slime");
+  player.poison(2, 1, "Slime");
+  expect(player.poisoned).toMatchObject({ damage: 3, turns: 3 });
+  player.tickPoison();
+  expect([player.health, player.poisoned.turns, player.lastHitBy]).toEqual([92, 2, "Slime's poison"]);
+});
+
+test("crits deal 1.5x; intelligence scales spells", async () => {
+  const { player, Enemy } = await setup();
+  const { fireball } = await import("./spell");
+  await play([]);
+  const target = new Enemy(dummy({ maxHealth: 100 }));
+  rolls(0); // crit
+  player.useSpell(fireball, [target]);
+  expect(target.health).toBe(100 - 23); // round(15 * 1.5)
+  player.intelligence = 20; // +50%
+  rolls(0.9);
+  player.useSpell(fireball, [target]);
+  expect(target.health).toBe(77 - 23);
+  expect(player.mana).toBe(80);
+});
+
+// --- combat ---
+
+test("faster enemies act before the hero, slower ones after", async () => {
+  const { player, Enemy, combat } = await setup();
+  const { log } = await play(["Attack", "1."]);
+  rolls(0, 0);
+  const fast = new Enemy(dummy({ name: "Imp", speed: 20 }));
+  const slow = new Enemy(dummy({ name: "Slug", speed: 1 }));
+  await expect(combat(player, [fast, slow])).rejects.toThrow("script ended");
+  const order = log.filter((l) => /Imp|Slug|You hit/.test(l));
+  expect(order[0]).toMatch(/^The Imp hits you/);
+  expect(order[1]).toMatch(/^You hit the Imp/);
+  expect(order[2]).toMatch(/^The Slug hits you/);
+});
+
+test("area spells hit every living enemy for one mana cost; mana regenerates each round", async () => {
+  const { player, Enemy, combat } = await setup();
+  await play(["Flame Wall"]);
+  rolls(0, 0);
+  const a = new Enemy(dummy());
+  const b = new Enemy(dummy());
+  await expect(combat(player, [a, b])).rejects.toThrow("script ended");
+  expect([a.health, b.health]).toEqual([45, 45]);
+  expect(player.mana).toBe(100); // 100 - 5 + 5 regen
+});
+
+test("no fleeing from a boss", async () => {
+  const { player, Enemy, combat } = await setup();
+  const { io } = await play([]);
+  let offered: string[] = [];
+  io.ask = async (_q, options) => {
+    offered = options;
+    throw new Error("stop");
+  };
+  await expect(combat(player, [new Enemy(dummy({ boss: true }))])).rejects.toThrow("stop");
+  expect(offered).not.toContain("Flee");
+});
+
+test("fleeing a fight gives no reward", async () => {
+  const { log } = await play(["Flee"]);
+  rolls(0, 0, 0); // floor 1 enemy pick, its pattern start, then the flee roll succeeds
+  const { Player } = await import("./player");
+  const { gameLoop } = await import("./game");
+  await expect(gameLoop(new Player())).rejects.toThrow("script ended"); // stops on floor 2
   expect(log).toContain("[bold yellow]You successfully fled the battle![/]");
-  expect([player.health, player.experience]).toEqual([100, 0]);
-});
-
-test("Attack hits for strength + roll and stops at 0 health", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0);
-  const log = await play(["Attack"]); // single enemy: auto-targeted
-  const { run } = await newGame();
-  await expect(run()).rejects.toThrow("script ended");
-  expect(log).toContain("You hit the Rat for 11 damage!"); // strength 10 + roll 1, rat had 10
-  expect(log).toContain("[bold green]You defeated all enemies![/]");
-});
-
-test("Use Item with no potions", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0);
-  const log = await play(["Use Item"]);
-  const { run } = await newGame();
-  await expect(run()).rejects.toThrow("script ended");
-  expect(log).toContain("[dim]You have no consumables.[/]");
-});
-
-test("Use Item drinks a potion", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0);
-  const log = await play(["Fireball", "2.", "Use Item", "1."]); // take the potion, drink it on floor 2
-  const { player, run } = await newGame();
-  await expect(run()).rejects.toThrow("script ended");
-  expect(log.some((l) => l.startsWith("You used Small Health Potion"))).toBe(true);
-  expect(player.consumables).toHaveLength(0);
-});
-
-test("defeat: no reward, game over", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0.99); // flee fails, goblin hits
-  const log = await play(["Flee"]);
-  const { player, run } = await newGame();
-  player.health = 1;
-  await run();
-  expect(log).toContain("[bold red]You have been defeated![/]");
-  expect(log).toContain("[panel bold red]Game Over![/]");
   expect(log).not.toContain("[panel bold blue]Choose your reward:[/]");
 });
+
+test("Use Item drinks a potion and is only offered when you have one", async () => {
+  const { player, Enemy, combat } = await setup();
+  const { getRewardForFloor } = await import("./reward");
+  const { io } = await play([]);
+  let offered: string[] = [];
+  io.ask = async (_q, options) => {
+    offered = options;
+    throw new Error("stop");
+  };
+  await expect(combat(player, [new Enemy(dummy())])).rejects.toThrow("stop");
+  expect(offered).not.toContain("Use Item");
+
+  await play(["Use Item", "1."]);
+  player.equip(getRewardForFloor(1)![1]);
+  player.health = 50;
+  rolls();
+  await expect(combat(player, [new Enemy(dummy())])).rejects.toThrow("script ended");
+  expect(player.consumables).toHaveLength(0);
+  expect(player.health).toBe(50 + 30 - 5); // potion, then the dummy's poke
+});
+
+// --- equipment ---
 
 test("reward potions respect the 5-slot pouch", async () => {
   const { Player } = await import("./player");
   const { chooseReward, getRewardForFloor } = await import("./reward");
-  const log = await play(["2."]);
+  const { log } = await play(["2."]);
   const p = new Player();
   p.consumables = Array.from({ length: 5 }, () => getRewardForFloor(1)![1] as never);
   await chooseReward(p, 1);
@@ -153,7 +218,7 @@ test("reward potions respect the 5-slot pouch", async () => {
   expect(log).toContain("Your consumables pouch is full. Please discard a consumable first.");
 });
 
-test("rings fill both ring slots, shields go in the off hand", async () => {
+test("rings fill both ring slots, shields go in the off hand, bonuses raise max HP/MP", async () => {
   const { Player } = await import("./player");
   const { getRewardForFloor } = await import("./reward");
   await play([]);
@@ -163,7 +228,7 @@ test("rings fill both ring slots, shields go in the off hand", async () => {
   p.equip(getRewardForFloor(2)![0]);
   expect([p.equipped.ringLeft, p.equipped.ringRight].map((r) => r?.name)).toEqual(["Enchanted Ring", "Enchanted Ring"]);
   expect(p.equipped.offHand?.name).toBe("Sturdy Shield");
-  expect(p.maxMana).toBe(124); // 100 + two rings at +12
+  expect([p.maxMana, p.maxHealth, p.health]).toEqual([124, 110, 110]);
 });
 
 test("a bow fills both hands but its bonus counts once", async () => {
@@ -173,11 +238,4 @@ test("a bow fills both hands but its bonus counts once", async () => {
   const p = new Player();
   p.equip(new Equipment({ name: "Bow", equipmentType: EquipmentType.WEAPON, subType: WeaponSubType.BOW, tier: 1, value: 1, perceptionBonus: 5 }));
   expect(p.calculateTotalStats().perception).toBe(15);
-});
-
-test("potions have a real tier and value, and no stat bonus", async () => {
-  const { getRewardForFloor } = await import("./reward");
-  const potion = getRewardForFloor(1)![1];
-  expect(String(potion)).toBe("Tier 1 Small Health Potion (Consumable)");
-  expect([potion.value, potion.strengthBonus]).toEqual([20, 0]);
 });

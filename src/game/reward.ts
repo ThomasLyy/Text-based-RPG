@@ -29,7 +29,7 @@ export function getRewardForFloor(floor: number): Equipment[] | undefined {
 
 export async function chooseReward(player: Player, floor: number) {
   const availableRewards = getRewardForFloor(floor);
-  if (!availableRewards) return io.print("There are no rewards available on this floor.");
+  if (!availableRewards) return; // shortcut: rewards only on floors 1-4 until step 2 adds random reward pools
 
   io.print("[panel bold blue]Choose your reward:[/]");
   const choice = await io.ask("Enter your choice", availableRewards.map((r, i) => `${i + 1}. ${r}`));

@@ -20,6 +20,9 @@ export class Player {
   mana = 100;
   maxMana = 100;
   xpToNextLevel = 100;
+  defending = false; // this round only
+  poisoned = { damage: 0, turns: 0, source: "" };
+  lastHitBy = "";
 
   equipped: Record<string, Equipment | null> = {
     mainHand: null, offHand: null, head: null, chest: null, waist: null,
@@ -60,10 +63,49 @@ export class Player {
     io.print(`You equipped ${item.name}.`);
   }
 
+  // Perception: crit chance. Speed: dodge chance. Intelligence: spell damage.
+  critChance() {
+    return Math.min(0.5, Math.max(0, 0.05 + 0.01 * (this.calculateTotalStats().perception - 10)));
+  }
+  dodgeChance() {
+    return Math.min(0.3, Math.max(0, 0.05 + 0.01 * (this.calculateTotalStats().speed - 10)));
+  }
+  spellPower() {
+    return Math.max(0.5, 1 + 0.05 * (this.calculateTotalStats().intelligence - 10));
+  }
+
+  private strike(target: Target, base: number, verb: string) {
+    const crit = Math.random() < this.critChance();
+    const damage = crit ? Math.round(base * 1.5) : base;
+    target.health = Math.max(0, target.health - damage);
+    io.print(`${crit ? "[bold yellow]Critical![/] " : ""}You ${verb} the ${target.name} for ${damage} damage!`);
+  }
+
   attack(enemy: Target) {
-    const damage = this.calculateTotalStats().strength + randint(1, 6);
-    enemy.health = Math.max(0, enemy.health - damage);
-    io.print(`You hit the ${enemy.name} for ${damage} damage!`);
+    this.strike(enemy, this.calculateTotalStats().strength + randint(1, 6), "hit");
+  }
+
+  takeDamage(amount: number, source: string) {
+    if (Math.random() < this.dodgeChance()) return io.print(`You dodge the ${source}'s attack!`);
+    const damage = this.defending ? Math.ceil(amount / 2) : amount;
+    this.health = Math.max(0, this.health - damage);
+    this.lastHitBy = source;
+    io.print(`The ${source} hits you for ${damage} damage${this.defending ? " (half blocked)" : ""}!`);
+  }
+
+  // Poison stacks its turns and keeps the stronger damage. Dodge avoids it; Defend does not.
+  poison(damage: number, turns: number, source: string) {
+    if (Math.random() < this.dodgeChance()) return io.print(`You dodge the ${source}'s attack!`);
+    this.poisoned = { damage: Math.max(damage, this.poisoned.damage), turns: this.poisoned.turns + turns, source };
+    io.print(`The ${source} poisons you: ${damage} damage per turn for ${turns} turns.`);
+  }
+
+  tickPoison() {
+    if (this.poisoned.turns <= 0) return;
+    this.health = Math.max(0, this.health - this.poisoned.damage);
+    this.poisoned.turns--;
+    this.lastHitBy = `${this.poisoned.source}'s poison`;
+    io.print(`[green]Poison[/] deals ${this.poisoned.damage} damage.`);
   }
 
   useSpell(spell: Spell, targets: Target[]) {
@@ -71,8 +113,7 @@ export class Player {
     this.mana -= spell.manaCost; // once per cast, however many targets
     for (const target of targets) {
       if (spell.damage > 0) {
-        target.health = Math.max(0, target.health - spell.damage);
-        io.print(`You cast ${spell.name} on the ${target.name} for ${spell.damage} damage!`);
+        this.strike(target, Math.round(spell.damage * this.spellPower()), `cast ${spell.name} on`);
       } else {
         const healing = -spell.damage;
         target.health = Math.min(target.health + healing, target.maxHealth);
