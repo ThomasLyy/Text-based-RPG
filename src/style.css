@@ -32,16 +32,18 @@ main {
 
 fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 0 0 8px; padding: 6px 10px; min-width: 0; }
 legend { padding: 0 4px; }
-.row { display: flex; gap: 8px; }
-.row > fieldset { flex: 1; }
 
-.bar { display: flex; align-items: center; gap: 8px; }
-.bar > span { width: 4ch; text-align: right; }
-.track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-.fill { height: 100%; }
+h1 { font-size: 1rem; margin: 0 0 8px; }
+.unit { margin: 4px 0 8px; }
+.line { display: flex; justify-content: space-between; gap: 8px; }
+.stats { justify-content: flex-start; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.intent { color: var(--yellow); margin-top: 2px; }
+.track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 2px; }
+.fill { height: 100%; transition: width 0.25s; }
 .fill.red { background: var(--red); }
 .fill.green { background: var(--green); }
 .fill.blue { background: var(--blue); }
+.fill.cyan { background: var(--cyan); }
 
 #log { flex: 1; white-space: pre-wrap; overflow-y: auto; max-height: 40vh; }
 

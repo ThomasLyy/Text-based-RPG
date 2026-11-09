@@ -51,7 +51,12 @@ export class Player {
     } else if (item.equipmentType === EquipmentType.CONSUMABLE) {
       if (this.consumables.length < 5) this.consumables.push(item as Consumable);
       else return io.print("Your consumables pouch is full. Please discard a consumable first.");
+      return io.print(`You put ${item.name} in your pouch.`);
     }
+    this.maxHealth += item.healthBonus;
+    this.health += item.healthBonus;
+    this.maxMana += item.manaBonus;
+    this.mana += item.manaBonus;
     io.print(`You equipped ${item.name}.`);
   }
 
@@ -80,8 +85,9 @@ export class Player {
     return Math.random() < 0.5;
   }
 
+  // Health and mana bonuses raise maxHealth/maxMana when equipped (see equip), so they are not here.
   calculateTotalStats() {
-    const t = { strength: this.strength, speed: this.speed, intelligence: this.intelligence, perception: this.perception, health: this.health, mana: this.mana };
+    const t = { strength: this.strength, speed: this.speed, intelligence: this.intelligence, perception: this.perception };
     // Set: a bow sits in both hand slots but counts once
     for (const e of new Set(Object.values(this.equipped))) {
       if (e === null) continue;
@@ -89,15 +95,7 @@ export class Player {
       t.speed += e.speedBonus;
       t.intelligence += e.intelligenceBonus;
       t.perception += e.perceptionBonus;
-      t.health += e.healthBonus;
-      t.mana += e.manaBonus;
     }
     return t;
-  }
-
-  getStat(statName: string): number {
-    const v = (this as unknown as Record<string, unknown>)[statName.toLowerCase()];
-    if (typeof v !== "number") throw new Error(`Invalid stat name: ${statName}`);
-    return v;
   }
 }

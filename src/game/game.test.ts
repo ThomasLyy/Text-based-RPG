@@ -107,7 +107,7 @@ test("successful flee ends the fight without damage or XP", async () => {
 
 test("Attack hits for strength + roll and stops at 0 health", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
-  const log = await play(["Attack", "1."]); // attack always asks for a target, even with one enemy left
+  const log = await play(["Attack"]); // single enemy: auto-targeted
   const { run } = await newGame();
   await expect(run()).rejects.toThrow("script ended");
   expect(log).toContain("You hit the Rat for 11 damage!"); // strength 10 + roll 1, rat had 10
@@ -163,7 +163,7 @@ test("rings fill both ring slots, shields go in the off hand", async () => {
   p.equip(getRewardForFloor(2)![0]);
   expect([p.equipped.ringLeft, p.equipped.ringRight].map((r) => r?.name)).toEqual(["Enchanted Ring", "Enchanted Ring"]);
   expect(p.equipped.offHand?.name).toBe("Sturdy Shield");
-  expect(p.calculateTotalStats().mana).toBe(124); // 100 + two rings at +12
+  expect(p.maxMana).toBe(124); // 100 + two rings at +12
 });
 
 test("a bow fills both hands but its bonus counts once", async () => {

@@ -19,7 +19,7 @@ export async function gameLoop(player: Player) {
       enemy.health = enemy.maxHealth;
     }
 
-    await combat(player, currentEnemies);
+    await combat(player, currentEnemies, `Floor ${floor} / 5`);
 
     if (player.health <= 0) {
       io.print("[panel bold red]Game Over![/]");

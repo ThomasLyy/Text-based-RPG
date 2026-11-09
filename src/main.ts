@@ -10,10 +10,8 @@ const markup = (s: string) =>
     .replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!)
     .replace(/\[(\/?)([\w ]*)\]/g, (_, close, cls) => (close ? "</span>" : `<span class="${cls}">`));
 
-const bar = (label: string, value: number, max: number, color: string) => {
-  const pct = Math.round(Math.min(100, Math.max(0, (value / max) * 100)));
-  return `<div class="bar"><span>${pct}%</span><div class="track"><div class="fill ${color}" style="width:${pct}%"></div></div><b>${markup(label)}</b></div>`;
-};
+const bar = (value: number, max: number, color: string) =>
+  `<div class="track"><div class="fill ${color}" style="width:${Math.min(100, Math.max(0, (value / max) * 100))}%"></div></div>`;
 
 io.print = (msg) => {
   const line = document.createElement("div");
@@ -41,22 +39,28 @@ io.ask = (question, options) =>
   });
 
 io.render = (v: CombatView) => {
+  const p = v.player;
   $("board").innerHTML = `
+    <h1>${markup(v.title)}</h1>
     <fieldset><legend>Enemies</legend>
-      ${v.enemies.map((e) => `<fieldset><legend>${markup(e.title)}</legend>${bar(`[bold]${e.name}[/]`, e.health, e.maxHealth, "red")}</fieldset>`).join("")}
+      ${v.enemies
+        .map((e) =>
+          e.health > 0
+            ? `<div class="unit"><div class="line"><b>${e.name}</b><span>${e.health} / ${e.maxHealth}</span></div>${bar(e.health, e.maxHealth, "red")}${e.intent ? `<div class="intent">Next: ${markup(e.intent)}</div>` : ""}</div>`
+            : `<div class="unit dim">${e.name} — defeated</div>`,
+        )
+        .join("")}
     </fieldset>
-    <fieldset><legend>Player</legend>
-      <fieldset><legend>Stats</legend>${v.stats.map(([n, val]) => `<div>${n}: ${val}</div>`).join("")}</fieldset>
-      <fieldset><legend>Actions</legend>${v.actions.map((a) => `<div class="bold blue">${a}</div>`).join("")}</fieldset>
-      <div class="row">
-        <fieldset><legend>Health</legend>${bar("[bold]Health[/]", v.health, v.maxHealth, "green")}</fieldset>
-        <fieldset><legend>Mana</legend>${bar("[bold]Mana[/]", v.mana, v.maxMana, "blue")}</fieldset>
-      </div>
+    <fieldset><legend>Hero · Level ${p.level}</legend>
+      <div class="unit"><div class="line"><span>Health</span><span>${p.health} / ${p.maxHealth}</span></div>${bar(p.health, p.maxHealth, "green")}</div>
+      <div class="unit"><div class="line"><span>Mana</span><span>${p.mana} / ${p.maxMana}</span></div>${bar(p.mana, p.maxMana, "blue")}</div>
+      <div class="unit"><div class="line dim"><span>XP</span><span>${p.xp} / ${p.xpNext}</span></div>${bar(p.xp, p.xpNext, "cyan")}</div>
+      <div class="line stats">${v.stats.map(([n, val]) => `<span><span class="dim">${n}</span> ${val}</span>`).join("")}</div>
+      ${p.status.length ? `<div class="yellow">${p.status.map(markup).join(" · ")}</div>` : ""}
     </fieldset>`;
 };
 
-gameLoop(new Player({ name: "Heracles" })).catch((e: unknown) => {
-  // Python printed a traceback and exited; show the error and offer a fresh run.
+gameLoop(new Player({ name: "Hero" })).catch((e: unknown) => {
   io.print(`[bold red]Crash: ${e instanceof Error ? e.message : String(e)}[/]`);
   console.error(e);
   io.ask("The game crashed.", ["Restart"]).then(() => location.reload());
