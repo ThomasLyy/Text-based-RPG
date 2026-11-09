@@ -1,6 +1,6 @@
 # Roguelike Textuel en Python avec Rich
 
-Ce projet est un roguelike textuel développé en Python, utilisant la bibliothèque Rich pour créer une interface utilisateur attrayante dans le terminal.
+Ce projet est un roguelike textuel en TypeScript. Il tourne dans le navigateur (Vite) et sur Android (Capacitor), avec le même code. Il a été porté depuis la version Python/Rich (voir l'historique git avant la branche `rework`).
 
 ## Fonctionnalités actuelles
 
@@ -24,9 +24,10 @@ Ce projet est un roguelike textuel développé en Python, utilisant la biblioth�
 
 ## Technologies utilisées
 
-* **Python :** Langage de programmation principal.
-* **Rich :** Bibliothèque pour créer des interfaces utilisateur textuelles riches en fonctionnalités dans le terminal.
-* **dataclasses :** Module Python pour faciliter la création de classes avec des attributs typés.
+* **TypeScript :** logique du jeu dans `src/game/` (sans interface, testable).
+* **Vite :** serveur de dev et build web (`src/main.ts` = interface HTML).
+* **Capacitor :** emballe le build web en application Android (`android/`).
+* **Vitest :** tests (`src/game/game.test.ts`).
 
 ## Améliorations futures
 
@@ -57,9 +58,10 @@ Ce projet est un roguelike textuel développé en Python, utilisant la biblioth�
 
 ## Comment exécuter le jeu
 
-1. Assurez-vous d'avoir Python installé sur votre système.
-2. Installez la bibliothèque Rich : `pip install rich`
-3. Exécutez le script Python : `python -m main`
+1. Installez Node.js (20+), puis `npm install`.
+2. Web : `npm run dev`, puis ouvrez l'URL affichée. Build : `npm run build` (sortie dans `dist/`).
+3. Tests : `npm test`.
+4. Android : installez Android Studio (avec JDK 21), puis `npm run android` (build + `cap sync` + ouvre Android Studio).
 
 ## Contribution
 

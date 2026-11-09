@@ -1,0 +1,28 @@
+{
+  "name": "text-based-rpg",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Roguelike textuel : web (Vite + TypeScript) et Android (Capacitor).",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThomasLyy/Text-based-RPG.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "android": "npm run build && cap sync android && cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0"
+  }
+}
