@@ -1,12 +1,7 @@
-import { ArmorSubType, Equipment, EquipmentType, WeaponSubType } from "./equipment";
+﻿import { ArmorSubType, Equipment, EquipmentType, WeaponSubType } from "./equipment";
 import { Consumable } from "./consumable";
 import { io } from "./io";
 import type { Player } from "./player";
-
-// audit #5: Python used ArmorSubType.OFF_HAND, which does not exist -> AttributeError on floor 2.
-const missingOffHand = (): never => {
-  throw new Error("AttributeError: OFF_HAND");
-};
 
 export function getRewardForFloor(floor: number): Equipment[] | undefined {
   if (floor === 1) {
@@ -17,7 +12,7 @@ export function getRewardForFloor(floor: number): Equipment[] | undefined {
     ];
   } else if (floor === 2) {
     return [
-      new Equipment({ name: "Sturdy Shield", equipmentType: EquipmentType.ARMOR, subType: missingOffHand(), tier: 1, value: 20, healthBonus: 10 }),
+      new Equipment({ name: "Sturdy Shield", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.SHIELD, tier: 1, value: 20, healthBonus: 10 }),
       new Consumable({ name: "Small Mana Potion", equipmentType: EquipmentType.CONSUMABLE, tier: null, value: 1, strengthBonus: 25, manaRecovery: 20 }),
     ];
   } else if (floor === 3) {

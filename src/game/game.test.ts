@@ -31,12 +31,12 @@ async function newGame() {
   return { player, run: () => gameLoop(player) };
 }
 
-test("Fireball run: kills floor 1-2 rats, double rewards, double mana, then floor 2 reward crash", async () => {
+test("Fireball run: kills floor 1-2 rats, double rewards, reaches floor 2 rewards", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0); // always 1 enemy, always the rat
   const log = await play(["Fireball", "1.", "1.", "Fireball"]);
   const { player, run } = await newGame();
 
-  await expect(run()).rejects.toThrow("AttributeError: OFF_HAND"); // audit #5
+  await expect(run()).rejects.toThrow("script ended");
   expect(player.mana).toBe(80); // two fireballs at 10 mana each
   expect(player.equipped.mainHand?.name).toBe("Sharp Dagger"); // audit #9: reward given twice
   expect(player.equipped.offHand?.name).toBe("Sharp Dagger");
