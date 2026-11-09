@@ -2,28 +2,41 @@
 import { ACTS, Enemy, FLOORS, FLOORS_PER_ACT } from "./enemy";
 import { combat } from "./combat";
 import { chooseReward } from "./reward";
+import { FAMILIES, describe, makeWeapon } from "./items";
 import type { Player } from "./player";
 
 const actOf = (floor: number) => ACTS[Math.floor((floor - 1) / FLOORS_PER_ACT)];
 const floorInAct = (floor: number) => ((floor - 1) % FLOORS_PER_ACT) + 1;
 
+// Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
+export const DIFFICULTY = [1.15, 1.45, 1.55];
+
 // Floor 1 of an act: 1 enemy, floor 2: 1-2, floor 3: 2, floor 4: 2-3, each floor 5% tougher. Last floor: the boss.
 export function encounter(floor: number): Enemy[] {
   const act = actOf(floor);
   const f = floorInAct(floor);
-  if (f === FLOORS_PER_ACT) return [new Enemy(act.boss)];
+  const d = DIFFICULTY[ACTS.indexOf(act)];
+  if (f === FLOORS_PER_ACT) return [new Enemy(act.boss, d)];
   const count = f === 1 ? 1 : f === 2 ? randint(1, 2) : f === 3 ? 2 : randint(2, 3);
-  return choices(act.enemies, count).map((t) => new Enemy(t, 1 + 0.05 * (f - 1)));
+  return choices(act.enemies, count).map((t) => new Enemy(t, d * (1 + 0.05 * (f - 1))));
 }
 
 const BOOSTS: { label: string; apply: (p: Player) => void }[] = [
-  { label: "+4 Strength", apply: (p) => void (p.strength += 4) },
-  { label: "+4 Intelligence", apply: (p) => void (p.intelligence += 4) },
-  { label: "+3 Speed", apply: (p) => void (p.speed += 3) },
-  { label: "+5 Perception", apply: (p) => void (p.perception += 5) },
-  { label: "+20 Max Health", apply: (p) => void ((p.maxHealth += 20), (p.health += 20)) },
-  { label: "+20 Max Mana", apply: (p) => void ((p.maxMana += 20), (p.mana += 20)) },
+  { label: "+4 Strength", apply: (p) => void (p.base.strength += 4) },
+  { label: "+4 Agility", apply: (p) => void (p.base.agility += 4) },
+  { label: "+4 Intelligence", apply: (p) => void (p.base.intelligence += 4) },
+  { label: "+5 Perception", apply: (p) => void (p.base.perception += 5) },
+  { label: "+20 Max Health", apply: (p) => void ((p.baseMaxHealth += 20), (p.health += 20)) },
+  { label: "+20 Max Mana", apply: (p) => void ((p.baseMaxMana += 20), (p.mana += 20)) },
 ];
+
+// Start of run: pick one of 3 random Common weapons from different families, so each run starts differently.
+export async function chooseStarter(player: Player) {
+  const pool = [...FAMILIES];
+  const offer = [0, 1, 2].map(() => makeWeapon(pool.splice(randint(0, pool.length - 1), 1)[0], 0, "Common"));
+  io.print("[panel bold]Choose your weapon[/]");
+  player.equipWeapon(offer[await io.ask("Choose your starting weapon", offer.map(describe))]);
+}
 
 // Each level: +10 health and a choice of 3 different boosts out of 6. Each level needs 5 more XP.
 export async function levelUps(player: Player) {
@@ -48,6 +61,7 @@ export interface RunSummary {
 }
 
 export async function gameLoop(player: Player): Promise<RunSummary> {
+  await chooseStarter(player);
   let kills = 0;
   let floor = 1;
   for (; floor <= FLOORS; floor++) {
@@ -63,14 +77,14 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     if (outcome === "dead") break;
 
     await levelUps(player);
+    const boss = enemies[0].boss;
+    if (outcome === "won") await chooseReward(player, ACTS.indexOf(act), boss); // no reward for running away
 
     // Rest: 20% health and 30 mana after each floor; a campfire (full heal) before each boss and after it.
-    const campfire = enemies[0].boss || floorInAct(floor + 1) === FLOORS_PER_ACT;
+    const campfire = boss || floorInAct(floor + 1) === FLOORS_PER_ACT;
     player.health = campfire ? player.maxHealth : Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * 0.2));
     player.mana = campfire ? player.maxMana : Math.min(player.maxMana, player.mana + 30);
     io.print(`${campfire ? "You rest at a campfire." : "You catch your breath."} Health ${player.health}/${player.maxHealth}, mana ${player.mana}/${player.maxMana}.`);
-
-    if (outcome === "won") await chooseReward(player, floor); // no reward for running away
   }
 
   const won = player.health > 0;

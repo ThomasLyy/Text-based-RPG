@@ -59,8 +59,8 @@ test("smoke: a seeded run plays to the end (win or game over) without crashing",
 });
 
 test("death screen names the floor and the killer (here: poison)", async () => {
-  await play(["Defend"]);
-  rolls(); // floor 1: Slime, starting on its Acid move
+  await play(["[white]", "Defend"]); // starter weapon, then defend
+  rolls(); // starter picks, then floor 1: Slime, starting on its Acid move
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
   const p = new Player();
@@ -80,7 +80,7 @@ test("level-up: 3 different boosts offered, XP carries over, each level needs 5 
   const p = new Player();
   p.experience = 25;
   await levelUps(p);
-  expect(offered).toEqual(["+5 Perception", "+3 Speed", "+20 Max Health"]);
+  expect(offered).toEqual(["+5 Perception", "+4 Intelligence", "+20 Max Health"]);
   expect([p.level, p.experience, p.xpToNextLevel, p.maxHealth, p.health]).toEqual([2, 5, 25, 120, 120]);
 });
 
@@ -155,11 +155,11 @@ test("crits deal 1.5x; intelligence scales spells", async () => {
   const target = new Enemy(dummy({ maxHealth: 100 }));
   rolls(0); // crit
   player.useSpell(fireball, [target]);
-  expect(target.health).toBe(100 - 33); // 22 * 1.5
-  player.intelligence = 20; // +50%
+  expect(target.health).toBe(100 - 30); // 20 * 1.5
+  player.base.intelligence = 20; // +30%
   rolls(0.9);
   player.useSpell(fireball, [target]);
-  expect(target.health).toBe(67 - 33); // 22 * 1.5 from INT
+  expect(target.health).toBe(70 - 26); // 20 * 1.3 from INT
   expect(player.mana).toBe(80);
 });
 
@@ -202,18 +202,18 @@ test("no fleeing from a boss", async () => {
 });
 
 test("fleeing a fight gives no reward", async () => {
-  const { log } = await play(["Flee"]);
-  rolls(0, 0, 0); // floor 1 enemy pick, its pattern start, then the flee roll succeeds
+  const { log } = await play(["[white]", "Flee"]);
+  rolls(0, 0, 0, 0, 0, 0); // 3 starter picks, floor 1 enemy, its pattern start, then the flee roll succeeds
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
   await expect(gameLoop(new Player())).rejects.toThrow("script ended"); // stops on floor 2
   expect(log).toContain("[bold yellow]You successfully fled the battle![/]");
-  expect(log).not.toContain("[panel bold blue]Choose your reward:[/]");
+  expect(log.some((l) => l.includes("Choose your reward"))).toBe(false);
 });
 
-test("Use Item drinks a potion and is only offered when you have one", async () => {
+test("Use Potion drinks a potion and is only offered when you have one", async () => {
   const { player, Enemy, combat } = await setup();
-  const { getRewardForFloor } = await import("./reward");
+  const { makePotion } = await import("./items");
   const { io } = await play([]);
   let offered: string[] = [];
   io.ask = async (_q, options) => {
@@ -221,48 +221,171 @@ test("Use Item drinks a potion and is only offered when you have one", async () 
     throw new Error("stop");
   };
   await expect(combat(player, [new Enemy(dummy())])).rejects.toThrow("stop");
-  expect(offered).not.toContain("Use Item");
+  expect(offered).not.toContain("Use Potion");
 
-  await play(["Use Item", "1."]);
-  player.equip(getRewardForFloor(1)![1]);
+  await play(["Use Potion", "1."]);
+  player.addPotion(makePotion(0));
   player.health = 50;
   rolls();
   await expect(combat(player, [new Enemy(dummy())])).rejects.toThrow("script ended");
-  expect(player.consumables).toHaveLength(0);
-  expect(player.health).toBe(50 + 30 - 5); // potion, then the dummy's poke
+  expect(player.potions).toHaveLength(0);
+  expect(player.health).toBe(50 + 40 - 5); // potion, then the dummy's poke
 });
 
-// --- equipment ---
+// --- weapons ---
 
-test("reward potions respect the 5-slot pouch", async () => {
-  const { Player } = await import("./player");
-  const { chooseReward, getRewardForFloor } = await import("./reward");
-  const { log } = await play(["2."]);
-  const p = new Player();
-  p.consumables = Array.from({ length: 5 }, () => getRewardForFloor(1)![1] as never);
-  await chooseReward(p, 1);
-  expect(p.consumables).toHaveLength(5);
-  expect(log).toContain("Your consumables pouch is full. Please discard a consumable first.");
-});
+const family = async (name: string) => (await import("./items")).FAMILIES.find((f) => f.name === name)!;
 
-test("rings fill both ring slots, shields go in the off hand, bonuses raise max HP/MP", async () => {
-  const { Player } = await import("./player");
-  const { getRewardForFloor } = await import("./reward");
+test("weapon damage = roll × (1 + grade × (stat − 10)); quality and act scale the roll", async () => {
+  const { player, Enemy } = await setup();
+  const { makeWeapon } = await import("./items");
   await play([]);
-  const p = new Player();
-  p.equip(getRewardForFloor(3)![1]);
-  p.equip(getRewardForFloor(3)![1]);
-  p.equip(getRewardForFloor(2)![0]);
-  expect([p.equipped.ringLeft, p.equipped.ringRight].map((r) => r?.name)).toEqual(["Enchanted Ring", "Enchanted Ring"]);
-  expect(p.equipped.offHand?.name).toBe("Sturdy Shield");
-  expect([p.maxMana, p.maxHealth, p.health]).toEqual([124, 110, 110]);
+  const hammer = makeWeapon(await family("Hammer"), 0, "Common");
+  expect([hammer.min, hammer.max]).toEqual([14, 20]);
+  expect(makeWeapon(await family("Hammer"), 2, "Epic")).toMatchObject({ name: "Mithril Hammer", min: 34, max: 48 }); // ×1.6 ×1.5
+  player.equipWeapon(hammer);
+  player.base.strength = 20; // grade S: ×2.0
+  const target = new Enemy(dummy({ maxHealth: 100 }));
+  rolls(0.5, 0.5, 0.5); // roll 17, no crit, no stagger
+  player.attack(target, [target]);
+  expect(target.health).toBe(100 - 34);
 });
 
-test("a bow fills both hands but its bonus counts once", async () => {
-  const { Player } = await import("./player");
-  const { Equipment, EquipmentType, WeaponSubType } = await import("./equipment");
-  await play([]);
-  const p = new Player();
-  p.equip(new Equipment({ name: "Bow", equipmentType: EquipmentType.WEAPON, subType: WeaponSubType.BOW, tier: 1, value: 1, perceptionBonus: 5 }));
-  expect(p.calculateTotalStats().perception).toBe(15);
+test("dual-wielding swings both weapons, the off hand at 60%; daggers strike twice", async () => {
+  const { player, Enemy } = await setup();
+  const { makeWeapon } = await import("./items");
+  const { log } = await play([]);
+  player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common"));
+  player.equipWeapon(makeWeapon(await family("Dagger"), 0, "Common"), "off");
+  const target = new Enemy(dummy({ maxHealth: 100 }));
+  rolls();
+  player.attack(target, [target]);
+  // sword 9–13 rolls 11; dagger 5–8 rolls 7, ×0.6 off hand ×0.6 twin = 2.52 -> 3, twice
+  expect(log.filter((l) => l.startsWith("You hit"))).toEqual(["You hit the Dummy for 11 damage!", "You hit the Dummy for 3 damage!", "You hit the Dummy for 3 damage!"]);
 });
+
+test("hands: 2H clears the off hand; shields need a STR one-hander; a focus needs a wand", async () => {
+  const { player } = await setup();
+  const { makeWeapon, makeArmor } = await import("./items");
+  await play([]);
+  player.equipWeapon(makeWeapon(await family("Axe"), 0, "Common"));
+  expect(player.canHoldShield()).toBe(true);
+  player.equipArmor(makeArmor("shield", 0, "Common"));
+  expect(player.maxHealth).toBe(120);
+  const removed = player.equipWeapon(makeWeapon(await family("Dagger"), 0, "Common")); // daggers don't take shields
+  expect(removed.map((r) => r.name)).toEqual(["Iron Axe", "Wooden Shield"]);
+  expect([player.offHand, player.maxHealth]).toEqual([null, 100]);
+  player.equipWeapon(makeWeapon(await family("Dagger"), 0, "Common"), "off");
+  expect(player.equipWeapon(makeWeapon(await family("Bow"), 0, "Common")).map((r) => r.name)).toEqual(["Iron Dagger", "Iron Dagger"]);
+  expect(player.offHand).toBeNull();
+  expect(player.canHoldFocus()).toBe(false);
+  player.equipWeapon(makeWeapon(await family("Wand"), 0, "Common"));
+  expect(player.canHoldFocus()).toBe(true);
+});
+
+test("traits: cleave splashes, crush hits bosses harder, stagger cancels the next move", async () => {
+  const { player, Enemy } = await setup();
+  const { makeWeapon } = await import("./items");
+  const { log } = await play([]);
+  const a = new Enemy(dummy({ maxHealth: 100 }));
+  const b = new Enemy(dummy({ maxHealth: 100 }));
+  player.equipWeapon(makeWeapon(await family("Axe"), 0, "Common"));
+  rolls();
+  player.attack(a, [a, b]); // 8–14 rolls 11, splash 30% = 3
+  expect([a.health, b.health]).toEqual([89, 97]);
+
+  const boss = new Enemy(dummy({ maxHealth: 100, boss: true }));
+  player.equipWeapon(makeWeapon(await family("Mace"), 0, "Common"));
+  rolls();
+  player.attack(boss, [boss]); // 9–12 rolls 11 ×1.3 = 14
+  expect(boss.health).toBe(86);
+
+  player.equipWeapon(makeWeapon(await family("Hammer"), 0, "Common"));
+  rolls(0.5, 0.5, 0); // roll, no crit, stagger
+  player.attack(a, [a]);
+  expect(a.intentText()).toBe("Stunned, loses its move");
+  a.act(player, [a]);
+  expect(player.health).toBe(100);
+  expect(log).toContain("The Dummy is stunned and loses its Poke.");
+});
+
+test("traits: quick acts before faster enemies; keen adds crit; wand cuts spell cost; staff boosts spells; sword parries", async () => {
+  const { player, Enemy, combat } = await setup();
+  const { makeWeapon } = await import("./items");
+  const { fireball } = await import("./spell");
+  const { log } = await play(["Attack"]);
+  player.equipWeapon(makeWeapon(await family("Throwing Knives"), 0, "Common"));
+  rolls(0);
+  const imp = new Enemy(dummy({ name: "Imp", speed: 20 }));
+  await expect(combat(player, [imp])).rejects.toThrow("script ended");
+  expect(log.find((l) => /Imp|You hit/.test(l))).toMatch(/^(Critical! )?You hit/);
+
+  player.equipWeapon(makeWeapon(await family("Bow"), 0, "Common"));
+  expect(player.critChance()).toBeCloseTo(0.15);
+  player.equipWeapon(makeWeapon(await family("Wand"), 0, "Common"));
+  expect(player.spellCost(fireball)).toBe(8);
+  player.equipWeapon(makeWeapon(await family("Staff"), 0, "Common"));
+  expect(player.spellPower()).toBeCloseTo(1.2);
+
+  player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common"));
+  player.defending = true;
+  player.health = 100;
+  rolls();
+  player.takeDamage(20, "Ogre");
+  expect(player.health).toBe(98); // 90% blocked
+});
+
+// --- gear and rewards ---
+
+test("armor: rings fill two slots, bonuses add to stats and max HP/MP", async () => {
+  const { player } = await setup();
+  const { makeArmor } = await import("./items");
+  await play([]);
+  player.equipArmor(makeArmor("ring", 0, "Common", "intelligence"));
+  player.equipArmor(makeArmor("ring", 0, "Rare", "intelligence")); // 3 × 1.3 = 4
+  player.equipArmor(makeArmor("amulet", 0, "Common", "agility"));
+  expect([player.stat("intelligence"), player.stat("agility"), player.maxMana]).toEqual([17, 13, 110]);
+  expect(player.armorIn("ring")?.name).toBe("Copper Ring"); // the next ring would replace this one
+});
+
+test("starter: 3 Common weapons from different families", async () => {
+  const { io } = await play([]);
+  let offered: string[] = [];
+  io.ask = async (_q, o) => ((offered = o), 0);
+  const { Player } = await import("./player");
+  const { chooseStarter } = await import("./game");
+  const p = new Player();
+  await chooseStarter(p);
+  expect(offered).toHaveLength(3);
+  expect(new Set(offered.map((o) => o.split(" · ")[0])).size).toBe(3);
+  expect(offered.every((o) => o.includes("Common"))).toBe(true);
+  expect(p.mainHand).not.toBeNull();
+});
+
+test("rewards: 3 different offers plus Skip; boss rewards are Rare+ gear; a full pouch leaves the potion", async () => {
+  const { player } = await setup();
+  const { rewardOffers, take } = await import("./reward");
+  const { makePotion } = await import("./items");
+  const { log } = await play([]);
+  for (let i = 0; i < 20; i++) {
+    const offers = rewardOffers(player, 1);
+    expect(new Set(offers.map((o) => o.kind + o.name)).size).toBe(3);
+    const boss = rewardOffers(player, 1, true);
+    expect(boss.every((o) => o.kind !== "potion" && (o.quality === "Rare" || o.quality === "Epic"))).toBe(true);
+  }
+  for (let i = 0; i < 5; i++) player.addPotion(makePotion(0));
+  await take(player, makePotion(0, true));
+  expect(player.potions).toHaveLength(5);
+  expect(log).toContain("Your pouch is full. You leave the potion behind.");
+});
+
+test("rewards: a one-hander asks which hand when you already hold one", async () => {
+  const { player } = await setup();
+  const { makeWeapon } = await import("./items");
+  const { take } = await import("./reward");
+  await play(["Off hand"]);
+  player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common"));
+  await take(player, makeWeapon(await family("Axe"), 0, "Common"));
+  expect([player.mainHand?.name, player.offHand?.name]).toEqual(["Iron Sword", "Iron Axe"]);
+});
+

@@ -1,5 +1,5 @@
 ﻿import { io, type CombatView } from "./io";
-import { smallSpell, type Spell } from "./spell";
+import type { Spell } from "./spell";
 import type { Enemy } from "./enemy";
 import { DEFEND_MANA, type Player } from "./player";
 
@@ -16,7 +16,7 @@ export async function handleTargeting(spell: Spell | null, enemies: Enemy[]): Pr
 
 // Built from live state on every render, so the screen never lags behind the game.
 export function combatView(player: Player, enemies: Enemy[], title: string): CombatView {
-  const t = player.calculateTotalStats();
+  const t = player.stats();
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   return {
     title,
@@ -25,42 +25,45 @@ export function combatView(player: Player, enemies: Enemy[], title: string): Com
       health: player.health, maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
       level: player.level, xp: player.experience, xpNext: player.xpToNextLevel,
       status: [...(player.defending ? ["Defending"] : []), ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turn${player.poisoned.turns === 1 ? "" : "s"}`] : [])],
+      weapons: player.weapons().map(([w]) => `${w.name} ${w.min}–${w.max}`).join(" + "),
     },
-    stats: [["STR", t.strength], ["INT", t.intelligence], ["SPD", t.speed], ["PER", t.perception], ["Crit", pct(player.critChance())], ["Dodge", pct(player.dodgeChance())]],
+    stats: [["STR", t.strength], ["AGI", t.agility], ["INT", t.intelligence], ["PER", t.perception], ["Crit", pct(player.critChance())], ["Dodge", pct(player.dodgeChance())]],
   };
 }
 
-// Choices (target, item) are made now; the returned function runs on the player's turn in speed order.
-async function chooseAction(player: Player, enemies: Enemy[]): Promise<(() => void) | "fled"> {
-  const spells = smallSpell.filter((s) => s.manaCost <= player.mana);
-  const actions = ["Attack", "Defend", ...spells.map((s) => `${s.name} (${s.manaCost} MP)`), ...(player.consumables.length ? ["Use Item"] : []), ...(enemies.some((e) => e.boss) ? [] : ["Flee"])];
+interface Turn { run: () => void; first?: boolean }
+
+// Choices (target, potion) are made now; run() happens on the hero's turn in agility order.
+async function chooseAction(player: Player, enemies: Enemy[]): Promise<Turn | "fled"> {
+  const spells = player.spells.filter((s) => player.spellCost(s) <= player.mana);
+  const actions = ["Attack", "Defend", ...spells.map((s) => `${s.name} (${player.spellCost(s)} MP)`), ...(player.potions.length ? ["Use Potion"] : []), ...(enemies.some((e) => e.boss) ? [] : ["Flee"])];
   const action = actions[await io.ask("Your turn", actions)];
 
   const spell = spells.find((s) => action.startsWith(s.name));
   if (spell) {
     const targets = spell.targetType === "multiple" ? enemies.filter((e) => e.health > 0) : [await handleTargeting(spell, enemies)];
-    return () => player.useSpell(spell, targets);
+    return { run: () => player.useSpell(spell, targets) };
   }
   if (action === "Attack") {
     const target = await handleTargeting(null, enemies);
-    return () => player.attack(target);
+    return { run: () => player.attack(target, enemies), first: player.weapons().some(([w]) => w.family.trait === "quick") };
   }
   if (action === "Defend") {
     player.defending = true; // set now so it also covers faster enemies
     io.print("You raise your guard and focus.");
-    return () => void (player.mana = Math.min(player.maxMana, player.mana + DEFEND_MANA));
+    return { run: () => void (player.mana = Math.min(player.maxMana, player.mana + DEFEND_MANA)) };
   }
-  if (action === "Use Item") {
-    const i = await io.ask("Choose a consumable", player.consumables.map((c, n) => `${n + 1}. ${c.name} - Health: ${c.healthRecovery}, Mana: ${c.manaRecovery}`));
-    const item = player.consumables.splice(i, 1)[0];
-    return () => item.use(player);
+  if (action === "Use Potion") {
+    const i = await io.ask("Choose a potion", player.potions.map((p, n) => `${n + 1}. ${p.name}`));
+    const potion = player.potions.splice(i, 1)[0];
+    return { run: () => player.drink(potion) };
   }
-  if (player.flee()) {
+  if (Math.random() < 0.5) {
     io.print("[bold yellow]You successfully fled the battle![/]");
     return "fled";
   }
   io.print("[bold red]You failed to flee![/]");
-  return () => {};
+  return { run: () => {} };
 }
 
 export async function combat(player: Player, enemies: Enemy[], title = ""): Promise<"won" | "fled" | "dead"> {
@@ -69,15 +72,16 @@ export async function combat(player: Player, enemies: Enemy[], title = ""): Prom
 
   while (!over()) {
     render();
-    const playerTurn = await chooseAction(player, enemies);
-    if (playerTurn === "fled") return "fled";
+    const turn = await chooseAction(player, enemies);
+    if (turn === "fled") return "fled";
 
-    // Enemies faster than the hero act before him, the rest after.
-    const speed = player.calculateTotalStats().speed;
-    const order = [...enemies.filter((e) => e.speed > speed), "hero" as const, ...enemies.filter((e) => e.speed <= speed)];
+    // Enemies faster than the hero's agility act before him, the rest after. Quick weapons always go first.
+    const agility = player.stat("agility");
+    const faster = turn.first ? [] : enemies.filter((e) => e.speed > agility);
+    const order = [...faster, "hero" as const, ...enemies.filter((e) => !faster.includes(e))];
     for (const who of order) {
       if (over()) break;
-      if (who === "hero") playerTurn();
+      if (who === "hero") turn.run();
       else if (who.health > 0) {
         await io.sleep(400);
         who.act(player, enemies);

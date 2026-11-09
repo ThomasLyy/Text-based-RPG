@@ -8,6 +8,7 @@
   --blue: #61afef;
   --yellow: #e5c07b;
   --cyan: #56b6c2;
+  --purple: #c678dd;
   color-scheme: dark;
 }
 
@@ -71,3 +72,5 @@ button:hover, button:focus-visible { border-color: var(--blue); }
 .blue { color: var(--blue); }
 .yellow { color: var(--yellow); }
 .cyan { color: var(--cyan); }
+.white { color: var(--fg); }
+.purple { color: var(--purple); }

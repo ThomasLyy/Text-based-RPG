@@ -59,6 +59,7 @@ io.render = (v: CombatView) => {
       <div class="unit"><div class="line"><span>Health</span><span>${p.health} / ${p.maxHealth}</span></div>${bar(p.health, p.maxHealth, "green")}</div>
       <div class="unit"><div class="line"><span>Mana</span><span>${p.mana} / ${p.maxMana}</span></div>${bar(p.mana, p.maxMana, "blue")}</div>
       <div class="unit"><div class="line dim"><span>XP</span><span>${p.xp} / ${p.xpNext}</span></div>${bar(p.xp, p.xpNext, "cyan")}</div>
+      <div class="dim">${markup(p.weapons)}</div>
       <div class="line stats">${v.stats.map(([n, val]) => `<span><span class="dim">${n}</span> ${val}</span>`).join("")}</div>
       ${p.status.length ? `<div class="yellow">${p.status.map(markup).join(" · ")}</div>` : ""}
     </fieldset>`;

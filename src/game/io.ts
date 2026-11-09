@@ -2,7 +2,7 @@
 export interface CombatView {
   title: string;
   enemies: { name: string; health: number; maxHealth: number; intent: string }[];
-  player: { health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; status: string[] };
+  player: { health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; status: string[]; weapons: string };
   stats: [string, string | number][];
 }
 

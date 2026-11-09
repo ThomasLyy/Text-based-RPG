@@ -33,6 +33,7 @@ export class Enemy {
   pattern: Intent[];
   step: number;
   bonus = 0; // extra damage from buffs
+  stunned = false; // loses its next move
 
   // scale multiplies health and intent values; the template itself is never changed
   constructor(t: EnemyTemplate, scale = 1) {
@@ -50,6 +51,7 @@ export class Enemy {
   }
 
   intentText() {
+    if (this.stunned) return "Stunned, loses its move";
     const i = this.intent;
     if (i.kind === "attack") return `${i.name}, ${i.value + this.bonus} damage`;
     if (i.kind === "poison") return `${i.name}, poison ${i.value + this.bonus} per turn for ${i.turns} turns`;
@@ -60,6 +62,10 @@ export class Enemy {
   act(player: Player, allies: Enemy[]) {
     const i = this.intent;
     this.step++;
+    if (this.stunned) {
+      this.stunned = false;
+      return io.print(`The ${this.name} is stunned and loses its ${i.name}.`);
+    }
     if (i.kind === "attack") player.takeDamage(i.value + this.bonus, this.name);
     else if (i.kind === "poison") player.poison(i.value + this.bonus, i.turns!, this.name);
     else if (i.kind === "heal") {

@@ -1,37 +1,57 @@
-﻿import { ArmorSubType, Equipment, EquipmentType, WeaponSubType } from "./equipment";
-import { Consumable } from "./consumable";
-import { io } from "./io";
+﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeWeapon, rollQuality, type Item, type Weapon } from "./items";
+import { io, randint } from "./io";
 import type { Player } from "./player";
 
-export function getRewardForFloor(floor: number): Equipment[] | undefined {
-  if (floor === 1) {
-    return [
-      new Equipment({ name: "Sharp Dagger", equipmentType: EquipmentType.WEAPON, subType: WeaponSubType.SWORD, tier: 1, value: 15, strengthBonus: 4 }),
-      new Consumable({ name: "Small Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 1, value: 20, healthRecovery: 30 }),
-    ];
-  } else if (floor === 2) {
-    return [
-      new Equipment({ name: "Sturdy Shield", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.SHIELD, tier: 1, value: 20, healthBonus: 10 }),
-      new Consumable({ name: "Small Mana Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 1, value: 25, manaRecovery: 20 }),
-    ];
-  } else if (floor === 3) {
-    return [
-      new Equipment({ name: "Iron Helmet", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.HEAD, tier: 2, value: 30, healthBonus: 15 }),
-      new Equipment({ name: "Enchanted Ring", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.RING, tier: 2, value: 35, manaBonus: 12 }),
-    ];
-  } else if (floor === 4) {
-    return [
-      new Equipment({ name: "Steel Breastplate", equipmentType: EquipmentType.ARMOR, subType: ArmorSubType.CHEST, tier: 2, value: 40, strengthBonus: 6, healthBonus: 20 }),
-      new Consumable({ name: "Medium Health Potion", equipmentType: EquipmentType.CONSUMABLE, tier: 2, value: 35, healthRecovery: 50 }),
-    ];
-  }
+const avg = (w: Weapon | null) => (w ? Math.round((w.min + w.max) / 2) : 0);
+
+// Category odds for each offer: weapon 35%, armor 40%, potion 25%. Boss rewards: gear only, Rare or better.
+function randomItem(player: Player, act: number, boss: boolean): Item {
+  const r = Math.random();
+  if (!boss && r >= 0.75) return makePotion(act, Math.random() < 0.35);
+  if (r < 0.35 || (boss && r >= 0.85)) return makeWeapon(FAMILIES[randint(0, FAMILIES.length - 1)], act, rollQuality(act, boss));
+  const slots = ARMOR_SLOTS.filter((s) => (s !== "shield" || player.canHoldShield()) && (s !== "focus" || player.canHoldFocus()));
+  return makeArmor(slots[randint(0, slots.length - 1)], act, rollQuality(act, boss));
 }
 
-export async function chooseReward(player: Player, floor: number) {
-  const availableRewards = getRewardForFloor(floor);
-  if (!availableRewards) return; // shortcut: rewards only on floors 1-4 until step 2 adds random reward pools
+export function rewardOffers(player: Player, act: number, boss = false): Item[] {
+  const offers: Item[] = [];
+  while (offers.length < 3) {
+    const item = randomItem(player, act, boss);
+    if (!offers.some((o) => o.name === item.name && o.kind === item.kind)) offers.push(item);
+  }
+  return offers;
+}
 
-  io.print("[panel bold blue]Choose your reward:[/]");
-  const choice = await io.ask("Enter your choice", availableRewards.map((r, i) => `${i + 1}. ${r}`));
-  player.equip(availableRewards[choice]); // equip() also handles consumables and the 5-slot pouch
+// What picking this item would change, shown on its button.
+export function comparison(player: Player, item: Item): string {
+  if (item.kind === "potion") return player.potions.length >= 5 ? "pouch full" : `pouch ${player.potions.length}/5`;
+  if (item.kind === "armor") {
+    const current = player.armorIn(item.slot);
+    return current ? `replaces ${current.name} (${bonusText(current.bonuses)})` : "empty slot";
+  }
+  return `avg ${avg(item)} dmg, yours ${avg(player.mainHand)}`;
+}
+
+export async function take(player: Player, item: Item) {
+  if (item.kind === "potion") {
+    return io.print(player.addPotion(item) ? `You pack the ${item.name}.` : "Your pouch is full. You leave the potion behind.");
+  }
+  let removed: Item[];
+  if (item.kind === "armor") removed = player.equipArmor(item);
+  else if (item.family.hands === 1 && player.mainHand?.family.hands === 1) {
+    const off = player.offHand;
+    const hand = await io.ask(`Equip the ${item.name} in`, [
+      `Main hand (replaces ${player.mainHand.name})`,
+      `Off hand (${off ? `replaces ${off.name}` : "dual-wield"})`,
+    ]);
+    removed = player.equipWeapon(item, hand === 0 ? "main" : "off");
+  } else removed = player.equipWeapon(item);
+  io.print(`You equip the ${item.name}.${removed.length ? ` (${removed.map((r) => r.name).join(", ")} left behind)` : ""}`);
+}
+
+export async function chooseReward(player: Player, act: number, boss = false) {
+  const offers = rewardOffers(player, act, boss);
+  io.print(`[panel bold blue]${boss ? "The boss drops a treasure!" : "Choose your reward"}[/]`);
+  const choice = await io.ask("Choose a reward", [...offers.map((o) => `${describe(o)} — ${comparison(player, o)}`), "Skip"]);
+  if (choice < offers.length) await take(player, offers[choice]);
 }
