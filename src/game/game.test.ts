@@ -42,6 +42,23 @@ test("Fireball run: kills floor 1-2 rats, double rewards, reaches floor 2 reward
   expect(player.equipped.offHand?.name).toBe("Sharp Dagger");
   expect(player.calculateTotalStats().strength).toBe(18); // 10 + two daggers at +4
   expect(log.filter((l) => l.includes("You defeated all enemies!"))).toHaveLength(2);
+  const { rat } = await import("./enemy");
+  expect([rat.health, rat.maxHealth, rat.strength]).toEqual([10, 10, 2]); // template not scaled by floors 1-2
+});
+
+test("two rats in one fight have their own health", async () => {
+  // randint(1,2) -> 2 enemies on floor 2; every pick is the rat
+  const rolls = [0, 0, 0.99, 0, 0];
+  vi.spyOn(Math, "random").mockImplementation(() => rolls.shift() ?? 0);
+  await play(["Fireball", "1.", "1.", "Fireball", "1."]);
+  const { player, run } = await newGame();
+  const { io } = await import("./io");
+  let fight: { health: number }[] = [];
+  const render = io.render;
+  io.render = (v) => { fight = v.enemies; render(v); };
+  await expect(run()).rejects.toThrow("script ended");
+  expect(fight).toHaveLength(2);
+  expect(player.health).toBeLessThan(100); // the second rat survived the fireball and hit back
 });
 
 test("Flee always fails, then the enemy hits back", async () => {

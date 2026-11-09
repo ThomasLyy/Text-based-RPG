@@ -1,5 +1,5 @@
-import { io, randint, choices } from "./io";
-import { enemies } from "./enemy";
+﻿import { io, randint, choices } from "./io";
+import { Enemy, enemies } from "./enemy";
 import { combat } from "./combat";
 import { chooseReward } from "./reward";
 import type { Player } from "./player";
@@ -11,8 +11,8 @@ export async function gameLoop(player: Player) {
     const maxEnemies = Math.min(3, floor);
     const enemyStrengthMultiplier = 1 + (floor - 1) * 0.2;
 
-    // audit #8: same shared objects, mutated every floor
-    const currentEnemies = choices(enemies, randint(1, maxEnemies));
+    // copies, so the templates stay untouched and two rats have their own health
+    const currentEnemies = choices(enemies, randint(1, maxEnemies)).map((e) => new Enemy({ ...e }));
     for (const enemy of currentEnemies) {
       enemy.strength = Math.trunc(enemy.strength * enemyStrengthMultiplier);
       enemy.maxHealth = Math.trunc(enemy.maxHealth * enemyStrengthMultiplier);
