@@ -1,5 +1,4 @@
-﻿import { io } from "./io";
-
+﻿
 export enum EquipmentType {
   WEAPON = "Weapon",
   ARMOR = "Armor",
@@ -46,17 +45,6 @@ export class Equipment {
 
   toString() {
     return `Tier ${this.tier} ${this.name} (${this.equipmentType}${this.subType ? `, ${this.subType}` : ""}${this.element ? `, ${this.element}` : ""})`;
-  }
-
-  upgrade() {
-    if (this.tier < 5) {
-      this.tier += 1;
-      this.strengthBonus += 2;
-      this.healthBonus += 5;
-      io.print(`You upgraded ${this.name} to Tier ${this.tier}!`);
-    } else {
-      io.print(`${this.name} is already at the maximum tier.`);
-    }
   }
 }
 

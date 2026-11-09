@@ -30,8 +30,6 @@ export async function gameLoop(player: Player) {
     io.print(`\nYou rested and recovered 10 health. Your health is now ${player.health}/${player.maxHealth}.`);
 
     if (floor < 5) await chooseReward(player, floor);
-
-    if (floor === 3) io.print("[panel bold blue]Welcome to the Forge![/]"); // forge: to be implemented
   }
 
   if (player.health > 0) io.print("[panel bold green]Congratulations! You defeated the boss![/]");

@@ -21,7 +21,6 @@ export class Player {
   maxMana = 100;
   xpToNextLevel = 100;
 
-  inventory: Equipment[] = [];
   equipped: Record<string, Equipment | null> = {
     mainHand: null, offHand: null, head: null, chest: null, waist: null,
     legs: null, feet: null, neck: null, ringLeft: null, ringRight: null,
@@ -81,13 +80,6 @@ export class Player {
     return Math.random() < 0.5;
   }
 
-  useConsumable(item: Consumable) {
-    const i = this.consumables.indexOf(item);
-    if (i === -1) return io.print("You don't have that consumable.");
-    item.use(this);
-    this.consumables.splice(i, 1);
-  }
-
   calculateTotalStats() {
     const t = { strength: this.strength, speed: this.speed, intelligence: this.intelligence, perception: this.perception, health: this.health, mana: this.mana };
     // Set: a bow sits in both hand slots but counts once
@@ -101,17 +93,6 @@ export class Player {
       t.mana += e.manaBonus;
     }
     return t;
-  }
-
-  displayStats() {
-    const t = this.calculateTotalStats();
-    io.print("\nPlayer Stats:");
-    io.print(`  Health: ${this.health}/${this.maxHealth} (${t.health})`);
-    io.print(`  Strength: ${this.strength} (${t.strength})`);
-    io.print(`  Speed: ${this.speed} (${t.speed})`);
-    io.print(`  Intelligence: ${this.intelligence} (${t.intelligence})`);
-    io.print(`  Perception: ${this.perception} (${t.perception})`);
-    io.print(`  Mana: ${this.mana}/${this.maxMana} (${t.mana})`);
   }
 
   getStat(statName: string): number {

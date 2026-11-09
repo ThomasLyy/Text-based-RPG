@@ -7,7 +7,6 @@ export async function handleTargeting(spell: Spell | null, enemies: Enemy[]): Pr
   const alive = enemies.filter((e) => e.health > 0);
   if (spell && spell.targetType === "single" && alive.length === 1) return alive[0]; // auto-target last enemy
 
-  // audit #10 is gone here: buttons only offer valid targets
   const options = enemies.map((e, i) => ({ e, label: `${i + 1}. ${e.name} (Health: ${e.health}/${e.maxHealth})` })).filter((o) => o.e.health > 0);
   const i = await io.ask("Choose a target", options.map((o) => o.label));
   return options[i].e;
