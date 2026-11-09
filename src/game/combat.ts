@@ -1,6 +1,5 @@
 import { io, type CombatView } from "./io";
 import { smallSpell, type Spell } from "./spell";
-import { chooseReward } from "./reward";
 import type { Enemy } from "./enemy";
 import type { Player } from "./player";
 
@@ -22,7 +21,7 @@ export async function handleItemUse(player: Player) {
   item.use(player);
 }
 
-export async function combat(player: Player, enemies: Enemy[], floor: number) {
+export async function combat(player: Player, enemies: Enemy[]) {
   // Rich Progress tasks start at completed=0, so bars show 0% until the first update (same as Python).
   const view: CombatView = {
     enemies: enemies.map((e) => ({ name: e.name, title: e.name, health: 0, maxHealth: e.maxHealth })),
@@ -83,13 +82,4 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
     player.experience += totalXpGained;
     io.print(`You gained ${totalXpGained} experience points.`);
   }
-
-  if ("xpToNextLevel" in player && player.experience >= player.xpToNextLevel) {
-    player.level_up(); // audit #9
-    io.print(`[bold cyan]You leveled up! You are now level ${player.level}.[/]`);
-  }
-
-  // audit #9: rewards also given by gameLoop, and even after defeat
-  if (floor < 5) await chooseReward(player, floor);
-  else if (floor === 5) io.print("[bold yellow]Congratulations! You have completed the game![/]");
 }

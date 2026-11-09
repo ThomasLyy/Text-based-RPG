@@ -31,16 +31,16 @@ async function newGame() {
   return { player, run: () => gameLoop(player) };
 }
 
-test("Fireball run: kills floor 1-2 rats, double rewards, reaches floor 2 rewards", async () => {
+test("Fireball run: kills floor 1-2 rats, one reward per floor, reaches floor 2 rewards", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0); // always 1 enemy, always the rat
-  const log = await play(["Fireball", "1.", "1.", "Fireball"]);
+  const log = await play(["Fireball", "1.", "Fireball"]);
   const { player, run } = await newGame();
 
   await expect(run()).rejects.toThrow("script ended");
   expect(player.mana).toBe(80); // two fireballs at 10 mana each
-  expect(player.equipped.mainHand?.name).toBe("Sharp Dagger"); // audit #9: reward given twice
-  expect(player.equipped.offHand?.name).toBe("Sharp Dagger");
-  expect(player.calculateTotalStats().strength).toBe(18); // 10 + two daggers at +4
+  expect(player.equipped.mainHand?.name).toBe("Sharp Dagger");
+  expect(player.equipped.offHand).toBeNull();
+  expect(player.calculateTotalStats().strength).toBe(14); // 10 + dagger at +4
   expect(log.filter((l) => l.includes("You defeated all enemies!"))).toHaveLength(2);
   const { rat } = await import("./enemy");
   expect([rat.health, rat.maxHealth, rat.strength]).toEqual([10, 10, 2]); // template not scaled by floors 1-2
@@ -50,7 +50,7 @@ test("two rats in one fight have their own health", async () => {
   // randint(1,2) -> 2 enemies on floor 2; every pick is the rat
   const rolls = [0, 0, 0.99, 0, 0];
   vi.spyOn(Math, "random").mockImplementation(() => rolls.shift() ?? 0);
-  await play(["Fireball", "1.", "1.", "Fireball", "1."]);
+  await play(["Fireball", "1.", "Fireball", "1."]);
   const { player, run } = await newGame();
   const { io } = await import("./io");
   let fight: { health: number }[] = [];
@@ -90,11 +90,22 @@ test("Use Item with no potions", async () => {
 
 test("Use Item drinks a potion", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
-  const log = await play(["Fireball", "2.", "2.", "Use Item", "1."]); // take the potion, drink it on floor 2
+  const log = await play(["Fireball", "2.", "Use Item", "1."]); // take the potion, drink it on floor 2
   const { player, run } = await newGame();
   await expect(run()).rejects.toThrow("script ended");
   expect(log.some((l) => l.startsWith("You used Small Health Potion"))).toBe(true);
-  expect(player.consumables).toHaveLength(1);
+  expect(player.consumables).toHaveLength(0);
+});
+
+test("defeat: no reward, game over", async () => {
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  const log = await play(["Flee"]);
+  const { player, run } = await newGame();
+  player.health = 1;
+  await run();
+  expect(log).toContain("[bold red]You have been defeated![/]");
+  expect(log).toContain("[panel bold red]Game Over![/]");
+  expect(log).not.toContain("[panel bold blue]Choose your reward:[/]");
 });
 
 test("rings fill both ring slots, shields go in the off hand", async () => {

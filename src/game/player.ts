@@ -118,8 +118,3 @@ export class Player {
     return v;
   }
 }
-
-// audit #9: combat calls this, it was never written. Declared so it compiles, missing at runtime.
-export interface Player {
-  level_up(): void;
-}
