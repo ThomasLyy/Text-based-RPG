@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #0d0f12;
   --fg: #d8dee9;
   --muted: #7b8494;
@@ -27,7 +27,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 100dvh;
+  height: 100dvh; /* one screen, like an app: only the log scrolls */
 }
 
 fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 0 0 8px; padding: 6px 10px; min-width: 0; }
@@ -45,9 +45,10 @@ h1 { font-size: 1rem; margin: 0 0 8px; }
 .fill.blue { background: var(--blue); }
 .fill.cyan { background: var(--cyan); }
 
-#log { flex: 1; white-space: pre-wrap; overflow-y: auto; max-height: 40vh; }
+#board { flex-shrink: 0; }
+#log { flex: 1; min-height: 4em; white-space: pre-wrap; overflow-y: auto; }
 
-#prompt { position: sticky; bottom: 0; background: var(--bg); padding-bottom: 8px; }
+#prompt { flex-shrink: 0; padding-bottom: 8px; }
 #question:empty { display: none; }
 #options { display: flex; flex-wrap: wrap; gap: 8px; }
 button {

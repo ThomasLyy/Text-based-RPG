@@ -24,7 +24,7 @@ export function combatView(player: Player, enemies: Enemy[], title: string): Com
     player: {
       health: player.health, maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
       level: player.level, xp: player.experience, xpNext: player.xpToNextLevel,
-      status: [...(player.defending ? ["Defending"] : []), ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turns`] : [])],
+      status: [...(player.defending ? ["Defending"] : []), ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turn${player.poisoned.turns === 1 ? "" : "s"}`] : [])],
     },
     stats: [["STR", t.strength], ["INT", t.intelligence], ["SPD", t.speed], ["PER", t.perception], ["Crit", pct(player.critChance())], ["Dodge", pct(player.dodgeChance())]],
   };

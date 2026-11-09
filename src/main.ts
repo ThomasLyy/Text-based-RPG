@@ -1,4 +1,4 @@
-import { io, type CombatView } from "./game/io";
+﻿import { io, type CombatView } from "./game/io";
 import { Player } from "./game/player";
 import { gameLoop } from "./game/game";
 
@@ -13,11 +13,14 @@ const markup = (s: string) =>
 const bar = (value: number, max: number, color: string) =>
   `<div class="track"><div class="fill ${color}" style="width:${Math.min(100, Math.max(0, (value / max) * 100))}%"></div></div>`;
 
+// Keep the newest log line visible; board and buttons change size, so re-stick after each of them.
+const stick = () => ($("log").scrollTop = $("log").scrollHeight);
+
 io.print = (msg) => {
   const line = document.createElement("div");
   line.innerHTML = markup(msg);
   $("log").append(line);
-  $("log").scrollTop = $("log").scrollHeight;
+  stick();
 };
 
 io.ask = (question, options) =>
@@ -36,6 +39,7 @@ io.ask = (question, options) =>
         return b;
       }),
     );
+    stick();
   });
 
 io.render = (v: CombatView) => {
@@ -58,6 +62,7 @@ io.render = (v: CombatView) => {
       <div class="line stats">${v.stats.map(([n, val]) => `<span><span class="dim">${n}</span> ${val}</span>`).join("")}</div>
       ${p.status.length ? `<div class="yellow">${p.status.map(markup).join(" · ")}</div>` : ""}
     </fieldset>`;
+  stick();
 };
 
 async function runForever() {

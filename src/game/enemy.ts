@@ -109,7 +109,7 @@ export const ACTS: Act[] = [
       { name: "Fire Imp", maxHealth: 38, speed: 17, xp: 12, pattern: [attack("Firebolt", 9), attack("Firebolt", 9), poison("Ignite", 5, 3)] },
       { name: "Dread Knight", maxHealth: 55, speed: 9, xp: 15, pattern: [attack("Strike", 12), buff("Battle focus", 3), attack("Execute", 38)] },
     ],
-    boss: { name: "The Lich", maxHealth: 280, speed: 11, xp: 0, boss: true, pattern: [attack("Death bolt", 16), poison("Plague", 6, 3), heal("Raise dead", 25), attack("Doom", 58)] },
+    boss: { name: "Lich", maxHealth: 280, speed: 11, xp: 0, boss: true, pattern: [attack("Death bolt", 16), poison("Plague", 6, 3), heal("Raise dead", 25), attack("Doom", 58)] },
   },
 ];
 
