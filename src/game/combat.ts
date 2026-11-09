@@ -4,9 +4,6 @@ import { chooseReward } from "./reward";
 import type { Enemy } from "./enemy";
 import type { Player } from "./player";
 
-// audit #3: handleItemUse calls a function that only exists inside combat(). Declared so it compiles, missing at runtime.
-declare function updateHealthBars(): void;
-
 export async function handleTargeting(spell: Spell | null, enemies: Enemy[]): Promise<Enemy> {
   const alive = enemies.filter((e) => e.health > 0);
   if (spell && spell.targetType === "single" && alive.length === 1) return alive[0]; // auto-target last enemy
@@ -23,7 +20,6 @@ export async function handleItemUse(player: Player) {
   const i = await io.ask("Choose a consumable", player.consumables.map((c, n) => `${n + 1}. ${c.name} - Health: ${c.healthRecovery}, Mana: ${c.manaRecovery}`));
   const item = player.consumables.splice(i, 1)[0];
   item.use(player);
-  updateHealthBars();
 }
 
 export async function combat(player: Player, enemies: Enemy[], floor: number) {
@@ -66,6 +62,7 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
       io.print("[bold red]You failed to flee![/]");
     } else if (action === "use item") {
       await handleItemUse(player);
+      updateHealthBars();
     }
 
     // Enemy's turn

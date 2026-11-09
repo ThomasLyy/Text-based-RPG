@@ -71,6 +71,15 @@ test("Use Item with no potions", async () => {
   expect(log).toContain("[dim]You have no consumables.[/]");
 });
 
+test("Use Item drinks a potion", async () => {
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  const log = await play(["Fireball", "2.", "2.", "Use Item", "1."]); // take the potion, drink it on floor 2
+  const { player, run } = await newGame();
+  await expect(run()).rejects.toThrow("script ended");
+  expect(log.some((l) => l.startsWith("You used Small Health Potion"))).toBe(true);
+  expect(player.consumables).toHaveLength(1);
+});
+
 test("potions keep the shifted Python fields", async () => {
   const { getRewardForFloor } = await import("./reward");
   const potion = getRewardForFloor(1)![1];
