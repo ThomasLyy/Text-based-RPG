@@ -69,7 +69,7 @@ export class Player {
   }
 
   attack(enemy: Target) {
-    const damage = this.strength + randint(1, 6);
+    const damage = this.calculateTotalStats().strength + randint(1, 6);
     enemy.health = Math.max(0, enemy.health - damage);
     io.print(`You hit the ${enemy.name} for ${damage} damage!`);
   }
@@ -133,8 +133,7 @@ export class Player {
   }
 }
 
-// audit #2 / #9: combat calls these, they were never written. Declared so it compiles, missing at runtime.
+// audit #9: combat calls this, it was never written. Declared so it compiles, missing at runtime.
 export interface Player {
-  calculate_total_stats(): ReturnType<Player["calculateTotalStats"]>;
   level_up(): void;
 }

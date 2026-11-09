@@ -54,11 +54,13 @@ test("Flee always fails, then the enemy hits back", async () => {
   expect(player.health).toBe(97); // rat: strength 2 + roll 1
 });
 
-test("Attack crashes", async () => {
+test("Attack hits for strength + roll and stops at 0 health", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
-  await play(["Attack", "1."]); // attack always asks for a target, even with one enemy left
+  const log = await play(["Attack", "1."]); // attack always asks for a target, even with one enemy left
   const { run } = await newGame();
-  await expect(run()).rejects.toThrow(/calculate_total_stats is not a function/); // audit #2
+  await expect(run()).rejects.toThrow("script ended");
+  expect(log).toContain("You hit the Rat for 11 damage!"); // strength 10 + roll 1, rat had 10
+  expect(log).toContain("[bold green]You defeated all enemies![/]");
 });
 
 test("Use Item with no potions", async () => {

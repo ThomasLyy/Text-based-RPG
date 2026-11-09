@@ -1,4 +1,4 @@
-import { io, randint, type CombatView } from "./io";
+import { io, type CombatView } from "./io";
 import { smallSpell, type Spell } from "./spell";
 import { chooseReward } from "./reward";
 import type { Enemy } from "./enemy";
@@ -56,11 +56,7 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
       player.mana -= spellToCast.manaCost; // audit #4: mana taken twice
       updateHealthBars();
     } else if (action === "attack") {
-      const target = await handleTargeting(null, enemies);
-      const totalStats = player.calculate_total_stats(); // audit #2
-      const damage = totalStats.strength + randint(1, 6);
-      target.health -= damage;
-      io.print(`You hit the ${target.name} for ${damage} damage!`);
+      player.attack(await handleTargeting(null, enemies));
       updateHealthBars();
     } else if (action === "flee") {
       if (player.flee()) {
