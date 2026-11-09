@@ -37,7 +37,7 @@ test("Fireball run: kills floor 1-2 rats, double rewards, double mana, then floo
   const { player, run } = await newGame();
 
   await expect(run()).rejects.toThrow("AttributeError: OFF_HAND"); // audit #5
-  expect(player.mana).toBe(60); // audit #4: two fireballs cost 40, not 20
+  expect(player.mana).toBe(80); // two fireballs at 10 mana each
   expect(player.equipped.mainHand?.name).toBe("Sharp Dagger"); // audit #9: reward given twice
   expect(player.equipped.offHand?.name).toBe("Sharp Dagger");
   expect(player.calculateTotalStats().strength).toBe(10); // audit #7: equipment ignored

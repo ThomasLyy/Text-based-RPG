@@ -27,7 +27,7 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
   const view: CombatView = {
     enemies: enemies.map((e) => ({ name: e.name, title: e.name, health: 0, maxHealth: e.maxHealth })),
     stats: ["Health", "Strength", "Speed", "Intelligence", "Perception", "Mana"].map((s) => [s, player.getStat(s)]), // snapshot, never refreshed
-    actions: [...smallSpell.filter((s) => s.manaCost <= player.mana).map((s) => s.name), "Attack", "Flee", "Use Item"], // audit #4: built once
+    actions: [],
     health: 0, maxHealth: player.maxHealth,
     mana: 0, maxMana: player.maxMana,
   };
@@ -42,6 +42,7 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
   }
 
   while (player.health > 0 && enemies.some((e) => e.health > 0)) {
+    view.actions = [...smallSpell.filter((s) => s.manaCost <= player.mana).map((s) => s.name), "Attack", "Flee", "Use Item"];
     io.render(view);
     const action = view.actions[await io.ask("Choose an action", view.actions)].toLowerCase();
 
@@ -49,7 +50,6 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
     if (spellToCast) {
       const target = await handleTargeting(spellToCast, enemies);
       player.useSpell(spellToCast, target);
-      player.mana -= spellToCast.manaCost; // audit #4: mana taken twice
       updateHealthBars();
     } else if (action === "attack") {
       player.attack(await handleTargeting(null, enemies));
