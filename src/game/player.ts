@@ -75,8 +75,8 @@ export class Player {
     }
   }
 
-  flee(): boolean | void {
-    // Flee logic (to be developed) — audit #12
+  flee() {
+    return Math.random() < 0.5;
   }
 
   useConsumable(item: Consumable) {

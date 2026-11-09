@@ -61,14 +61,24 @@ test("two rats in one fight have their own health", async () => {
   expect(player.health).toBeLessThan(100); // the second rat survived the fireball and hit back
 });
 
-test("Flee always fails, then the enemy hits back", async () => {
+test("failed flee: the enemy hits back", async () => {
+  vi.spyOn(Math, "random").mockReturnValue(0.99); // goblin, flee roll fails, max damage roll
+  const log = await play(["Flee"]);
+  const { player, run } = await newGame();
+
+  await expect(run()).rejects.toThrow("script ended");
+  expect(log).toContain("[bold red]You failed to flee![/]");
+  expect(player.health).toBe(92); // goblin: strength 4 + roll 4
+});
+
+test("successful flee ends the fight without damage or XP", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
   const log = await play(["Flee"]);
   const { player, run } = await newGame();
 
   await expect(run()).rejects.toThrow("script ended");
-  expect(log).toContain("[bold red]You failed to flee![/]"); // audit #12
-  expect(player.health).toBe(97); // rat: strength 2 + roll 1
+  expect(log).toContain("[bold yellow]You successfully fled the battle![/]");
+  expect([player.health, player.experience]).toEqual([100, 0]);
 });
 
 test("Attack hits for strength + roll and stops at 0 health", async () => {
@@ -98,7 +108,7 @@ test("Use Item drinks a potion", async () => {
 });
 
 test("defeat: no reward, game over", async () => {
-  vi.spyOn(Math, "random").mockReturnValue(0);
+  vi.spyOn(Math, "random").mockReturnValue(0.99); // flee fails, goblin hits
   const log = await play(["Flee"]);
   const { player, run } = await newGame();
   player.health = 1;
