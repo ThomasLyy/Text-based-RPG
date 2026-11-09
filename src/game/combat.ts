@@ -75,7 +75,7 @@ export async function combat(player: Player, enemies: Enemy[], floor: number) {
     // Enemy's turn
     for (const enemy of enemies) {
       if (enemy.health > 0) {
-        enemy.attack(player); // audit #1
+        enemy.attack(player);
         updateHealthBars();
         await io.sleep(500);
       }

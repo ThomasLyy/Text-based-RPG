@@ -1,4 +1,5 @@
 import type { Player } from "./player";
+import { io, randint } from "./io";
 
 export class Enemy {
   name!: string;
@@ -11,11 +12,12 @@ export class Enemy {
   constructor(f: Pick<Enemy, "name" | "health" | "maxHealth" | "strength" | "speed" | "xpReward">) {
     Object.assign(this, f);
   }
-}
 
-// audit #1: combat calls enemy.attack(), which was never written. Declared so it compiles, missing at runtime.
-export interface Enemy {
-  attack(player: Player): void;
+  attack(player: Player) {
+    const damage = this.strength + randint(1, 4);
+    player.health = Math.max(0, player.health - damage);
+    io.print(`The ${this.name} hits you for ${damage} damage!`);
+  }
 }
 
 export const rat = new Enemy({ name: "Rat", health: 10, maxHealth: 10, strength: 2, speed: 8, xpReward: 5 });

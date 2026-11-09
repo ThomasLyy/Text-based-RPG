@@ -11,7 +11,8 @@ async function play(answers: string[]) {
   io.sleep = async () => {};
   io.ask = async (q, options) => {
     const a = answers.shift();
-    const i = options.findIndex((o) => a !== undefined && o.startsWith(a));
+    if (a === undefined) throw new Error("script ended"); // reached the end of the script without a crash
+    const i = options.findIndex((o) => o.startsWith(a));
     if (i === -1) throw new Error(`no scripted answer for "${q}" in [${options}]`);
     return i;
   };
@@ -43,13 +44,14 @@ test("Fireball run: kills floor 1-2 rats, double rewards, double mana, then floo
   expect(log.filter((l) => l.includes("You defeated all enemies!"))).toHaveLength(2);
 });
 
-test("Flee always fails, then the enemy turn crashes", async () => {
+test("Flee always fails, then the enemy hits back", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
   const log = await play(["Flee"]);
-  const { run } = await newGame();
+  const { player, run } = await newGame();
 
-  await expect(run()).rejects.toThrow(/attack is not a function/); // audit #1
+  await expect(run()).rejects.toThrow("script ended");
   expect(log).toContain("[bold red]You failed to flee![/]"); // audit #12
+  expect(player.health).toBe(97); // rat: strength 2 + roll 1
 });
 
 test("Attack crashes", async () => {
@@ -59,11 +61,11 @@ test("Attack crashes", async () => {
   await expect(run()).rejects.toThrow(/calculate_total_stats is not a function/); // audit #2
 });
 
-test("Use Item with no potions, then crash on enemy turn", async () => {
+test("Use Item with no potions", async () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
   const log = await play(["Use Item"]);
   const { run } = await newGame();
-  await expect(run()).rejects.toThrow(/attack is not a function/);
+  await expect(run()).rejects.toThrow("script ended");
   expect(log).toContain("[dim]You have no consumables.[/]");
 });
 
