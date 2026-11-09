@@ -40,7 +40,7 @@ test("Fireball run: kills floor 1-2 rats, double rewards, reaches floor 2 reward
   expect(player.mana).toBe(80); // two fireballs at 10 mana each
   expect(player.equipped.mainHand?.name).toBe("Sharp Dagger"); // audit #9: reward given twice
   expect(player.equipped.offHand?.name).toBe("Sharp Dagger");
-  expect(player.calculateTotalStats().strength).toBe(10); // audit #7: equipment ignored
+  expect(player.calculateTotalStats().strength).toBe(18); // 10 + two daggers at +4
   expect(log.filter((l) => l.includes("You defeated all enemies!"))).toHaveLength(2);
 });
 
@@ -85,12 +85,21 @@ test("rings fill both ring slots, shields go in the off hand", async () => {
   const { getRewardForFloor } = await import("./reward");
   await play([]);
   const p = new Player();
-  const ring = getRewardForFloor(3)![1];
-  p.equip(ring);
-  p.equip(ring);
+  p.equip(getRewardForFloor(3)![1]);
+  p.equip(getRewardForFloor(3)![1]);
   p.equip(getRewardForFloor(2)![0]);
   expect([p.equipped.ringLeft, p.equipped.ringRight].map((r) => r?.name)).toEqual(["Enchanted Ring", "Enchanted Ring"]);
   expect(p.equipped.offHand?.name).toBe("Sturdy Shield");
+  expect(p.calculateTotalStats().mana).toBe(124); // 100 + two rings at +12
+});
+
+test("a bow fills both hands but its bonus counts once", async () => {
+  const { Player } = await import("./player");
+  const { Equipment, EquipmentType, WeaponSubType } = await import("./equipment");
+  await play([]);
+  const p = new Player();
+  p.equip(new Equipment({ name: "Bow", equipmentType: EquipmentType.WEAPON, subType: WeaponSubType.BOW, tier: 1, value: 1, perceptionBonus: 5 }));
+  expect(p.calculateTotalStats().perception).toBe(15);
 });
 
 test("potions keep the shifted Python fields", async () => {

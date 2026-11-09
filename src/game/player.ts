@@ -3,7 +3,6 @@ import type { Consumable } from "./consumable";
 import type { Spell } from "./spell";
 import { io, randint } from "./io";
 
-type Slot = "mainHand" | "offHand" | "head" | "chest" | "waist" | "legs" | "feet" | "neck" | "ringLeft" | "ringRight";
 interface Target { name: string; health: number; maxHealth: number }
 // armor types whose slot name differs from the type name; others use the lowercase type ("head", "chest"...)
 const ARMOR_SLOTS: Record<string, string[]> = { ring: ["ringLeft", "ringRight"], shield: ["offHand"] };
@@ -21,18 +20,6 @@ export class Player {
   mana = 100;
   maxMana = 100;
   xpToNextLevel = 100;
-
-  // Equipment slots (audit #7: never written, equip() uses `equipped` instead)
-  mainHand: Equipment | null = null;
-  offHand: Equipment | null = null;
-  head: Equipment | null = null;
-  chest: Equipment | null = null;
-  waist: Equipment | null = null;
-  legs: Equipment | null = null;
-  feet: Equipment | null = null;
-  neck: Equipment | null = null;
-  ringLeft: Equipment | null = null;
-  ringRight: Equipment | null = null;
 
   inventory: Equipment[] = [];
   equipped: Record<string, Equipment | null> = {
@@ -101,17 +88,15 @@ export class Player {
 
   calculateTotalStats() {
     const t = { strength: this.strength, speed: this.speed, intelligence: this.intelligence, perception: this.perception, health: this.health, mana: this.mana };
-    const slots: Slot[] = ["mainHand", "offHand", "head", "chest", "waist", "legs", "feet", "neck", "ringLeft", "ringRight"];
-    for (const s of slots) {
-      const e = this[s];
-      if (e !== null) {
-        t.strength += e.strengthBonus;
-        t.speed += e.speedBonus;
-        t.intelligence += e.intelligenceBonus;
-        t.perception += e.perceptionBonus;
-        t.health += e.healthBonus;
-        t.mana += e.manaBonus;
-      }
+    // Set: a bow sits in both hand slots but counts once
+    for (const e of new Set(Object.values(this.equipped))) {
+      if (e === null) continue;
+      t.strength += e.strengthBonus;
+      t.speed += e.speedBonus;
+      t.intelligence += e.intelligenceBonus;
+      t.perception += e.perceptionBonus;
+      t.health += e.healthBonus;
+      t.mana += e.manaBonus;
     }
     return t;
   }
