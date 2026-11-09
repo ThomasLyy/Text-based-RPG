@@ -37,6 +37,7 @@ export class Player {
   defending = false; // this round only
   poisoned = { damage: 0, turns: 0, source: "" };
   lastHitBy = "";
+  gold = 0;
 
   mainHand: Weapon | null = null;
   offHand: Weapon | Armor | null = null; // second 1H weapon, shield (with a STR 1H weapon) or focus (with a wand)

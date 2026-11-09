@@ -25,6 +25,7 @@ io.print = (msg) => {
 
 io.ask = (question, options) =>
   new Promise((resolve) => {
+    if (io.snapshot) io.render(io.snapshot());
     $("question").textContent = question;
     $("options").replaceChildren(
       ...options.map((label, i) => {
@@ -55,7 +56,7 @@ io.render = (v: CombatView) => {
         )
         .join("")}
     </fieldset>
-    <fieldset><legend>Hero · Level ${p.level}</legend>
+    <fieldset><legend>Hero · Level ${p.level} · <span class="yellow">${p.gold} gold</span></legend>
       <div class="unit"><div class="line"><span>Health</span><span>${p.health} / ${p.maxHealth}</span></div>${bar(p.health, p.maxHealth, "green")}</div>
       <div class="unit"><div class="line"><span>Mana</span><span>${p.mana} / ${p.maxMana}</span></div>${bar(p.mana, p.maxMana, "blue")}</div>
       <div class="unit"><div class="line dim"><span>XP</span><span>${p.xp} / ${p.xpNext}</span></div>${bar(p.xp, p.xpNext, "cyan")}</div>

@@ -27,9 +27,9 @@ function randomItem(player: Player, act: number, boss: boolean): Item {
   return makeArmor(slots[randint(0, slots.length - 1)], act, rollQuality(act, boss));
 }
 
-export function rewardOffers(player: Player, act: number, boss = false): Item[] {
+export function rewardOffers(player: Player, act: number, boss = false, count = 3): Item[] {
   const offers: Item[] = [];
-  while (offers.length < 3) {
+  while (offers.length < count) {
     const item = randomItem(player, act, boss);
     if (!offers.some((o) => o.name === item.name && o.kind === item.kind)) offers.push(item);
   }

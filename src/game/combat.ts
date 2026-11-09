@@ -3,6 +3,8 @@ import { spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
 import { DEFEND_MANA, SET_BONUS, type Player } from "./player";
 
+export const GOLD_PER_XP = 1.5;
+
 export async function handleTargeting(question: string, enemies: Enemy[]): Promise<Enemy> {
   const alive = enemies.filter((e) => e.health > 0);
   if (alive.length === 1) return alive[0];
@@ -20,7 +22,7 @@ export function combatView(player: Player, enemies: Enemy[], title: string): Com
     enemies: enemies.map((e) => ({ name: e.name, health: e.health, maxHealth: e.maxHealth, intent: e.health > 0 ? e.intentText() : "", status: e.health > 0 ? e.statusText() : [] })),
     player: {
       health: player.health, maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
-      level: player.level, xp: player.experience, xpNext: player.xpToNextLevel,
+      level: player.level, xp: player.experience, xpNext: player.xpToNextLevel, gold: player.gold,
       status: [
         ...(player.defending ? ["Defending"] : []),
         ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turn${player.poisoned.turns === 1 ? "" : "s"}`] : []),
@@ -108,8 +110,10 @@ export async function combat(player: Player, enemies: Enemy[], title = ""): Prom
     return "dead";
   }
   io.print("[bold green]You defeated all enemies![/]");
-  const totalXpGained = enemies.reduce((sum, e) => sum + e.xpReward, 0);
-  player.experience += totalXpGained;
-  io.print(`You gained ${totalXpGained} experience points.`);
+  const xp = enemies.reduce((sum, e) => sum + e.xpReward, 0);
+  const gold = Math.round(xp * GOLD_PER_XP);
+  player.experience += xp;
+  player.gold += gold;
+  io.print(`You gained ${xp} experience and ${gold} gold.`);
   return "won";
 }

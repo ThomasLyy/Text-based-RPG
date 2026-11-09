@@ -1,16 +1,17 @@
 ﻿import { io, randint, choices } from "./io";
 import { ACTS, Enemy, FLOORS, FLOORS_PER_ACT } from "./enemy";
-import { combat } from "./combat";
+import { combat, combatView } from "./combat";
 import { chooseReward } from "./reward";
 import { FAMILIES, describe, makeWeapon } from "./items";
 import { SPELLS, describeSpell } from "./spell";
+import { actEvents, runEvent, type EventKind } from "./events";
 import type { Player } from "./player";
 
 const actOf = (floor: number) => ACTS[Math.floor((floor - 1) / FLOORS_PER_ACT)];
 const floorInAct = (floor: number) => ((floor - 1) % FLOORS_PER_ACT) + 1;
 
 // Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
-export const DIFFICULTY = [1.25, 1.55, 1.65];
+export const DIFFICULTY = [1.4, 1.75, 1.85];
 
 // Floor 1 of an act: 1 enemy, floor 2: 1-2, floor 3: 2, floor 4: 2-3, each floor 5% tougher. Last floor: the boss.
 export function encounter(floor: number): Enemy[] {
@@ -71,9 +72,11 @@ export interface RunSummary {
 }
 
 export async function gameLoop(player: Player): Promise<RunSummary> {
+  io.snapshot = null; // no board until the first fight (and none left over from the last run)
   if (!player.mainHand) await chooseStarter(player); // already armed: a test set the build
   let kills = 0;
   let floor = 1;
+  let events: EventKind[] = [];
   for (; floor <= FLOORS; floor++) {
     const act = actOf(floor);
     if (floorInAct(floor) === 1) io.print(`[panel bold]${act.name}[/]`);
@@ -81,7 +84,9 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     if (enemies[0].boss) io.print(`[bold red]${enemies[0].name} blocks the way![/]`);
     else io.print(`[bold]Floor ${floor}[/]: ${enemies.map((e) => e.name).join(", ")}`);
 
-    const outcome = await combat(player, enemies, `${act.name} · Floor ${floor} / ${FLOORS}`);
+    const title = `${act.name} · Floor ${floor} / ${FLOORS}`;
+    io.snapshot = () => combatView(player, enemies, title);
+    const outcome = await combat(player, enemies, title);
     player.poisoned.turns = 0; // poison does not follow you to the next floor
     kills += enemies.filter((e) => e.health <= 0).length;
     if (outcome === "dead") break;
@@ -95,6 +100,10 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     player.health = campfire ? player.maxHealth : Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * 0.2));
     player.mana = campfire ? player.maxMana : Math.min(player.maxMana, player.mana + 30);
     io.print(`${campfire ? "You rest at a campfire." : "You catch your breath."} Health ${player.health}/${player.maxHealth}, mana ${player.mana}/${player.maxMana}.`);
+
+    // Events after floors 2 and 3 of each act, two different kinds per act.
+    if (floorInAct(floor) === 2) events = actEvents();
+    if (floorInAct(floor) === 2 || floorInAct(floor) === 3) await runEvent(events[floorInAct(floor) - 2], player, ACTS.indexOf(act));
   }
 
   const won = player.health > 0;

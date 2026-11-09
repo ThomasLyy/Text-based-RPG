@@ -504,3 +504,86 @@ test("spellbook: 4 slots, a 5th spell asks what to forget; known spells rank up"
   await take(player, makeScroll(SPELLS.find((s) => s.name === "Judgment")!, 2));
   expect(player.knows("Judgment")?.rank).toBe(2);
 });
+
+// --- events and gold ---
+
+test("fights pay gold (1.5 per XP)", async () => {
+  const { player, Enemy, combat } = await setup();
+  await play(["Attack", "Attack", "Attack", "Attack", "Attack"]);
+  player.equipWeapon((await import("./items")).makeWeapon(await family("Hammer"), 2, "Epic"));
+  rolls();
+  await combat(player, [new Enemy(dummy({ xp: 5 }))]);
+  expect(player.gold).toBe(8);
+});
+
+test("forge quality: values grow, Rare and Epic gain affixes", async () => {
+  const { makeWeapon, makeArmor, upgradeQuality } = await import("./items");
+  const w = makeWeapon(await family("Sword"), 0, "Common");
+  upgradeQuality(w);
+  expect([w.quality, w.min, w.max]).toEqual(["Uncommon", 10, 15]); // ×1.15
+  const a = makeArmor("chest", 0, "Uncommon", { weight: "heavy" });
+  upgradeQuality(a);
+  expect([a.quality, a.affixes.length, a.bonuses.agility]).toEqual(["Rare", 1, -2]); // the heavy penalty does not grow
+  upgradeQuality(a);
+  expect([a.quality, new Set(a.affixes).size]).toEqual(["Epic", 2]);
+  expect(upgradeQuality(a)).toBe(false);
+});
+
+test("merchant: only affordable items are listed; buying costs gold and equips", async () => {
+  const { player } = await setup();
+  const { runEvent } = await import("./events");
+  const { io, log } = await play([]);
+  player.gold = 25;
+  let first: string[] = [];
+  let n = 0;
+  io.ask = async (_q, o) => {
+    if (n++ === 0) first = o;
+    return o.length - 1; // leave
+  };
+  await runEvent("merchant", player, 0);
+  expect(first.every((o) => o === "Leave" || /— (\d+) gold$/.test(o) && +/— (\d+) gold$/.exec(o)![1] <= 25)).toBe(true);
+  expect(log).toContain("You move on.");
+
+  player.gold = 500;
+  player.health = 50;
+  await play(["Heal", "Leave"]);
+  await runEvent("merchant", player, 0);
+  expect([player.health, player.gold]).toEqual([player.maxHealth, 470]);
+});
+
+test("forge event upgrades the chosen item; shrine prays a spell up a rank", async () => {
+  const { player } = await setup();
+  const { runEvent } = await import("./events");
+  const { makeWeapon } = await import("./items");
+  await play(["Iron Axe", "Pray", "Fireball"]);
+  player.equipWeapon(makeWeapon(await family("Axe"), 0, "Common"));
+  player.spells = [await known("Fireball")];
+  await runEvent("forge", player, 0);
+  expect(player.mainHand?.quality).toBe("Uncommon");
+  await runEvent("shrine", player, 0);
+  expect(player.spells[0].rank).toBe(2);
+});
+
+test("trial: chance from the stat; success pays and offers a reward, failure hurts but never kills", async () => {
+  const { player } = await setup();
+  const { runEvent, trialChance } = await import("./events");
+  expect([trialChance(10), trialChance(20), trialChance(40)]).toEqual([0.4, 0.7, 0.95]);
+  const { log } = await play(["Lift", "Skip"]);
+  const after = seeded(3);
+  const seq = [0, 0.1]; // first trial text, then success (0.1 < 0.4); then varied rolls so the reward has 3 different items
+  vi.spyOn(Math, "random").mockImplementation(() => seq.shift() ?? after());
+  await runEvent("trial", player, 1);
+  expect(player.gold).toBe(40);
+  expect(log.some((l) => l.includes("Choose your reward"))).toBe(true);
+
+  await play(["Lift"]);
+  rolls(0, 0.9); // failure
+  player.health = 5;
+  await runEvent("trial", player, 0);
+  expect(player.health).toBe(1);
+});
+
+test("each act has 2 different events", async () => {
+  const { actEvents } = await import("./events");
+  for (let i = 0; i < 20; i++) expect(new Set(actEvents()).size).toBe(2);
+});

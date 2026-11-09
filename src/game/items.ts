@@ -203,6 +203,31 @@ export function rollQuality(act: number, boss = false): Quality {
   return "Common";
 }
 
+// Forge: one quality tier up. Values grow with the quality multiplier; reaching Rare/Epic adds affixes.
+export function upgradeQuality(item: Weapon | Armor): boolean {
+  const i = QUALITIES.indexOf(item.quality);
+  if (i === QUALITIES.length - 1) return false;
+  const next = QUALITIES[i + 1];
+  const r = QUALITY_MULT[next] / QUALITY_MULT[item.quality];
+  if (item.kind === "weapon") {
+    item.min = Math.round(item.min * r);
+    item.max = Math.round(item.max * r);
+  } else {
+    for (const [k, v] of Object.entries(item.bonuses) as [BonusKey, number][]) if (v > 0) item.bonuses[k] = Math.round(v * r);
+    const pool = (Object.keys(AFFIXES) as AffixId[]).filter((a) => !item.affixes.includes(a));
+    while (item.affixes.length < AFFIX_COUNT[next]) item.affixes.push(pool.splice(randint(0, pool.length - 1), 1)[0]);
+  }
+  item.quality = next;
+  return true;
+}
+
+const QUALITY_PRICE: Record<Quality, number> = { Common: 30, Uncommon: 50, Rare: 80, Epic: 120 };
+export function price(item: Item): number {
+  if (item.kind === "potion") return 20;
+  if (item.kind === "spell") return 40 + 20 * (item.rank - 1);
+  return QUALITY_PRICE[item.quality];
+}
+
 // --- text ---
 
 export const grade = (g: number) => (g >= 0.1 ? "S" : g >= 0.08 ? "A" : "B");

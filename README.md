@@ -1,68 +1,38 @@
-# Roguelike Textuel en Python avec Rich
+# Text-based RPG
 
-Ce projet est un roguelike textuel en TypeScript. Il tourne dans le navigateur (Vite) et sur Android (Capacitor), avec le même code. Il a été porté depuis la version Python/Rich (voir l'historique git avant la branche `rework`).
+Roguelite textuel au tour par tour, en TypeScript. Le même code tourne dans le navigateur (Vite) et sur Android (Capacitor). Porté depuis la version Python/Rich (voir l'historique git avant la branche `rework`).
 
-## Fonctionnalités actuelles
+## Le jeu
 
-* **Classe `Player` :** Représente le personnage du joueur avec ses statistiques (santé, force, mana, etc.), son équipement et son inventaire de consommables.
-* **Classe `Enemy` :** Représente les ennemis du jeu avec leurs statistiques et leur récompense en expérience. Plusieurs ennemis de base ont été créés (Rat, Gobelin).
-* **Classe `Spell` :** Représente les sorts du jeu, avec des attributs pour le nom, les dégâts, le coût en mana, l'élément, l'effet et le type de cible (mono-cible ou multi-cible). Une grande variété de sorts a été implémentée pour différents éléments.
-* **Classe `Equipment` :** Représente les équipements (armes, armures, consommables) avec leurs statistiques et leurs effets.
-* **Classe `Consumable` :** Représente les consommables (potions de vie, de mana) avec leurs effets de récupération.
-* **Système de combat :**
-    * Combat au tour par tour entre le joueur et un ou plusieurs ennemis.
-    * Actions possibles pour le joueur : attaquer, utiliser un sort, fuir, utiliser un consommable.
-    * Gestion des sorts mono-cibles et multi-cibles (sorts de zone).
-    * Ciblage automatique du dernier ennemi restant lors d'une attaque mono-cible.
-    * Affichage dynamique des barres de progression de santé du joueur et des ennemis, avec les valeurs réelles de santé.
-    * Les barres de vie des ennemis restent affichées jusqu'à la fin du combat, même s'ils sont vaincus.
-* **Interface utilisateur (Rich) :**
-    * Affichage des statistiques du joueur dans un panneau avec un titre et une bordure.
-    * Affichage de l'équipement du joueur dans des panneaux séparés pour chaque emplacement.
-    * Menu interactif pour choisir les actions du joueur pendant le combat, avec affichage des sorts disponibles, de leur élément, de leur effet et de leur coût en mana.
-    * Affichage de l'inventaire des consommables.
+Une partie dure 10 à 15 minutes : 15 étages en 3 actes (The Sewers, The Catacombs, The Spire), un boss aux étages 5, 10 et 15.
 
-## Technologies utilisées
+* **Un héros qui s'adapte :** au départ, choix d'une arme parmi 3 tirées au hasard, plus un sort mono-cible aléatoire. Le reste du build vient des récompenses.
+* **Combat lisible :** chaque ennemi annonce son prochain coup (attaque physique ou magique, poison, soin, buff). Actions : Attaquer, Se défendre (bloque 75 %), sorts, potions, fuir (pas contre un boss).
+* **4 statistiques :** Force (armes de mêlée, PV max), Agilité (dagues, couteaux de lancer, arcs, esquive, ordre du tour), Intelligence (baguettes, bâtons, puissance des sorts), Perception (critiques).
+* **9 familles d'armes** avec un rang de scaling et un trait (Parade, Fendoir, Écrasement, Étourdissement, Double frappe, Rapide, Précis, Arcane, Canalisation). Double maniement des armes à une main.
+* **Armures :** lourde (Armure contre le physique, −2 Agilité par pièce), intermédiaire (esquive), légère (mana et Protection contre la magie). Bonus de set à 4 pièces, affixes sur les objets Rares et Épiques.
+* **18 sorts :** 6 éléments × (mono-cible, zone, puissant), chacun avec son effet signature (brûlure, gel, étourdissement, chaîne, soin, malédiction), rangs I à IV, grimoire de 4 sorts.
+* **Récompenses :** 1 objet au choix parmi 3 après chaque combat (armes, armures, sorts, potions), qualité Commun à Épique.
+* **Événements :** 2 par acte (marchand, forge, sanctuaire, épreuve de statistique), de l'or sur les ennemis.
+* **Boss :** enragent à partir du 8e tour.
 
-* **TypeScript :** logique du jeu dans `src/game/` (sans interface, testable).
-* **Vite :** serveur de dev et build web (`src/main.ts` = interface HTML).
-* **Capacitor :** emballe le build web en application Android (`android/`).
-* **Vitest :** tests (`src/game/game.test.ts`).
+## Équilibrage
 
-## Améliorations futures
+`src/game/balance.test.ts` joue des centaines de parties simulées à chaque `npm test` : un bot « premier bouton » doit perdre, un bot raisonnable doit gagner entre 20 et 50 % des parties, et aucun build (Force, Agilité, Intelligence) ne doit avoir plus de 15 points d'avance sur un autre. Pour voir les chiffres : `npx vitest run balance --reporter=verbose`.
 
-* **Combat :**
-    * **Effets de sorts :** Implémenter les effets spécifiques de chaque sort (dégâts, soins, buffs, debuffs, effets de statut).
-    * **Sorts combinés :** Permettre au joueur de combiner des sorts de différents éléments pour créer de nouveaux effets.
-    * **IA ennemie :** Développer une IA plus sophistiquée, prenant en compte les faiblesses et résistances élémentaires, utilisant des sorts et des compétences de manière stratégique.
-    * **Coups critiques :** Implémenter une chance de coup critique basée sur la perception du joueur.
-    * **Variété d'attaques :** Permettre au joueur de choisir entre différents types d'attaques (coup puissant, coup rapide, etc.).
-* **Génération de niveau :**
-    * **Algorithmes avancés :** Utiliser des algorithmes plus complexes pour créer des niveaux plus intéressants et variés (salles, couloirs, obstacles, étages).
-    * **Salles spéciales :** Ajouter des salles avec des événements ou récompenses uniques (trésor, pièges, rencontres, autels).
-    * **Niveaux de boss :** Concevoir des niveaux spécifiques pour les combats de boss.
-* **Objets et équipement :**
-    * **Génération aléatoire :** Créer un système pour générer des équipements aléatoires en fonction du niveau et de la difficulté.
-    * **Amélioration :** Permettre au joueur d'améliorer ses équipements.
-    * **Enchantements :** Ajouter des enchantements aux armes et armures.
-* **Autres fonctionnalités :**
-    * **Système de quêtes :** Ajouter des quêtes secondaires.
-    * **Compétences et talents :** Permettre au joueur de développer des compétences et talents.
-    * **Événements aléatoires :** Intégrer des événements aléatoires (pièges, rencontres, trésors).
-    * **Magasins :** Ajouter des niveaux pour acheter et vendre des équipements et consommables.
-* **Interface graphique :**
-    * **Explorer l'utilisation de Pygame ou Arcade** pour créer une interface graphique plus immersive et interactive.
-    * **Couleurs et styles :** Utiliser davantage les fonctionnalités de Rich.
-    * **Menus élaborés :** Créer des menus plus complexes et interactifs.
-    * **Affichage du niveau :** Afficher une représentation visuelle du niveau (mini-carte, grille).
+## Code
 
-## Comment exécuter le jeu
+* `src/game/` : toute la logique du jeu, sans interface (`io.ts` fait le lien avec l'interface ou les tests).
+* `src/main.ts`, `src/style.css`, `index.html` : l'interface web.
+* `android/` : le projet Android généré par Capacitor.
+
+## Lancer le jeu
 
 1. Installez Node.js (20+), puis `npm install`.
 2. Web : `npm run dev`, puis ouvrez l'URL affichée. Build : `npm run build` (sortie dans `dist/`).
 3. Tests : `npm test`.
 4. Android : installez Android Studio (avec JDK 21), puis `npm run android` (build + `cap sync` + ouvre Android Studio).
 
-## Contribution
+## Branches
 
-N'hésitez pas à contribuer à ce projet en proposant des améliorations, des nouvelles fonctionnalités ou en signalant des bugs.
+`main` (stable), `develop` (nouvelles fonctionnalités), `fix` (corrections, partant de `develop`).

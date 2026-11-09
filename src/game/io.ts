@@ -2,7 +2,7 @@
 export interface CombatView {
   title: string;
   enemies: { name: string; health: number; maxHealth: number; intent: string; status: string[] }[];
-  player: { health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; status: string[]; weapons: string };
+  player: { health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; gold: number; status: string[]; weapons: string };
   stats: [string, string | number][];
 }
 
@@ -12,6 +12,8 @@ export const io = {
     throw new Error("io.ask not set");
   },
   render(_view: CombatView): void {},
+  // the current board, so the UI can redraw it before every prompt (rewards, events, level-ups)
+  snapshot: null as null | (() => CombatView),
   sleep(ms: number): Promise<void> {
     return new Promise((r) => setTimeout(r, ms));
   },

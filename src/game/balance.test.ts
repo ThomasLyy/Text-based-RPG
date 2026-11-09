@@ -45,6 +45,14 @@ function sensibleBot(build: Build, shapes: Record<string, string>): Bot {
       const s = options.map(score);
       return s.indexOf(Math.max(...s));
     }
+    if (q.startsWith("You have")) {
+      // merchant: best fitting item, else heal, else leave
+      const s = options.map((o) => (o.startsWith("Heal") || o === "Leave" ? 0 : score(o.replace(/ — \d+ gold$/, ""))));
+      if (Math.max(...s) > 0) return s.indexOf(Math.max(...s));
+      return Math.max(0, has("Heal")) || options.length - 1;
+    }
+    if (q === "How do you get through?") return Math.max(0, options.findIndex((o) => o.includes(`(${BUILD_STAT[build]},`)));
+    if (q === "Choose a blessing") return build === "INT" && has("Pray") >= 0 ? has("Pray") : has("Meditate");
     if (q.startsWith("Your spellbook is full")) return options.length - 1; // keep
     if (q.startsWith("Equip the")) return 1; // dual-wield
     if (q === "Choose a boost") return Math.max(0, options.findIndex((o) => o === [BOOST[build], "+20 Max Health", "+5 Perception", "+4 Agility"].find((p) => options.includes(p))));
