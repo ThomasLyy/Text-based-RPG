@@ -472,9 +472,9 @@ test("rewards: 3 different offers; boss rewards are Rare+ gear or spells; a full
   const { makePotion } = await import("./items");
   const { log } = await play([]);
   for (let i = 0; i < 20; i++) {
-    const offers = rewardOffers(player, 1);
+    const offers = rewardOffers(player, 1, {});
     expect(new Set(offers.map((o) => o.kind + o.name)).size).toBe(3);
-    const boss = rewardOffers(player, 1, true);
+    const boss = rewardOffers(player, 1, { boss: true });
     expect(boss.every((o) => o.kind === "spell" || (o.kind !== "potion" && (o.quality === "Rare" || o.quality === "Epic")))).toBe(true);
   }
   for (let i = 0; i < 5; i++) player.addPotion(makePotion(0));
@@ -640,7 +640,7 @@ test("scrolls never offer a spell you already have at rank IV", async () => {
   const { rewardOffers } = await import("./reward");
   player.spells = [await known("Fireball", 4)]; // Fireball is the first spell in the list
   rolls(0.7, 0); // a scroll, then the first spell of the pool
-  expect(rewardOffers(player, 0, false, 1)[0].name).toBe("Flame Wall");
+  expect(rewardOffers(player, 0, { count: 1 })[0].name).toBe("Flame Wall");
 });
 
 // --- events and gold ---
@@ -669,7 +669,7 @@ test("forge quality: values grow, Rare and Epic gain affixes", async () => {
 
 test("merchant: only affordable items are listed; buying costs gold and equips", async () => {
   const { player } = await setup();
-  const { runEvent } = await import("./events");
+  const { merchant, restRoom, EVENTS } = await import("./events");
   const { io, log } = await play([]);
   player.gold = 25;
   let first: string[] = [];
@@ -678,21 +678,21 @@ test("merchant: only affordable items are listed; buying costs gold and equips",
     if (n++ === 0) first = o;
     return o.length - 1; // leave
   };
-  await runEvent("merchant", player, 0);
+  await merchant(player, 0);
   expect(first.every((o) => o === "Leave" || /— (\d+) gold$/.test(o) && +/— (\d+) gold$/.exec(o)![1] <= 25)).toBe(true);
   expect(log).toContain("You move on.");
 
   player.gold = 500;
   player.health = 50;
   await play(["Heal", "Leave"]);
-  await runEvent("merchant", player, 0);
+  await merchant(player, 0);
   expect([player.health, player.gold]).toEqual([player.maxHealth, 470]);
 });
 
 test("merchant: warns before a purchase that makes you drop gear; Never mind keeps your gold", async () => {
   const { Player } = await import("./player");
   const { ARMOR_SLOTS, makeArmor, makeWeapon } = await import("./items");
-  const { runEvent } = await import("./events");
+  const { merchant, restRoom, EVENTS } = await import("./events");
   const { io } = await play([]);
   const sword = await family("Sword");
   vi.spyOn(Math, "random").mockImplementation(seeded(1));
@@ -711,7 +711,7 @@ test("merchant: warns before a purchase that makes you drop gear; Never mind kee
     const visits = questions.filter((x) => x.startsWith("You have")).length;
     return visits <= 2 ? pick : o.length - 1; // try it twice, then leave
   };
-  await runEvent("merchant", p, 0);
+  await merchant(p, 0);
   const warnings = questions.filter((q) => q.startsWith('"Oh, if you buy this'));
   expect(warnings).toHaveLength(2);
   expect(warnings[0]).toMatch(/you'll lose your .+\. Are you sure\?"$/);
@@ -721,7 +721,7 @@ test("merchant: warns before a purchase that makes you drop gear; Never mind kee
 
 test("merchant: a new spell with a full spellbook asks to confirm, which spell to forget, then confirms again", async () => {
   const { Player } = await import("./player");
-  const { runEvent } = await import("./events");
+  const { merchant, restRoom, EVENTS } = await import("./events");
   const { io, log } = await play([]);
   const book = ["Fireball", "Water Whip", "Rock Throw", "Lightning Bolt"];
   let found = false;
@@ -743,7 +743,7 @@ test("merchant: a new spell with a full spellbook asks to confirm, which spell t
       learned = /\[cyan\](.+) I\[/.exec(o[learn])![1];
       return learn;
     };
-    await runEvent("merchant", p, 0);
+    await merchant(p, 0);
     if (visits.length < 5) continue; // this stock had no new spell
     found = true;
     expect(visits.slice(0, 4)).toEqual(Array(4).fill("You have 1000 gold")); // backing out costs nothing
@@ -757,7 +757,7 @@ test("merchant: a new spell with a full spellbook asks to confirm, which spell t
 test("merchant: with a full pouch, potions stay listed but she refuses to sell one", async () => {
   const { Player } = await import("./player");
   const { makePotion } = await import("./items");
-  const { runEvent } = await import("./events");
+  const { merchant, restRoom, EVENTS } = await import("./events");
   const { io, log } = await play([]);
   let tried = 0;
   for (let seed = 1; seed <= 30 && !tried; seed++) {
@@ -770,7 +770,7 @@ test("merchant: with a full pouch, potions stay listed but she refuses to sell o
       if (potion < 0 || tried++) return o.length - 1; // no potion in stock, or already tried: leave
       return potion;
     };
-    await runEvent("merchant", p, 0);
+    await merchant(p, 0);
     if (tried) expect([p.gold, p.potions.length]).toEqual([1000, 5]);
   }
   expect(tried).toBe(2); // tried to buy, then saw the potion still listed and left
@@ -779,48 +779,102 @@ test("merchant: with a full pouch, potions stay listed but she refuses to sell o
 
 test("forge event upgrades the chosen item; shrine prays a spell up a rank", async () => {
   const { player } = await setup();
-  const { runEvent } = await import("./events");
+  const { merchant, restRoom, EVENTS } = await import("./events");
   const { makeWeapon } = await import("./items");
-  await play(["Iron Axe", "Pray", "Fireball"]);
+  await play(["Forge", "Iron Axe", "Pray", "Fireball"]);
   player.equipWeapon(makeWeapon(await family("Axe"), 0, "Common"));
   player.spells = [await known("Fireball")];
-  await runEvent("forge", player, 0);
+  await restRoom(player);
   expect(player.mainHand?.quality).toBe("Uncommon");
-  await runEvent("shrine", player, 0);
+  await EVENTS.shrine(player, 0);
   expect(player.spells[0].rank).toBe(2);
 });
 
 test("trial: chance from the stat; success pays and offers a reward, failure hurts but never kills", async () => {
   const { player } = await setup();
-  const { runEvent, trialChance } = await import("./events");
+  const { EVENTS, trialChance } = await import("./events");
   expect([trialChance(10), trialChance(20), trialChance(40)]).toEqual([0.4, 0.7, 0.95]);
   const { log } = await play(["Lift", "Skip"]);
   const after = seeded(3);
   const seq = [0, 0.1]; // first trial text, then success (0.1 < 0.4); then varied rolls so the reward has 3 different items
   vi.spyOn(Math, "random").mockImplementation(() => seq.shift() ?? after());
-  await runEvent("trial", player, 1);
+  await EVENTS.trial(player, 1);
   expect(player.gold).toBe(40);
   expect(log.some((l) => l.includes("Choose your reward"))).toBe(true);
 
   await play(["Lift"]);
   rolls(0, 0.9); // failure
   player.health = 5;
-  await runEvent("trial", player, 0);
+  await EVENTS.trial(player, 0);
   expect(player.health).toBe(1);
 });
 
-test("each act has 2 different events", async () => {
-  const { actEvents } = await import("./events");
-  for (let i = 0; i < 20; i++) expect(new Set(actEvents()).size).toBe(2);
+test("rest room: Rest heals 40% and all mana; Forge upgrades; Forge is greyed out when nothing can be upgraded", async () => {
+  const { player } = await setup();
+  const { restRoom } = await import("./events");
+  const { makeWeapon } = await import("./items");
+  await play(["Rest"]);
+  player.health = 30;
+  player.mana = 10;
+  await restRoom(player);
+  expect([player.health, player.mana]).toEqual([70, 100]);
+  await play(["Forge", "Iron Axe"]);
+  player.equipWeapon(makeWeapon(await family("Axe"), 0, "Common"));
+  await restRoom(player);
+  expect(player.mainHand?.quality).toBe("Uncommon");
+  const { io } = await play([]);
+  let disabled: boolean[] | undefined;
+  io.ask = async (_q, _o, d) => ((disabled = d), 0);
+  player.equipWeapon(makeWeapon(await family("Axe"), 0, "Epic"));
+  await restRoom(player);
+  expect(disabled?.[1]).toBe(true);
+});
+
+test("brew: drinking gives +3 or -2 to a random stat; -2 Strength at full health keeps health within max HP", async () => {
+  const { player } = await setup();
+  const { EVENTS } = await import("./events");
+  await play(["Drink", "Drink"]);
+  rolls(0, 0); // good brew, first stat
+  await EVENTS.brew(player, 0);
+  expect(player.base.strength).toBe(13);
+  player.health = player.maxHealth; // 103
+  rolls(0.9, 0); // bad brew, Strength
+  await EVENTS.brew(player, 0);
+  expect([player.base.strength, player.health]).toEqual([11, player.maxHealth]);
+  expect(player.maxHealth).toBe(101);
+});
+
+test("chest: 30% trap costs 15% max HP and never kills; otherwise gold 20 × (act + 1) and a reward", async () => {
+  const { player } = await setup();
+  const { EVENTS } = await import("./events");
+  await play(["Open"]);
+  rolls(0.1); // trap
+  player.health = 5;
+  await EVENTS.chest(player, 0);
+  expect(player.health).toBe(1);
+  const { log } = await play(["Open", "Skip"]);
+  const after = seeded(3);
+  const seq = [0.5]; // no trap, then varied rolls so the reward has 3 different items
+  vi.spyOn(Math, "random").mockImplementation(() => seq.shift() ?? after());
+  await EVENTS.chest(player, 1);
+  expect(player.gold).toBe(40);
+  expect(log.some((l) => l.includes("Choose your reward"))).toBe(true);
+});
+
+test("elite rewards: quality one step up, capped at Epic", async () => {
+  const { rollQuality } = await import("./items");
+  rolls(0, 0);
+  expect(rollQuality(0, false, 1)).toBe("Uncommon");
+  expect(rollQuality(2, true, 1)).toBe("Epic");
 });
 
 test("shrine blood offering: costs 20% of max HP from current health, greyed out if it would leave less than 1 HP", async () => {
   const { player } = await setup();
-  const { runEvent } = await import("./events");
+  const { merchant, restRoom, EVENTS } = await import("./events");
   await play(["Blood offering"]);
   rolls(0); // the stat roll picks strength
   player.health = 80;
-  await runEvent("shrine", player, 0);
+  await EVENTS.shrine(player, 0);
   expect([player.health, player.base.strength, player.baseMaxHealth]).toEqual([60, 13, 100]); // -20 (20% of 100), max HP unchanged
 
   const { io } = await play([]);
@@ -828,7 +882,7 @@ test("shrine blood offering: costs 20% of max HP from current health, greyed out
   let labels: string[] = [];
   io.ask = async (_q, o, d) => ((labels = o), (disabled = d), o.length - 1); // look, then meditate
   player.health = 21; // 21 - 21 (20% of 103 max HP) = 0: not allowed
-  await runEvent("shrine", player, 0);
+  await EVENTS.shrine(player, 0);
   const blood = labels.findIndex((l) => l.startsWith("Blood"));
   expect(disabled?.[blood]).toBe(true);
   expect(labels[blood]).toContain("not enough health");

@@ -193,13 +193,14 @@ export const makeScroll = (spell: Spell, rank = 1): Scroll => ({ kind: "spell", 
 
 export type Item = Weapon | Armor | Potion | Scroll;
 
-// Chance (%) of Common / Uncommon / Rare / Epic per act; boss rewards are Rare or better.
+// Chance (%) of Common / Uncommon / Rare / Epic per act; boss rewards are Rare or better. `step` tiers up (elites), capped at Epic.
 const QUALITY_ODDS = [[60, 30, 9, 1], [40, 35, 20, 5], [25, 35, 28, 12]];
-export function rollQuality(act: number, boss = false): Quality {
+export function rollQuality(act: number, boss = false, step = 0): Quality {
   const odds = boss ? [0, 0, 70, 30] : QUALITY_ODDS[act];
   let r = Math.random() * 100;
-  for (let i = 0; i < QUALITIES.length; i++) if ((r -= odds[i]) < 0) return QUALITIES[i];
-  return "Common";
+  let i = 0;
+  while (i < QUALITIES.length - 1 && (r -= odds[i]) >= 0) i++;
+  return QUALITIES[Math.min(QUALITIES.length - 1, i + step)];
 }
 
 // Forge: one quality tier up. Values grow with the quality multiplier; reaching Rare/Epic adds affixes.

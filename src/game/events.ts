@@ -1,18 +1,17 @@
-﻿// Events between fights: 2 per act (after floors 2 and 3), picked from 4 kinds.
-import { describe, price, upgradeQuality, QUALITIES, type Armor, type Stat, type Weapon } from "./items";
+﻿// The non-fight rooms of the map: merchant (Shop), rest (Rest or Forge), and the random events (Event).
+import { describe, price, upgradeQuality, QUALITIES, STATS, type Armor, type Stat, type Weapon } from "./items";
 import { RANK_NAME, SPELLBOOK_SIZE, spellName } from "./spell";
 import { askHand, chooseReward, offer, rewardOffers, spellLine, take } from "./reward";
 import { io, randint } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
 
-export type EventKind = "merchant" | "forge" | "shrine" | "trial";
-export const EVENT_KINDS: EventKind[] = ["merchant", "forge", "shrine", "trial"];
 export const HEAL_PRICE = 30;
+export const REST_HEAL = 0.4; // Rest room: share of max health
 
 // Merchant: 4 items for gold (only what you can afford is listed), or pay to heal.
-async function merchant(player: Player, act: number) {
+export async function merchant(player: Player, act: number) {
   io.print("[panel bold yellow]A wandering merchant spreads out her wares.[/]");
-  const stock = rewardOffers(player, act, false, 4);
+  const stock = rewardOffers(player, act, { count: 4 });
   for (;;) {
     const affordable = stock.filter((i) => price(i) <= player.gold);
     const heal = player.health < player.maxHealth && player.gold >= HEAL_PRICE;
@@ -48,13 +47,24 @@ async function merchant(player: Player, act: number) {
   }
 }
 
+const upgradable = (player: Player) =>
+  [player.mainHand, player.offHand, ...Object.values(player.armor)].filter((i, n, all): i is Weapon | Armor => !!i && i.quality !== "Epic" && all.indexOf(i) === n);
+
+// Rest room: one of rest (health and all mana) or forge. Forge is greyed out when nothing can be upgraded.
+export async function restRoom(player: Player) {
+  io.print("[panel bold yellow]A quiet campfire, and an old forge beside it.[/]");
+  const canForge = upgradable(player).length > 0;
+  const options = [`Rest: recover ${REST_HEAL * 100}% health and all mana`, `Forge: upgrade one item${canForge ? "" : " — nothing to upgrade"}`];
+  if ((await io.ask("Rest or forge?", options, [false, !canForge])) === 1 && canForge) return forge(player);
+  player.health = Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * REST_HEAL));
+  player.mana = player.maxMana;
+  io.print(`You rest by the fire. Health ${player.health}/${player.maxHealth}, mana ${player.mana}/${player.maxMana}.`);
+}
+
 // Forge: one equipped item goes up a quality tier, free.
 async function forge(player: Player) {
-  io.print("[panel bold yellow]An abandoned forge, its coals still glowing.[/]");
-  const items = [player.mainHand, player.offHand, ...Object.values(player.armor)].filter(
-    (i, n, all): i is Weapon | Armor => !!i && i.quality !== "Epic" && all.indexOf(i) === n,
-  );
-  if (!items.length) return io.print("Your gear is already as fine as it gets.");
+  io.print("The coals of the forge still glow.");
+  const items = upgradable(player);
   const next = (i: Weapon | Armor) => QUALITIES[QUALITIES.indexOf(i.quality) + 1];
   const choice = await io.ask("Choose an item to upgrade", [...items.map((i) => `${i.name} (${i.quality} → ${next(i)})`), "Leave"]);
   if (choice === items.length) return io.print("You leave the forge.");
@@ -124,15 +134,33 @@ async function trial(player: Player, act: number) {
   }
 }
 
-export async function runEvent(kind: EventKind, player: Player, act: number) {
-  if (kind === "merchant") await merchant(player, act);
-  else if (kind === "forge") await forge(player);
-  else if (kind === "shrine") await shrine(player);
-  else await trial(player, act);
+// Strange brew: a random stat, +3 or -2.
+async function brew(player: Player) {
+  if ((await io.ask("A bubbling flask sits on a stone. Drink it?", ["Drink it", "Walk away"])) === 1) return io.print("You leave the flask alone.");
+  const good = Math.random() < 0.5;
+  const stat = STATS[randint(0, STATS.length - 1)];
+  player.base[stat] += good ? 3 : -2;
+  player.health = Math.min(player.health, player.maxHealth); // less Strength, less max HP
+  io.print(good ? `[green]Warmth spreads through you.[/] +3 ${stat}.` : `[red]It burns going down.[/] -2 ${stat}.`);
 }
 
-// Two different kinds per act.
-export function actEvents(): EventKind[] {
-  const pool = [...EVENT_KINDS];
-  return [0, 1].map(() => pool.splice(randint(0, pool.length - 1), 1)[0]);
+// Locked chest: 30% a trap (15% of max HP, never kills), otherwise gold and a reward.
+async function chest(player: Player, act: number) {
+  if ((await io.ask("A locked chest. Open it?", ["Open it", "Leave it"])) === 1) return io.print("You leave the chest.");
+  if (Math.random() < 0.3) {
+    player.health = Math.max(1, player.health - Math.round(player.maxHealth * 0.15));
+    return io.print(`[red]A needle trap![/] Health ${player.health}/${player.maxHealth}.`);
+  }
+  const gold = 20 * (act + 1);
+  player.gold += gold;
+  io.print(`[green]The lock gives.[/] ${gold} gold inside.`);
+  await chooseReward(player, act);
+}
+
+export const EVENTS: Record<string, (player: Player, act: number) => Promise<void>> = { shrine, trial, brew, chest };
+
+// Event room: one random event.
+export async function eventRoom(player: Player, act: number) {
+  const all = Object.values(EVENTS);
+  await all[randint(0, all.length - 1)](player, act);
 }

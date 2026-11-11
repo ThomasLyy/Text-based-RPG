@@ -17,19 +17,20 @@ function randomScroll(player: Player): Scroll {
 }
 
 // Odds per offer: weapon 30%, armor 35%, spell 20%, potion 15%. Bosses: Rare+ gear or a spell upgrade, no potions.
-function randomItem(player: Player, act: number, boss: boolean): Item {
+function randomItem(player: Player, act: number, boss: boolean, step: number): Item {
   const r = Math.random();
   if (!boss && r >= 0.85) return makePotion(act, Math.random() < 0.35);
   if (r >= 0.65) return randomScroll(player);
-  if (r < 0.3) return makeWeapon(FAMILIES[randint(0, FAMILIES.length - 1)], act, rollQuality(act, boss));
+  if (r < 0.3) return makeWeapon(FAMILIES[randint(0, FAMILIES.length - 1)], act, rollQuality(act, boss, step));
   const slots = ARMOR_SLOTS.filter((s) => (s !== "shield" || player.canHoldShield()) && (s !== "focus" || player.canHoldFocus()));
-  return makeArmor(slots[randint(0, slots.length - 1)], act, rollQuality(act, boss));
+  return makeArmor(slots[randint(0, slots.length - 1)], act, rollQuality(act, boss, step));
 }
 
-export function rewardOffers(player: Player, act: number, boss = false, count = 3): Item[] {
+// Elites: gear one quality tier up.
+export function rewardOffers(player: Player, act: number, { boss = false, elite = false, count = 3 }: { boss?: boolean; elite?: boolean; count?: number } = {}): Item[] {
   const offers: Item[] = [];
   while (offers.length < count) {
-    const item = randomItem(player, act, boss);
+    const item = randomItem(player, act, boss, elite ? 1 : 0);
     if (!offers.some((o) => o.name === item.name && o.kind === item.kind)) offers.push(item);
   }
   return offers;
@@ -141,8 +142,8 @@ export async function take(player: Player, item: Item, hand?: "main" | "off") {
   io.print(`You equip the ${item.name}.${removed.length ? ` (${removed.map((r) => r.name).join(", ")} left behind)` : ""}`);
 }
 
-export async function chooseReward(player: Player, act: number, boss = false) {
-  const offers = rewardOffers(player, act, boss);
+export async function chooseReward(player: Player, act: number, { boss = false, elite = false }: { boss?: boolean; elite?: boolean } = {}) {
+  const offers = rewardOffers(player, act, { boss, elite });
   io.print(`[panel bold blue]${boss ? "The boss drops a treasure!" : "Choose your reward"}[/]`);
   const buttons = offers.map((o) => offer(player, o));
   const choice = await io.ask("Choose a reward", [...buttons.map((b) => b.label), "Skip"], undefined, buttons.map((b) => b.detail));
