@@ -638,6 +638,41 @@ test("merchant: warns before a purchase that makes you drop gear; Never mind kee
   expect(p.gold).toBeLessThan(1000);
 });
 
+test("merchant: a new spell with a full spellbook asks to confirm, which spell to forget, then confirms again", async () => {
+  const { Player } = await import("./player");
+  const { runEvent } = await import("./events");
+  const { io, log } = await play([]);
+  const book = ["Fireball", "Water Whip", "Rock Throw", "Lightning Bolt"];
+  let found = false;
+  for (let seed = 1; seed <= 50 && !found; seed++) {
+    vi.spyOn(Math, "random").mockImplementation(seeded(seed));
+    const p = new Player();
+    p.gold = 1000;
+    p.spells = await Promise.all(book.map((n) => known(n)));
+    const visits: string[] = [];
+    let learned = "";
+    io.ask = async (q, o) => {
+      const n = visits.length; // which visit we are on
+      if (q.startsWith('"Your spellbook is full')) return n === 1 ? 1 : 0; // 1st try: Never mind
+      if (q === "Choose a spell to forget") return n === 2 ? o.length - 1 : 0; // 2nd try: Never mind, then Fireball I
+      if (q.startsWith('"You\'ll forget')) return n === 3 ? 1 : 0; // 3rd try: Never mind; 4th: Buy it
+      visits.push(q);
+      const learn = o.findIndex((x) => x.startsWith("Learn"));
+      if (learn < 0 || visits.length > 4) return o.length - 1; // leave
+      learned = /\[cyan\](.+) I\[/.exec(o[learn])![1];
+      return learn;
+    };
+    await runEvent("merchant", p, 0);
+    if (visits.length < 5) continue; // this stock had no new spell
+    found = true;
+    expect(visits.slice(0, 4)).toEqual(Array(4).fill("You have 1000 gold")); // backing out costs nothing
+    expect(p.gold).toBe(960);
+    expect(p.spells.map((k) => k.spell.name)).toEqual([...book.slice(1), learned]);
+    expect(log).toContain("You forget Fireball I.");
+  }
+  expect(found).toBe(true);
+});
+
 test("merchant: with a full pouch, potions stay listed but she refuses to sell one", async () => {
   const { Player } = await import("./player");
   const { makePotion } = await import("./items");

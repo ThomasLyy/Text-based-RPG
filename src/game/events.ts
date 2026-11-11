@@ -1,6 +1,6 @@
 ﻿// Events between fights: 2 per act (after floors 2 and 3), picked from 4 kinds.
 import { describe, price, upgradeQuality, QUALITIES, type Armor, type Stat, type Weapon } from "./items";
-import { RANK_NAME, spellName } from "./spell";
+import { RANK_NAME, SPELLBOOK_SIZE, spellName } from "./spell";
 import { askHand, chooseReward, comparison, rewardOffers, take } from "./reward";
 import { io, randint } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
@@ -26,9 +26,15 @@ async function merchant(player: Player, act: number) {
       }
       const hand = item.kind === "weapon" ? await askHand(player, item) : "main";
       const lost = item.kind === "weapon" || item.kind === "armor" ? player.wouldRemove(item, hand) : [];
-      if (lost.length) {
-        const names = new Intl.ListFormat("en").format(lost.map((l) => `your ${l.name}`));
-        if ((await io.ask(`"Oh, if you buy this, you'll lose ${names}. Are you sure?"`, ["Buy it", "Never mind"])) === 1) continue;
+      const sure = async (q: string) => (await io.ask(`"${q}"`, ["Buy it", "Never mind"])) === 0;
+      const names = new Intl.ListFormat("en").format(lost.map((l) => `your ${l.name}`));
+      if (lost.length && !(await sure(`Oh, if you buy this, you'll lose ${names}. Are you sure?`))) continue;
+      if (item.kind === "spell" && !player.knows(item.name) && player.spells.length >= SPELLBOOK_SIZE) {
+        if (!(await sure(`Your spellbook is full. To learn ${item.name}, you'll have to forget a spell. Are you sure?`))) continue;
+        const f = await io.ask("Choose a spell to forget", [...player.spells.map(spellName), "Never mind"]);
+        if (f === player.spells.length || !(await sure(`You'll forget ${spellName(player.spells[f])} for ${item.name}. Are you sure?`))) continue;
+        io.print(`You forget ${spellName(player.spells[f])}.`);
+        player.spells.splice(f, 1); // room made now, so learning below asks nothing more
       }
       player.gold -= price(item);
       stock.splice(stock.indexOf(item), 1);
