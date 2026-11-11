@@ -1,28 +1,35 @@
-﻿:root {
-  --bg: #0d0f12;
-  --fg: #d8dee9;
-  --muted: #7b8494;
-  --border: #3b4252;
-  --red: #e06c75;
-  --green: #98c379;
-  --blue: #61afef;
-  --yellow: #e5c07b;
-  --cyan: #56b6c2;
-  --purple: #c678dd;
+﻿/* 8-bit look: our own 12 flat colours, two pixel fonts, square shapes, no gradients, no smooth motion. */
+:root {
+  --bg: #12101c;
+  --panel: #1e1a2e;
+  --hover: #2d2748;
+  --fg: #f2e9d8;
+  --muted: #a59cb8;
+  --border: #4a4266;
+  --red: #ff5d5d;
+  --green: #7ee06a;
+  --blue: #5fb4ff;
+  --yellow: #ffd75e;
+  --cyan: #4fe3d0;
+  --purple: #c58bff;
+  --pixel: "Press Start 2P", ui-monospace, monospace; /* titles, labels, the map: short text only */
+  --text: "VT323", ui-monospace, Consolas, monospace; /* the log and item text: easier to read at length */
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; border-radius: 0; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 15px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font: 20px/1.15 var(--text);
+  -webkit-font-smoothing: none;
+  font-smooth: never;
 }
 
-/* Phone: one scrolling column. Hero, then the fight and the choices, then the map (it takes the path clicks),
-   the log, and gear. The comparison panel needs hover, so it only exists on wide screens. */
+/* Phone: one scrolling column. Hero, the room, the fight and the choices, then the map (it takes the path clicks)
+   and gear. The comparison panel needs hover, so it only exists on wide screens. */
 main {
   max-width: 900px;
   margin: 0 auto;
@@ -41,7 +48,7 @@ main {
 #log { max-height: 40dvh; }
 #compare { display: none; }
 
-/* Wide screens: map and hero | log, fight and choices | comparison and gear. Each column scrolls on its own. */
+/* Wide screens: map and hero | room, fight and choices | comparison and gear. Each column scrolls on its own. */
 @media (min-width: 1000px) {
   main {
     max-width: 1600px;
@@ -52,66 +59,92 @@ main {
     gap: 16px;
   }
   #left, #right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
-  #center { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  #center { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
   #log { max-height: 50dvh; }
   #compare { display: block; white-space: pre-line; flex-shrink: 0; }
-  #compare:not(:empty) { border: 1px solid var(--blue); border-radius: 4px; padding: 8px 10px; }
+  #compare:not(:empty) { border: 3px solid var(--blue); background: var(--panel); padding: 8px 10px; }
 }
 
-fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 0 0 8px; padding: 6px 10px; min-width: 0; }
-legend { padding: 0 4px; }
+/* Boxes: a hard 3px frame; the title is an inverted tab sitting on it. */
+fieldset { border: 3px solid var(--border); background: var(--panel); margin: 0 0 8px; padding: 8px 12px 10px; min-width: 0; }
+legend {
+  font: 10px/1 var(--pixel);
+  text-transform: uppercase;
+  background: var(--border);
+  color: var(--fg);
+  padding: 5px 8px;
+}
+#room { border-color: var(--fg); }
+#room > legend { background: var(--fg); color: var(--bg); font-size: 12px; }
+#room > legend .yellow, #room > legend .red, #room > legend .green { color: var(--bg); }
 
-h1 { font-size: 1rem; margin: 0 0 8px; }
 .unit { margin: 4px 0 8px; }
 .line { display: flex; justify-content: space-between; gap: 8px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
 .item { margin: 3px 0; }
 .intent { color: var(--yellow); margin-top: 2px; }
-.track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 2px; }
-.fill { height: 100%; transition: width 0.25s; }
+
+/* Bars: 10 blocks with gaps; the fill jumps a whole block at a time (main.ts rounds it). */
+.track { position: relative; height: 14px; background: var(--bg); border: 2px solid var(--border); margin-top: 2px; }
+.track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), var(--bg) calc(10% - 2px) 10%);
+}
+.fill { height: 100%; }
 .fill.red { background: var(--red); }
 .fill.green { background: var(--green); }
 .fill.blue { background: var(--blue); }
 .fill.cyan { background: var(--cyan); }
 
-#map svg { display: block; width: 100%; max-height: 55dvh; margin: 0 auto; }
-#map .link { stroke: var(--border); stroke-width: 2; }
-#map .link.walked { stroke: var(--fg); }
-#map .node rect { fill: #1b1f27; stroke: var(--border); stroke-width: 1.5; }
-#map .node text { fill: var(--muted); font: 15px ui-monospace, Consolas, monospace; text-anchor: middle; pointer-events: none; }
-#map .reachable rect { stroke: var(--blue); stroke-width: 2.5; }
-#map .reachable text { fill: var(--fg); font-weight: bold; }
+/* The map: square tiles. Rooms you can walk to blink, your room is drawn inverted. */
+#map svg { display: block; width: 100%; max-height: 55dvh; margin: 0 auto; shape-rendering: crispEdges; }
+#map .link { stroke: var(--border); stroke-width: 3; stroke-dasharray: 6 4; }
+#map .link.walked { stroke: var(--fg); stroke-dasharray: none; }
+#map .node rect { fill: var(--panel); stroke: var(--border); stroke-width: 3; }
+#map .node text { fill: var(--muted); font: 12px var(--pixel); text-anchor: middle; pointer-events: none; }
+#map .reachable rect { stroke: var(--blue); animation: blink 1s steps(2, jump-none) infinite; }
+#map .reachable text { fill: var(--fg); }
 #map [data-i] { cursor: pointer; outline: none; }
-#map [data-i]:hover rect, #map [data-i]:focus-visible rect { fill: #23324a; stroke-width: 3.5; }
-#map .current rect { stroke: var(--yellow); stroke-width: 2.5; }
-#map .current text { fill: var(--yellow); }
-#map .visited { opacity: 0.6; }
+#map [data-i]:hover rect, #map [data-i]:focus-visible rect { fill: var(--blue); animation: none; }
+#map [data-i]:hover text, #map [data-i]:focus-visible text { fill: var(--bg); }
+#map .current rect { fill: var(--yellow); stroke: var(--yellow); }
+#map .current text { fill: var(--bg); }
+#map .visited { opacity: 0.5; }
 #map .boss rect { stroke: var(--red); }
-#map .boss text { fill: var(--red); font-weight: bold; }
+#map .boss text { fill: var(--red); }
+@keyframes blink { 50% { stroke: var(--border); } }
 
-#log { min-height: 4em; white-space: pre-wrap; overflow-y: auto; }
+#log { min-height: 3em; white-space: pre-wrap; overflow-y: auto; }
 
 #prompt { padding-bottom: 8px; flex-shrink: 0; }
 #board { flex-shrink: 0; }
+#question { font: 12px/1.4 var(--pixel); color: var(--yellow); margin: 4px 0 12px; }
 #question:empty { display: none; }
-#options { display: flex; flex-wrap: wrap; gap: 8px; }
+#question::before { content: "> "; animation: cursor 1s steps(2, jump-none) infinite; }
+@keyframes cursor { 50% { opacity: 0; } }
+#options { display: flex; flex-wrap: wrap; gap: 12px; padding: 3px; }
+
+/* Buttons: notched pixel corners (four shadows instead of a border), pressed = shifted down. */
 button {
   font: inherit;
   color: var(--fg);
-  background: #1b1f27;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 10px 14px;
+  background: var(--panel);
+  border: 0;
+  padding: 8px 14px;
   min-height: 44px;
   cursor: pointer;
   white-space: pre-line; /* item choices: description, then what changes */
   text-align: left;
+  box-shadow: 0 -3px 0 var(--b, var(--border)), 0 3px 0 var(--b, var(--border)), -3px 0 0 var(--b, var(--border)), 3px 0 0 var(--b, var(--border));
 }
-button.wide { flex-basis: 100%; }
-button:hover:not(:disabled), button:focus-visible { border-color: var(--blue); }
+button:hover:not(:disabled), button:focus-visible { --b: var(--blue); background: var(--hover); outline: none; }
+button:active:not(:disabled) { transform: translateY(2px); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.wide { flex-basis: 100%; }
 
-.panel { display: block; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; margin: 6px 0; }
+.panel { display: block; font: 10px/1.6 var(--pixel); text-transform: uppercase; border-bottom: 3px solid currentColor; padding: 6px 0 4px; margin: 6px 0; }
 .bold { font-weight: bold; }
 .dim { color: var(--muted); }
 .red { color: var(--red); }
@@ -121,3 +154,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .cyan { color: var(--cyan); }
 .white { color: var(--fg); }
 .purple { color: var(--purple); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+}

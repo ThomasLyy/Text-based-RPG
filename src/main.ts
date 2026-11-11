@@ -12,8 +12,9 @@ const markup = (s: string) =>
     .replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!)
     .replace(/\[(\/?)([\w ]*)\]/g, (_, close, cls) => (close ? "</span>" : `<span class="${cls}">`));
 
+// 10 chunky blocks: any value above 0 lights at least one
 const bar = (value: number, max: number, color: string) =>
-  `<div class="track"><div class="fill ${color}" style="width:${Math.min(100, Math.max(0, (value / max) * 100))}%"></div></div>`;
+  `<div class="track"><div class="fill ${color}" style="width:${Math.min(10, Math.ceil(Math.max(0, value / max) * 10)) * 10}%"></div></div>`;
 
 // Keep the newest log line visible; board and buttons change size, so re-stick after each of them.
 const stick = () => ($("log").scrollTop = $("log").scrollHeight);
