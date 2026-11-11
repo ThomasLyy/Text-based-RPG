@@ -73,26 +73,33 @@ Everything left before the game is complete, in the agreed order.
 * Enemies that resist physical attacks, elites included, to force the use of spells.
 * Level 10: 2 bosses per act.
 
-### 5. Screen and controls
+### 5. Look and feel
+
+* Art direction: 16×16 pixel sprites drawn in code (a grid of characters with a palette, rendered in the browser; no image files), one palette and one outline rule for everything.
+* Fight screen like an old dungeon crawler: the enemies' sprites face the player, scaled up, side by side.
+* Sprites for every enemy and boss (their look follows the lore set in step 1).
+* Pixel icons: one per weapon family (9), one per element (6), one per room type (5; no emoji).
+* Hit feedback: floating damage numbers, the target shakes, a pop on critical hits, enemies fade out when they die, and a red flash when the hero is hit.
+
+### 6. Screen and controls
 
 * **Full UI review (mandatory):** go through every screen (weapon choice, map, fight, rewards, shop, rest, events, level-up, death and victory) on a computer and on a phone, with screenshots, and judge it as a game HUD: where the eye goes, what moves, what is hard to read. Also check a minimum text size on phones, and that each enemy intent can be told apart without relying on its color (a word or an icon), for colorblind players. Fix what it finds before merging the `ui` branch (8-bit look, fixed HUD).
 * Phone layout: a fixed HUD for small screens too (for example tabs for Map, Hero and Gear, with the room, enemies and choices always visible). Today it is one scrolling column.
-* A red flash when the hero is hit.
 * The comparison box: show only the stats that change, so it fits without scrolling.
 * Map: the boss tile never shows as "current"; the next floor's rooms already show as reachable during a room.
-* Pixel icons for the 5 room types (no emoji).
 * A short how-to-play for the first run (intents, Defend, the map).
 * Settings screen: animations on/off, reset progression, music and sound volume.
 * Keyboard shortcuts on computers: number keys pick choices (the number shown on each button), Space continues.
 * Sound effects (hits, crits, level-ups, buying) and music (a track per act), chiptune to match the 8-bit look. Still open: making or licensing the tracks.
 
-### 6. Balance and playtests
+### 7. Balance and playtests
 
 * Re-tune with the bots after each of steps 1, 3 and 4 (build parity is currently 14.7 points against a 15-point limit, so step 1 will likely break it).
 * Playtests with real players: check that a run takes about 20 minutes and that the first win is reachable.
 
-### 7. Release
+### 8. Release
 
+* Choose the game's name ("Text-based RPG" no longer fits: it is becoming a pixel-art roguelite), before the store listing; update the title, the README and the app name.
 * First Android build, tested on a real phone (Android 7.0 and newer).
 * Bundle the pixel fonts with the game (required: today they load from Google Fonts, so the Android app without internet falls back to a plain font).
 * App icon and splash screen.
