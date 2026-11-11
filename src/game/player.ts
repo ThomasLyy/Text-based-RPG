@@ -11,6 +11,7 @@ export const OFFHAND_POWER = 0.6; // dual-wielding: the off-hand weapon hits at 
 export const POUCH_SIZE = 5;
 export const MAX_REDUCTION = 50; // Armor and Ward cap, in %
 export const MAX_DODGE = 0.3;
+export const STR_HEALTH = 3; // max HP per Strength point above 10
 
 // 4 body pieces of one weight
 export const SET_BONUS: Record<Weight, { name: string; text: string; bonuses: Partial<Record<BonusKey, number>> }> = {
@@ -74,7 +75,7 @@ export class Player {
     return Object.fromEntries(STATS.map((s) => [s, this.stat(s)])) as Record<Stat, number>;
   }
   get maxHealth() {
-    const raw = this.baseMaxHealth + this.bonus("maxHealth") + Math.max(0, this.stat("strength") - 10); // strength makes you sturdier
+    const raw = this.baseMaxHealth + this.bonus("maxHealth") + STR_HEALTH * Math.max(0, this.stat("strength") - 10); // strength makes you sturdier
     return Math.round(raw * (1 + 0.1 * this.affixes("vitality")));
   }
   get maxMana() {

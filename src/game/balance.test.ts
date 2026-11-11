@@ -41,8 +41,17 @@ function sensibleBot(build: Build, shapes: Record<string, string>): Bot {
     if (o.includes("empty slot")) return 6 + (weight ? 4 : 0);
     return weight && /Rare|Epic/.test(o) ? 3 : -1;
   };
-  return (q, options, view) => {
+  return (q, options, view, disabled) => {
     const has = (label: string) => options.findIndex((o) => o.startsWith(label));
+    const hp = view ? view.player.health / view.player.maxHealth : 1;
+    // map: rest when hurt, elites when healthy, fights otherwise
+    if (q === "Choose your path") {
+      if (hp < 0.5 && has("Rest") >= 0) return has("Rest");
+      if (hp > 0.7 && has("Elite") >= 0) return has("Elite");
+      return Math.max(0, has("Fight"));
+    }
+    if (q === "Rest or forge?") return hp < 0.6 || disabled?.[1] ? 0 : 1;
+    if (q.startsWith("A bubbling flask")) return 1; // walk away
     if (q === "Choose a reward") {
       const s = options.map(score);
       return s.indexOf(Math.max(...s));
@@ -83,7 +92,7 @@ function sensibleBot(build: Build, shapes: Record<string, string>): Bot {
 
 async function simulate(runs: number, build?: Build) {
   vi.spyOn(Math, "random").mockImplementation(seeded(build ? build.charCodeAt(0) : 1));
-  let wins = 0, floors = 0, turns = 0;
+  let wins = 0, floors = 0, turns = 0, fights = 0;
   for (let r = 0; r < runs; r++) {
     vi.resetModules();
     const { io } = await import("./io");
@@ -93,7 +102,7 @@ async function simulate(runs: number, build?: Build) {
     const { SPELLS } = await import("./spell");
     const player = new Player();
     let view: CombatView | null = null;
-    io.print = () => {};
+    io.print = (m) => void (fights += Number(/You defeated all enemies|You have been defeated|You successfully fled/.test(m))); // each fight ends with one of these
     io.sleep = async () => {};
     io.render = (v) => void (view = v);
     let bot = firstButton;
@@ -110,7 +119,7 @@ async function simulate(runs: number, build?: Build) {
     floors += s.floor;
   }
   vi.restoreAllMocks();
-  return { winRate: wins / runs, avgFloor: +(floors / runs).toFixed(1), turnsPerFight: +(turns / floors).toFixed(1) };
+  return { winRate: wins / runs, avgFloor: +(floors / runs).toFixed(1), turnsPerFight: +(turns / fights).toFixed(1) };
 }
 
 test("balance: lazy play loses, sensible play wins sometimes, and every build is viable", { timeout: 120000 }, async () => {
@@ -124,4 +133,5 @@ test("balance: lazy play loses, sensible play wins sometimes, and every build is
   expect(overall).toBeGreaterThan(0.2);
   expect(overall).toBeLessThan(0.5);
   expect(Math.max(...rates) - Math.min(...rates)).toBeLessThanOrEqual(0.15); // build parity
+  for (const b of Object.values(builds)) expect(b.turnsPerFight).toBeLessThanOrEqual(3.5); // ~20-minute runs
 });

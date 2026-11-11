@@ -4,29 +4,31 @@ A turn-based text roguelike written in TypeScript, on its way to becoming a rogu
 
 ## The game
 
-Designed for 10 to 15 minute runs (not yet timed with real players): 15 floors in 3 acts (The Sewers, The Catacombs, The Spire), with a boss on floors 5, 10 and 15.
+Designed for runs of about 20 minutes (not yet timed with real players): 3 acts (The Sewers, The Catacombs, Hell), 33 floors in all.
 
+* **A map per act:** 10 floors of rooms on up to 4 lanes, then the boss. The whole map is visible from the start; each room links to 1 to 3 rooms on the next floor, so you plan a route. Rooms: Fight, Elite (40% tougher, double XP and gold, gear one quality tier up), Event, Shop (the merchant) and Rest (rest for 40% health and all mana, or forge one item). At least one path reaches a Rest on floor 9 or 10.
+* **No healing between fights:** health comes back only from Rest rooms, potions, the merchant, events, level-ups (+10), and a full heal when you enter the next act.
 * **One hero who adapts:** each run starts with a choice of 3 random weapons, plus one random single-target spell. The rest of the build comes from rewards.
 * **Readable combat:** every enemy announces its next move (physical or magic attack, poison, heal, buff). Actions: Attack, Defend (blocks 75% of each hit this turn, 90% with a sword, and gives +10 mana), spells, potions, Flee (not against bosses).
-* **4 stats:** Strength (melee weapons, max HP), Agility (daggers, throwing knives, bows, dodge, turn order), Intelligence (wands, staves, spell power), Perception (critical hit chance and damage).
+* **4 stats:** Strength (melee weapons, +3 max HP per point), Agility (daggers, throwing knives, bows, dodge, turn order), Intelligence (wands, staves, spell power), Perception (critical hit chance and damage).
 * **9 weapon families**, each with a scaling grade and a trait (Parry, Cleave, Crush, Stagger, Twin strike, Quick, Keen, Arcane, Channel). One-handed weapons can be dual-wielded.
 * **Armor:** heavy (Armor against physical hits, -2 Agility per piece), medium (dodge), light (mana and Ward against magic). 4-piece set bonuses; Rare and Epic items roll affixes.
 * **18 spells:** 6 elements × (single target, all enemies, powerful), each element with a signature effect (burn, chill, stun, chain, heal, curse). Ranks I to IV, and a 4-slot spellbook.
-* **Rewards:** pick 1 of 3 after every fight (weapons, armor, spells, potions), from Common to Epic.
-* **Events:** 2 per act (merchant, forge, shrine, stat trial). Enemies drop gold.
+* **Rewards:** pick 1 of 3 after every fight (weapons, armor, spells, potions), from Common to Epic. Every choice shows what it changes, before and after (attack damage, max HP, stats, crit, dodge, Armor, Ward); spells show their damage for you.
+* **Events:** shrine, stat trial, Strange brew (+3 or -2 to a random stat) and Locked chest (gold and a reward, or a trap). Enemies drop gold.
 * **Bosses** enrage from their 8th turn.
 
 ## Balance
 
-`src/game/balance.test.ts` plays hundreds of simulated runs on every `npm test`. A "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, and no build (Strength, Agility, Intelligence) may be more than 15 points ahead of another. To see the numbers: `npx vitest run balance --reporter=verbose`.
+`src/game/balance.test.ts` plays hundreds of simulated runs on every `npm test`. A "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, no build (Strength, Agility, Intelligence) may be more than 15 points ahead of another, and fights must average 3.5 turns or fewer (for 20-minute runs). To see the numbers: `npx vitest run balance --reporter=verbose`.
 
 Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health and damage per act). All tuning so far comes from bots, not human players.
 
 ## Roadmap
 
-* **Done:** port from Python; combat core (intents, Defend, stats, 15 floors, bosses, level-up, end-of-run screen); variety (weapons, armor, sets, affixes, spells, rewards, events, gold, enrage, build parity).
-* **Next:** a gear screen to see everything you wear during a run.
-* **Step 3, roguelite:** a currency earned per run, a camp between runs with permanent upgrades and unlocks, high scores, and saving a run in progress.
+* **Done:** port from Python; combat core (intents, Defend, stats, bosses, level-up, end-of-run screen); variety (weapons, armor, sets, affixes, spells, rewards, events, gold, enrage, build parity); hero sheet and before/after comparisons; a branching map per act.
+* **Next:** enemies (4+ per act with coherent lore, 3 bosses per act picked at random), then an end-of-run screen with damage stats.
+* **Step 3, roguelite:** a home screen, a currency earned per run, permanent upgrades and unlocks, difficulty levels 1 to 10 (more elites, resistances, 2 bosses per act at level 10), high scores, and saving a run in progress.
 * **Step 4, release:** first Android build and test on a real phone, Play Store release, installable web version (PWA) and hosting, settings screen, possibly optional ads. The game stays free.
 
 ## Code

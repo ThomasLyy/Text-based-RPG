@@ -153,7 +153,7 @@ test("encounters: counts by floor, elites are 40% tougher with double XP, bosses
   expect(encounter(0, 5)).toHaveLength(2);
   rolls(0, 0, 0); // one elite, the first template (Rat)
   const [elite] = encounter(0, 1, true);
-  expect([elite.name, elite.maxHealth, elite.xpReward]).toEqual(["Elite Rat", Math.round(14 * DIFFICULTY[0] * 1.4), 2 * Math.round(4 * DIFFICULTY[0] * 1.4)]);
+  expect([elite.name, elite.maxHealth, elite.xpReward]).toEqual(["Elite Rat", Math.round(11 * DIFFICULTY[0] * 1.4), 2 * Math.round(4 * DIFFICULTY[0] * 1.4)]);
   expect([0, 1, 2].map((a) => bossOf(a).name)).toEqual(ACTS.map((a) => a.boss.name));
   expect(ACTS[2].name).toBe("Hell");
   encounter(1, 8).forEach((e) => (e.health = 0));
@@ -422,7 +422,7 @@ test("comparisons: gear shows what changes, before -> after; spells show their d
   expect(hammer.line).toBe("Attack 11 dmg → [green]17 dmg[/]");
   expect(hammer.full.split("\n")).toHaveLength(13); // every number, for the side panel
   const chest = gearChanges(player, makeArmor("chest", 0, "Common", { weight: "heavy", affixes: [] })); // +18 HP, +4 Armor, +3 STR, -2 AGI
-  expect(chest.line).toContain("Max HP 100 → [green]121[/]"); // 18 + 3 from Strength
+  expect(chest.line).toContain("Max HP 100 → [green]127[/]"); // 18, plus 3 HP for each of the 3 Strength
   expect(chest.line).toContain("AGI 10 → [red]8[/]");
   expect(chest.line).toContain("Attack 11 dmg → [green]13 dmg[/]"); // Strength scales the sword
   expect([player.maxHealth, player.armor.chest]).toEqual([100, undefined]); // only a preview
@@ -881,11 +881,11 @@ test("brew: drinking gives +3 or -2 to a random stat; -2 Strength at full health
   rolls(0, 0); // good brew, first stat
   await EVENTS.brew(player, 0);
   expect(player.base.strength).toBe(13);
-  player.health = player.maxHealth; // 103
+  player.health = player.maxHealth; // 109: 3 HP per Strength point
   rolls(0.9, 0); // bad brew, Strength
   await EVENTS.brew(player, 0);
   expect([player.base.strength, player.health]).toEqual([11, player.maxHealth]);
-  expect(player.maxHealth).toBe(101);
+  expect(player.maxHealth).toBe(103);
 });
 
 test("chest: 30% trap costs 15% max HP and never kills; otherwise gold 20 × (act + 1) and a reward", async () => {
@@ -925,7 +925,7 @@ test("shrine blood offering: costs 20% of max HP from current health, greyed out
   let disabled: boolean[] | undefined;
   let labels: string[] = [];
   io.ask = async (_q, o, d) => ((labels = o), (disabled = d), o.length - 1); // look, then meditate
-  player.health = 21; // 21 - 21 (20% of 103 max HP) = 0: not allowed
+  player.health = 21; // 21 - 22 (20% of 109 max HP) < 1: not allowed
   await EVENTS.shrine(player, 0);
   const blood = labels.findIndex((l) => l.startsWith("Blood"));
   expect(disabled?.[blood]).toBe(true);
