@@ -1,4 +1,4 @@
-﻿import { io, randint, choices, type MapView } from "./io";
+import { io, randint, choices, type MapView } from "./io";
 import { ACTS, Enemy } from "./enemy";
 import { ROOMS_PER_ACT, ROOM_LABEL, generateMap, type ActMap, type MapRoom } from "./map";
 import { combat, combatView } from "./combat";
@@ -10,7 +10,7 @@ import type { Player } from "./player";
 import { CURRENCY, ashEarned, available, boost, level, settings } from "./meta";
 
 // Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
-export const DIFFICULTY = [1.4, 1.75, 1.85];
+export const DIFFICULTY = [1.2, 1.5, 1.6];
 export const ELITE_SCALE = 1.4;
 export const FLOORS = ACTS.length * (ROOMS_PER_ACT + 1); // 10 rooms and a boss per act
 

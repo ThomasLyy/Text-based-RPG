@@ -20,13 +20,16 @@ Designed for runs of about 20 minutes (not yet timed with real players): 3 acts 
 * **Enemies:** 4 per act, fitting the place: vermin, outlaws and a drowned cult in The Sewers; the restless dead and their keepers in The Catacombs; ash, chains and fire in Hell.
 * **Bosses:** each act has 3 (for example the Gutter King, the Brood Mother and the Drowned Prophet in The Sewers) and a run meets one of them, picked at random. Bosses enrage from their 8th turn.
 * **End of run:** on death or victory, a screen lists the damage you dealt by type (each weapon family, each element, burn, thorns), your best weapon and your best spell, and what killed you.
+* **Saving:** the run in progress is saved after every choice; closing the tab or the app and coming back continues it where it was.
+* **Between runs:** every run earns Ash. The store on the home screen sells unlocks (the two-handed weapons, the six powerful spells, two events) and five permanent boosts with 5 levels each. The home screen also shows your best results and can reset your progression.
+* **10 difficulty levels,** opened one by one by winning: tougher enemies, more Elite rooms, enemies that resist their own element and are weak to its opposite (from level 4), armored enemies that weapons hurt less (from level 6), and two bosses per act at level 10.
 * **The room box:** titled with the act and the room ("The Sewers - Fight"), it shows only what happened in the current room; Continue moves on and clears it.
 
 ## Balance
 
-`src/game/balance.test.ts` plays 2,000 simulated runs on every `npm test` (about 25 seconds). A "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, and fights must average 3.5 turns or fewer (for 20-minute runs). The gap between builds (Strength, Agility, Intelligence) has a 15-point limit; it is printed but not enforced until the final balance pass (roadmap step 7). To see the numbers: `npx vitest run balance --reporter=verbose`.
+`src/game/balance.test.ts` plays about 3,200 simulated runs on every `npm test` (about a minute). On a new profile at difficulty level 1, a "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, no build (Strength, Agility, Intelligence) may be more than 15 points ahead of another, and fights must average 3.5 turns or fewer (for 20-minute runs). The test also prints, without checking them, the win rates with everything bought in the store at levels 1 and 10. To see the numbers: `npx vitest run balance --reporter=verbose`.
 
-Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health and damage per act). All tuning so far comes from bots, not human players.
+Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health and damage per act); the difficulty levels are the `LEVELS` table in `src/game/meta.ts`. All tuning so far comes from bots, not human players.
 
 ## Roadmap
 

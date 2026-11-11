@@ -148,7 +148,7 @@ test("balance on a new profile: lazy play loses, sensible play wins sometimes, a
   expect(lazy.winRate).toBeLessThan(0.1);
   expect(overall).toBeGreaterThan(0.2);
   expect(overall).toBeLessThan(0.5);
-  // Build parity, limit 15 points. Print-only until roadmap step 7 (the user, 2026-11-11: build first, balance once everything is built).
-  console.log(`build parity gap: ${((Math.max(...rates) - Math.min(...rates)) * 100).toFixed(1)} points (limit 15, not enforced until step 7)`);
+  console.log(`build parity gap: ${((Math.max(...rates) - Math.min(...rates)) * 100).toFixed(1)} points (limit 15)`);
+  expect(Math.max(...rates) - Math.min(...rates)).toBeLessThanOrEqual(0.15); // build parity
   for (const b of Object.values(builds)) expect(b.turnsPerFight).toBeLessThanOrEqual(3.5); // ~20-minute runs
 });

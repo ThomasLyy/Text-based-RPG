@@ -49,11 +49,11 @@ A step is done when every "Done when" line of that step is true.
 
 ## Balance
 
-`balance.test.ts` is the balance contract. It plays 200 "first button" runs and 600 runs per build (Strength, Agility, Intelligence) with a fixed seed, and requires: the first-button bot wins under 10%; the sensible bot wins between 20% and 50% overall; no build is more than 15 points ahead of another; fights average 3.5 turns or fewer. It takes about 25 seconds.
+`balance.test.ts` is the balance contract. It plays 200 "first button" runs and 600 runs per build (Strength, Agility, Intelligence) with a fixed seed, on a new profile, and requires: the first-button bot wins under 10%; the sensible bot wins between 20% and 50% overall; no build is more than 15 points ahead of another; fights average 3.5 turns or fewer. It also prints the win rates with everything bought, at levels 1 and 10. It takes about a minute.
 
 **Decided by the user on 2026-11-11: build first, balance once everything is built.** Steps 1 to 6 do not re-tune. Each step notes the bots' numbers before and after and reports them; tuning happens in step 7.
 
-**Also decided: the parity check is print-only until step 7.** It prints the gap and does not fail the test run; the other three checks still do. Step 7 turns it back on.
+**The parity check was print-only until the bots' part of step 7, done on 2026-11-11. It is enforced again.** The contract is now checked on a new profile (nothing bought) at level 1; see the spec of steps 3 and 4 for the numbers after tuning. Whenever a change would make a saved run play out differently, bump `RULES` in `src/game/save.ts`.
 
 Numbers at 600 runs, 2026-11-11:
 
@@ -77,6 +77,9 @@ Numbers at 600 runs, 2026-11-11:
 - Step 1, enemies: 4 enemies per act with lore, act 3's placeholders replaced, 3 bosses per act with one picked at random per run (spec: `docs/superpowers/specs/2026-11-11-enemies-design.md`, which also records each enemy's element for step 4). Enemy behaviours are to be revisited later, at the user's request.
 
 - Step 2, end-of-run screen: the run counts damage dealt per weapon family, element, spell, burn and thorns (`Player.dealt`); the Victory or Defeat screen lists it with the best weapon and spell.
+
+- Steps 3 and 4: saving by replay (seed and answers), the home screen, the Ash currency and the store (11 unlocks, 5 boosts), 10 difficulty levels as one table. Spec: `docs/superpowers/specs/2026-11-11-saving-store-levels-design.md`.
+- Step 7, the bots' part: re-tuned for a new profile, parity check enforced again. Playtests with real players are still to do.
 
 ## 1. Enemies (done, kept for reference)
 
@@ -129,7 +132,7 @@ Shown on death and on victory.
 
 Done when: the run tracks damage per source in the game logic, a test checks the totals over a scripted fight, and the screen shows every line above.
 
-## 3. Home screen, meta-progression and saving
+## 3. Home screen, meta-progression and saving (done, kept for reference)
 
 Two parts, in this order, each with its own spec and its own stop for the user.
 
@@ -160,7 +163,7 @@ Open questions: the exact list of unlocks and boosts and their prices (propose a
 
 Done when: the store works and persists across a page reload; reset progression wipes everything after a confirmation; the user has seen the bots' win rates with nothing bought and with everything bought.
 
-## 4. Difficulty levels 1 to 10
+## 4. Difficulty levels 1 to 10 (done, kept for reference)
 
 - Unlocked one by one through meta-progression (winning at level N unlocks N+1).
 - Higher levels: more elites, the same enemies with more health and damage, elemental resistances (30–40% less damage, e.g. a Fire Rat against fire) and weaknesses (10–20% more, e.g. to water).

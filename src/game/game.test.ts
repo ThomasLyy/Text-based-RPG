@@ -1,4 +1,4 @@
-﻿// Game tests. Math.random is stubbed: rolls(...) feeds fixed values, then 0.5 ("no crit, no dodge, flee fails").
+// Game tests. Math.random is stubbed: rolls(...) feeds fixed values, then 0.5 ("no crit, no dodge, flee fails").
 import { beforeEach, expect, test, vi } from "vitest";
 import type { EnemyTemplate } from "./enemy";
 
@@ -69,15 +69,15 @@ test("run stats: damage is counted per weapon family, element, spell and burn, n
   const { player, Enemy } = await setup();
   const { makeWeapon } = await import("./items");
   const { damageReport } = await import("./game");
-  rolls(); // 0.5 everywhere: no crit, no dodge, a Common Sword (9–13) rolls 11
+  rolls(); // 0.5 everywhere: no crit, no dodge, a Common Sword (10–14) rolls 12
   player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common"));
   player.spells = [await known("Fireball")];
   const foe = new Enemy(dummy({ maxHealth: 35 }));
-  player.attack(foe, [foe]); // 11
+  player.attack(foe, [foe]); // 12
   player.cast(player.spells[0], [foe], [foe]); // 13, and a burn of 4 per turn
   foe.act(player, [foe]); // its turn ends: burns for 4
-  expect(player.dealt).toEqual({ Sword: 11, Fire: 13, "spell:Fireball": 13, Burn: 4 });
-  player.attack(foe, [foe]); // 7 health left: only 7 counts
+  expect(player.dealt).toEqual({ Sword: 12, Fire: 13, "spell:Fireball": 13, Burn: 4 });
+  player.attack(foe, [foe]); // 6 health left: only 6 counts
   expect(foe.health).toBe(0);
   expect(damageReport(player.dealt)).toEqual(["[bold]Damage dealt: 35[/]", "Sword: 18", "Fire: 13", "Burn: 4", "Best weapon: [yellow]Sword[/] (18)", "Best spell: [cyan]Fireball[/] (13)"]);
   expect(damageReport({})).toEqual(["No damage dealt."]);
@@ -243,25 +243,25 @@ test("difficulty levels: tougher enemies, more Elites, resistances and weaknesse
     settings.level = lvl;
     rolls();
     const p = new Player();
-    p.equipWeapon(makeWeapon(await family("Sword"), 0, "Common")); // rolls 11
+    p.equipWeapon(makeWeapon(await family("Sword"), 0, "Common")); // rolls 12
     const foe = new Enemy({ ...template, maxHealth: 100 }, 1, elite);
     if (spell) p.cast(await known(spell), [foe], [foe]);
     else p.attack(foe, [foe]);
     return { lost: 100 - foe.health, status: foe.statusText().filter((s) => !s.startsWith("Burning")) };
   };
-  // level 1: nothing special. Fireball 13, Water Whip 14, a Sword 11
+  // level 1: nothing special. Fireball 13, Water Whip 14, a Sword 12
   expect((await hit(1, imp, "Fireball")).lost).toBe(13);
-  expect((await hit(1, sludge, null)).lost).toBe(11);
+  expect((await hit(1, sludge, null)).lost).toBe(12);
   expect((await hit(3, imp, "Fireball")).status).toEqual([]);
   // level 4: its own element 35% less, the opposite 15% more, the rest unchanged
   expect(await hit(4, imp, "Fireball")).toEqual({ lost: 8, status: ["Resists Fire, weak to Water"] }); // 13 × 0.65
   expect((await hit(4, imp, "Water Whip")).lost).toBe(16); // 14 × 1.15
   expect((await hit(4, imp, "Rock Throw")).lost).toBe(14);
-  expect((await hit(4, sludge, null)).lost).toBe(11); // not armored yet
+  expect((await hit(4, sludge, null)).lost).toBe(12); // not armored yet
   // level 6: armored enemies take 30% less from weapons, spells are unchanged; level 8: every elite is armored
-  expect((await hit(6, sludge, null)).lost).toBe(8); // 11 × 0.7
+  expect((await hit(6, sludge, null)).lost).toBe(8); // 12 × 0.7
   expect((await hit(6, sludge, "Fireball")).lost).toBe(13);
-  expect((await hit(6, imp, null, true)).lost).toBe(11);
+  expect((await hit(6, imp, null, true)).lost).toBe(12);
   const elite = await hit(8, imp, null, true);
   expect([elite.lost, elite.status]).toEqual([8, ["Resists Fire, weak to Water", "Armored: weapons deal 30% less"]]);
 
@@ -655,8 +655,8 @@ test("dual-wielding swings both weapons, the off hand at 60%; daggers strike twi
   const target = new Enemy(dummy({ maxHealth: 100 }));
   rolls();
   player.attack(target, [target]);
-  // sword 9–13 rolls 11; dagger 5–8 rolls 7, ×0.6 off hand ×0.6 twin = 2.52 -> 3, twice
-  expect(log.filter((l) => l.startsWith("You hit"))).toEqual(["You hit the Dummy for 11 damage!", "You hit the Dummy for 3 damage!", "You hit the Dummy for 3 damage!"]);
+  // sword 10–14 rolls 12; dagger 7–11 rolls 9, ×0.6 off hand ×0.6 twin = 3.24 -> 3, twice
+  expect(log.filter((l) => l.startsWith("You hit"))).toEqual(["You hit the Dummy for 12 damage!", "You hit the Dummy for 3 damage!", "You hit the Dummy for 3 damage!"]);
 });
 
 test("hands: 2H clears the off hand; shields need a STR one-hander; a focus needs a wand", async () => {
@@ -700,13 +700,13 @@ test("comparisons: gear shows what changes, before -> after; spells show their d
   const { gearChanges, comparison } = await import("./reward");
   player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common")); // 9-13: 11 per Attack
   const hammer = gearChanges(player, makeWeapon(await family("Hammer"), 0, "Common")); // 14-20
-  expect(hammer.line).toBe("Attack 11 dmg → [green]17 dmg[/]");
+  expect(hammer.line).toBe("Attack 12 dmg → [green]17 dmg[/]");
   expect(hammer.full.split("\n")).toHaveLength(13); // every number, for the side panel
   const chest = gearChanges(player, makeArmor("chest", 0, "Common", { weight: "heavy", affixes: [] })); // +18 HP, +4 Armor, +3 STR, -1 AGI
   expect(chest.line).toContain("Max HP 100 → [green]118[/]");
   expect(chest.line).toContain("Armor 0% → [green]5%[/]"); // 4, plus 1 for the 3 Strength
   expect(chest.line).toContain("AGI 10 → [red]9[/]");
-  expect(chest.line).toContain("Attack 11 dmg → [green]13 dmg[/]"); // Strength scales the sword
+  expect(chest.line).toContain("Attack 12 dmg → [green]15 dmg[/]"); // Strength scales the sword
   expect([player.maxHealth, player.armor.chest]).toEqual([100, undefined]); // only a preview
   player.spells = [await known("Fireball")];
   const fireball = (await import("./spell")).SPELLS[0];
@@ -721,14 +721,14 @@ test("traits: cleave splashes, crush hits bosses harder, stagger cancels the nex
   const b = new Enemy(dummy({ maxHealth: 100 }));
   player.equipWeapon(makeWeapon(await family("Axe"), 0, "Common"));
   rolls();
-  player.attack(a, [a, b]); // 8–14 rolls 11, splash 30% = 3
-  expect([a.health, b.health]).toEqual([89, 97]);
+  player.attack(a, [a, b]); // 9–15 rolls 12, splash 30% = 3.6 -> 4
+  expect([a.health, b.health]).toEqual([88, 96]);
 
   const boss = new Enemy(dummy({ maxHealth: 100, boss: true }));
   player.equipWeapon(makeWeapon(await family("Mace"), 0, "Common"));
   rolls();
-  player.attack(boss, [boss]); // 9–12 rolls 11 ×1.3 = 14
-  expect(boss.health).toBe(86);
+  player.attack(boss, [boss]); // 10–13 rolls 12 ×1.3 = 15.6 -> 16
+  expect(boss.health).toBe(84);
 
   player.equipWeapon(makeWeapon(await family("Hammer"), 0, "Common"));
   rolls(0.5, 0.5, 0); // roll, no crit, stagger
@@ -985,7 +985,7 @@ test("forge quality: values grow, Rare and Epic gain affixes", async () => {
   const { makeWeapon, makeArmor, upgradeQuality } = await import("./items");
   const w = makeWeapon(await family("Sword"), 0, "Common");
   upgradeQuality(w);
-  expect([w.quality, w.min, w.max]).toEqual(["Uncommon", 10, 15]); // ×1.15
+  expect([w.quality, w.min, w.max]).toEqual(["Uncommon", 12, 16]); // ×1.15
   const a = makeArmor("chest", 0, "Uncommon", { weight: "heavy" });
   upgradeQuality(a);
   expect([a.quality, a.affixes.length, a.bonuses.agility]).toEqual(["Rare", 1, -1]); // the heavy penalty does not grow

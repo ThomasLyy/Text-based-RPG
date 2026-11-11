@@ -47,15 +47,15 @@ export const ARMORED = 0.7; // weapon damage taken by an armored enemy
 
 export const LEVELS: Level[] = [
   { scale: 1, elites: 15, elements: false, armored: "none", bosses: 1, adds: "the base game" },
-  { scale: 1.06, elites: 15, elements: false, armored: "none", bosses: 1, adds: "enemies have 6% more health and damage" },
-  { scale: 1.06, elites: 20, elements: false, armored: "none", bosses: 1, adds: "more Elite rooms" },
-  { scale: 1.06, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies resist their own element (35% less) and are weak to its opposite (15% more)" },
-  { scale: 1.12, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies have 12% more health and damage" },
-  { scale: 1.12, elites: 20, elements: true, armored: "some", bosses: 1, adds: "some enemies are armored: weapons deal 30% less to them" },
-  { scale: 1.18, elites: 25, elements: true, armored: "some", bosses: 1, adds: "18% more health and damage, and more Elite rooms" },
-  { scale: 1.18, elites: 25, elements: true, armored: "elites", bosses: 1, adds: "every Elite is armored" },
-  { scale: 1.24, elites: 30, elements: true, armored: "elites", bosses: 1, adds: "24% more health and damage, and more Elite rooms" },
-  { scale: 1.24, elites: 30, elements: true, armored: "elites", bosses: 2, adds: "two bosses at the end of each act, one after the other" },
+  { scale: 1.1, elites: 15, elements: false, armored: "none", bosses: 1, adds: "enemies have 10% more health and damage" },
+  { scale: 1.1, elites: 20, elements: false, armored: "none", bosses: 1, adds: "more Elite rooms" },
+  { scale: 1.1, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies resist their own element (35% less) and are weak to its opposite (15% more)" },
+  { scale: 1.2, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies have 20% more health and damage" },
+  { scale: 1.2, elites: 20, elements: true, armored: "some", bosses: 1, adds: "some enemies are armored: weapons deal 30% less to them" },
+  { scale: 1.3, elites: 25, elements: true, armored: "some", bosses: 1, adds: "30% more health and damage, and more Elite rooms" },
+  { scale: 1.3, elites: 25, elements: true, armored: "elites", bosses: 1, adds: "every Elite is armored" },
+  { scale: 1.4, elites: 30, elements: true, armored: "elites", bosses: 1, adds: "40% more health and damage, and more Elite rooms" },
+  { scale: 1.4, elites: 30, elements: true, armored: "elites", bosses: 2, adds: "two bosses at the end of each act, one after the other" },
 ];
 
 // --- the run's settings ---

@@ -37,12 +37,12 @@ const WOOD = ["Oak", "Yew", "Elven"];
 const ARCANE = ["Ashwood", "Ebony", "Starwood"];
 
 export const FAMILIES: Family[] = [
-  { name: "Sword", hands: 1, stat: "strength", grade: 0.07, min: 9, max: 13, trait: "parry", traitText: "Parry: Defend blocks 90%", materials: METAL },
-  { name: "Axe", hands: 1, stat: "strength", grade: 0.07, min: 8, max: 14, trait: "cleave", traitText: "Cleave: 30% splash to another enemy", materials: METAL },
-  { name: "Mace", hands: 1, stat: "strength", grade: 0.07, min: 9, max: 12, trait: "crush", traitText: "Crush: +30% vs bosses", materials: METAL },
+  { name: "Sword", hands: 1, stat: "strength", grade: 0.07, min: 10, max: 14, trait: "parry", traitText: "Parry: Defend blocks 90%", materials: METAL },
+  { name: "Axe", hands: 1, stat: "strength", grade: 0.07, min: 9, max: 15, trait: "cleave", traitText: "Cleave: 30% splash to another enemy", materials: METAL },
+  { name: "Mace", hands: 1, stat: "strength", grade: 0.07, min: 10, max: 13, trait: "crush", traitText: "Crush: +30% vs bosses", materials: METAL },
   { name: "Hammer", hands: 2, stat: "strength", grade: 0.1, min: 14, max: 20, trait: "stagger", traitText: "Stagger: 20% to cancel the enemy's move", materials: METAL },
-  { name: "Dagger", hands: 1, stat: "agility", grade: 0.07, min: 7, max: 10, trait: "twin", traitText: "Twin strike: hits twice at 60%", materials: METAL },
-  { name: "Throwing Knives", hands: 1, stat: "agility", grade: 0.07, min: 8, max: 12, trait: "quick", traitText: "Quick: attacking acts first", materials: METAL },
+  { name: "Dagger", hands: 1, stat: "agility", grade: 0.06, min: 7, max: 11, trait: "twin", traitText: "Twin strike: hits twice at 60%", materials: METAL },
+  { name: "Throwing Knives", hands: 1, stat: "agility", grade: 0.06, min: 8, max: 12, trait: "quick", traitText: "Quick: attacking acts first", materials: METAL },
   { name: "Bow", hands: 2, stat: "agility", grade: 0.1, min: 12, max: 18, trait: "keen", traitText: "Keen: +10% crit chance", materials: WOOD },
   { name: "Wand", hands: 1, stat: "intelligence", grade: 0.06, min: 6, max: 9, trait: "arcane", traitText: "Arcane: spells cost 20% less", materials: ARCANE },
   { name: "Staff", hands: 2, stat: "intelligence", grade: 0.08, min: 9, max: 14, trait: "channel", traitText: "Channel: +20% spell power", materials: ARCANE },
