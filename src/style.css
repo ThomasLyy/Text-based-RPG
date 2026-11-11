@@ -93,6 +93,13 @@ kbd { display: none; }
   #compare:empty::before { content: "Hover a choice to compare it with what you have."; color: var(--muted); }
 }
 
+/* Short wide screens (most laptops): smaller slots for the enemies and the choices, so the room keeps its place. */
+@media (min-width: 1000px) and (max-height: 899px) {
+  #center { grid-template-rows: minmax(0, 1fr) 230px 250px; }
+  .foe .sprite { width: 64px; }
+  .foe.boss .sprite { width: 80px; }
+}
+
 /* Boxes: a hard 3px frame; the title is an inverted tab sitting on it. */
 fieldset { border: 3px solid var(--border); background: var(--panel); margin: 0 0 8px; padding: 8px 12px 10px; min-width: 0; }
 legend {

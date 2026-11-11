@@ -80,6 +80,10 @@ Numbers at 600 runs, 2026-11-11:
 
 - Steps 3 and 4: saving by replay (seed and answers), the home screen, the Ash currency and the store (11 unlocks, 5 boosts), 10 difficulty levels as one table. Spec: `docs/superpowers/specs/2026-11-11-saving-store-levels-design.md`.
 - Step 7, the bots' part: re-tuned for a new profile, parity check enforced again. Playtests with real players are still to do.
+- Steps 5 and 6: 41 sprites in code, enemies facing the player, hit feedback, phone HUD with tabs, settings, how-to-play, keyboard shortcuts, bundled fonts, sound effects and music made in code. Spec: `docs/superpowers/specs/2026-11-11-look-screens-sound-design.md`. The user has not approved the sprites or heard the sound yet.
+- Step 8, the agent's part: installable offline web version, relative paths, app icon, store text drafts. The name, the Android build and the Play Store are the user's; see `docs/questions.md`.
+
+**What is left on 2026-11-11:** everything in `docs/questions.md`. Go through it with the user, one entry at a time, apply each answer, and delete the entry. `ui` is ahead of `develop`; merge it only when the user approves the look.
 
 ## 1. Enemies (done, kept for reference)
 
@@ -174,7 +178,7 @@ Open questions: what each level adds exactly (propose a table, levels 1 to 10). 
 
 Done when: each level's changes are data in one table; tests cover resistances, weaknesses and the 2 bosses of level 10; the balance bots run at levels 1 and 10 and the user has seen their win rates.
 
-## 5. Look and feel
+## 5. Look and feel (built, waiting for the user's eye)
 
 On `ui`.
 
@@ -188,7 +192,7 @@ Open questions: the palette (propose one per act or a single one); show the user
 
 Done when: a test checks that every enemy, boss, weapon family, element and room type has a sprite of exactly 16×16 using only palette characters; the user has approved the sprites in the browser.
 
-## 6. Screen and controls
+## 6. Screen and controls (built, waiting for the user's eye and ear)
 
 On `ui`. Two parts, each with its own stop for the user.
 
@@ -222,7 +226,7 @@ Done when: every listed effect plays; each act has its track; both volumes in th
 
 Done when: `npm test` passes at levels 1 and 10 with every check on, and the user reports playtest runs of about 20 minutes.
 
-## 8. Release
+## 8. Release (the agent's part is done; the rest is the user's)
 
 - Testing before release is done by the user, with an `.apk` or through Android Studio, whichever is simpler then. The user wants no public test phase.
 - The user's Play account was created before November 2023, so Google's closed test for new personal accounts (12 testers for 14 days) does not apply.

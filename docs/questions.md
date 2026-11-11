@@ -6,7 +6,8 @@ Kinds: **Question** (the agent could not decide), **Call** (the agent decided; s
 
 ## Git
 
-- **Yours:** nothing is pushed. `develop` holds steps 1 to 4 and 7; `ui` holds steps 5, 6 and 8 on top of them. Say when to push, when to merge `ui` into `develop`, and when to merge `develop` into `main`.
+- **Yours:** nothing is pushed. `develop` holds steps 1 to 4 and the bots' part of 7; `ui` holds steps 5, 6 and 8 on top of them. `main` is untouched. Say when to push, when to merge `ui` into `develop`, and when to merge `develop` into `main`.
+- **Call:** step 8's files (offline version, icon, store texts) were made on `ui`, because they touch `index.html` and the screens.
 
 ## Process
 
@@ -33,7 +34,7 @@ The spec is `docs/superpowers/specs/2026-11-11-saving-store-levels-design.md`; i
 - **Call:** at level 10 the two bosses are fought one after the other, not together.
 - **Call:** with a run in progress the game opens on the run. There is no "abandon run" button.
 - **Question:** storage on Android. The game uses `localStorage`; Android can clear it when the phone is short of space. `@capacitor/preferences` is safer and adds one dependency. Which do you want?
-- **Check:** play a run, close the tab mid-fight, reopen: the fight must be where you left it.
+- **Check:** play a run, close the tab mid-fight, reopen: the fight must be where you left it. (It was, each time the agent reloaded the page in its browser.)
 
 ## Step 7: balance
 
@@ -42,19 +43,32 @@ The spec is `docs/superpowers/specs/2026-11-11-saving-store-levels-design.md`; i
 - **Question:** with everything bought the bots win 71 to 92% at level 1 and 22 to 38% at level 10. What win rates do you want there? Level 10 also favours Intelligence (38% against 22%) because of armored enemies: is that the intent of "the player has to use spells", or should the 15-point parity hold at level 10 too?
 - **Yours:** playtests with real players (a run of about 20 minutes, the first win reachable). `docs/playtest.md` says what to time and ask.
 
-## Step 5: look and feel (built on `ui`, not finished)
+## Steps 5 and 6: look, screens, sound (on `ui`)
 
-- **Check:** the 41 sprites are a first pass and nobody has looked at them. The 21 enemies are built from 9 base shapes, recoloured, with crowns or horns added; 7 of them share the hooded shape. Look at them in the browser and say which to redraw.
-- **Check:** the fight screen, the icons on the map and on choices, and the hit feedback (floating numbers, shake, critical pop, fade on death, red flash) compile and build, but were never seen in a browser: screenshots failed in the agent's session. Only the home screen was seen once.
-- **Call:** one palette of 18 colours for everything, in `src/sprites.ts`.
-- **Call:** until the settings screen exists, hit feedback follows the system's "reduce motion" setting.
-- **Not done:** step 5's spec, the README lines, and moving step 5 to Done in the roadmap.
+The spec is `docs/superpowers/specs/2026-11-11-look-screens-sound-design.md`; it has the UI review's findings.
 
-## Not started
+- **Check:** the sprites. The 21 enemies are built from 9 shapes, recoloured, with a crown, horns or extra eyes; 7 share the hooded figure. The agent saw only the Rat, the Gutter Thief and the Drowned Cultist on screen. Say which enemies deserve their own drawing, and whether the 20 icons read well.
+- **Check:** the music and the sound effects. They are made in code and were never heard: the agent cannot listen. Tell the agent what sounds wrong (too loud, too repetitive, wrong mood per act).
+- **Check:** the screens the agent did not see in a browser: shop, rest, events, level-up, end of run, settings.
+- **Question:** the five points "left for the user to judge" in the spec's UI review (empty home screen on computers, small text on very wide monitors, small map labels, the "> choice" echo in the log, the title "Home" inside the store).
+- **Call:** music is made in code, so there is no licence to find and no credit to show.
+- **Call:** one palette of 18 colours for all sprites.
+- **Call:** on phones, four tabs (Room, Map, Hero, Gear) above the enemies and the choices; the Map tab opens by itself when you must choose a path.
+- **Call:** Reset progression stays on the home screen only, not in the settings as well. Settings survive a reset.
+- **Call:** volume buttons go up 20% per press, then back to 0, because every screen is made of buttons and there is no slider.
 
-- Step 6a (UI review, phone layout, how-to-play, settings, keyboard shortcuts, bundled fonts), step 6b (sound and music), step 8 (name, Android build, icon, PWA, Play Store).
+## Step 8: release (partly done, on `ui`)
+
+Done by the agent: the installable web version (it started with the server stopped, in the agent's browser), relative paths so one build works on any host and in the Android app, the app icon as `public/icon.svg`, drafts of the store texts and the privacy policy in `docs/store-listing.md`, and `npx cap sync android`, which ran without error.
+
+- **Question:** the game's name. "Text-based RPG" is still everywhere. Ideas, all to be checked against existing games before use: Ashbound Descent, Three Depths, Cinder Road, Below the Graves.
+- **Yours:** the first Android build. This machine has the Android SDK but only Java 8 on the path, and the build needs JDK 21 (Android Studio brings its own). Open the project with `npm run android` and run it on your phone.
+- **Yours:** PNG launcher icons and the splash screen: in Android Studio, "Image Asset", from `public/icon.svg`.
+- **Yours:** where to host the web version and the privacy policy.
+- **Yours:** the Play Store account steps: listing, screenshots, signing key, content rating, data safety. The drafts are in `docs/store-listing.md`.
+- **Check:** install the web version on a phone ("Add to home screen"), switch to airplane mode, and start it.
 
 ## Step 1: enemies
 
-- **Check:** the new names were not looked at in a browser when step 1 was built. They are checked with the UI review of step 6.
+- **Check:** the enemy names fit their boxes for the three seen in the browser (the longest, "Elite Drowned Cultist", fits on a computer). The others were not seen.
 - **Call:** enemy behaviours were left as they were, as you asked. To revisit: Rat, Gutter Thief and Skeleton share one pattern shape (two light hits, then a heavy one).

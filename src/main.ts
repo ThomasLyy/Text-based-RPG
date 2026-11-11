@@ -264,6 +264,18 @@ const store = () => {
   }
 };
 
+// The installable web version: a service worker keeps the game's files so it starts with no network.
+// Not in development (it would serve old code) and not inside the Android app (its files are already on the phone).
+if (import.meta.env.PROD && "serviceWorker" in navigator && !("Capacitor" in window)) {
+  addEventListener("load", async () => {
+    await navigator.serviceWorker.register("./sw.js");
+    await navigator.serviceWorker.ready;
+    // the files of this first visit were loaded before the worker existed: hand them to its cache
+    const mine = performance.getEntriesByType("resource").map((r) => r.name).filter((url) => url.startsWith(location.origin));
+    (await caches.open("game-v1")).addAll([location.href, ...mine]).catch(() => {});
+  });
+}
+
 const applyOptions = () => {
   document.body.classList.toggle("still", !save.options.animations);
   setVolumes(save.options.sound, save.options.music);
