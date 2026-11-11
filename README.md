@@ -1,6 +1,6 @@
 # Text-based RPG
 
-A turn-based text roguelike written in TypeScript, on its way to becoming a roguelite (progression between runs is planned, see the roadmap). The same code runs in the browser (Vite) and on Android (Capacitor). Ported from the original Python/Rich version (see the git history before the `rework` branch).
+A turn-based text roguelike written in TypeScript, on its way to becoming a roguelite (progression between runs is planned, see the roadmap). The same code runs in the browser (Vite) and on Android (Capacitor). Ported from the original Python/Rich version (see the git history before commit `ce641ff`, the TypeScript port).
 
 ## The game
 
