@@ -1,11 +1,11 @@
-﻿import { io, randint, choices } from "./io";
+﻿import { io, randint, choices, type MapView } from "./io";
 import { ACTS, Enemy } from "./enemy";
-import { ROOMS_PER_ACT } from "./map";
+import { ROOMS_PER_ACT, ROOM_LABEL, generateMap, type ActMap, type MapRoom } from "./map";
 import { combat, combatView } from "./combat";
 import { chooseReward, offer as button } from "./reward";
 import { FAMILIES, makeWeapon } from "./items";
 import { SPELLS, describeSpell } from "./spell";
-import { actEvents, runEvent, type EventKind } from "./events";
+import { eventRoom, merchant, restRoom } from "./events";
 import type { Player } from "./player";
 
 // Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
@@ -70,45 +70,79 @@ export interface RunSummary {
   killedBy: string;
 }
 
+const LANE_NAME = ["far left", "left", "right", "far right"];
+// A path button: the room, and which lane it is in (two rooms of one kind can be side by side).
+export const pathLabel = (r: MapRoom) => `${ROOM_LABEL[r.kind]} · ${LANE_NAME[r.lane]}`;
+
+function mapView(act: string, map: ActMap, path: MapRoom[], reachable: MapRoom[], choosing: boolean): MapView {
+  const state = (r: MapRoom) => (r === path.at(-1) ? "current" : path.includes(r) ? "visited" : reachable.includes(r) ? "reachable" : "other");
+  return { act, choosing, floors: map.map((floor) => floor.map((r) => ({ lane: r.lane, label: ROOM_LABEL[r.kind], next: r.next, state: state(r) }))) };
+}
+
+// Each act: walk its map floor by floor, picking a room linked to the last one, then fight the boss.
+// No healing between rooms; a full heal when entering the next act.
 export async function gameLoop(player: Player): Promise<RunSummary> {
-  io.snapshot = () => combatView(player, [], "A new run begins"); // the hero sheet from the start, no enemies left over from the last run
+  let enemies: Enemy[] = [];
+  let title = "A new run begins";
+  let view: () => MapView | null = () => null;
+  io.snapshot = () => combatView(player, enemies, title, view()); // the hero sheet from the start, no enemies left over from the last run
   if (!player.mainHand) await chooseStarter(player); // already armed: a test set the build
   let kills = 0;
-  let floor = 1;
-  let events: EventKind[] = [];
-  for (; floor <= FLOORS; floor++) {
-    const act = actOf(floor);
-    if (floorInAct(floor) === 1) io.print(`[panel bold]${act.name}[/]`);
-    const enemies = encounter(floor);
-    if (enemies[0].boss) io.print(`[bold red]${enemies[0].name} blocks the way![/]`);
-    else io.print(`[bold]Floor ${floor}[/]: ${enemies.map((e) => e.name).join(", ")}`);
+  let floor = 0; // overall, 1-33
+  let dead = false;
 
-    const title = `${act.name} · Floor ${floor} / ${FLOORS}`;
-    io.snapshot = () => combatView(player, enemies, title);
-    const outcome = await combat(player, enemies, title);
-    player.poisoned.turns = 0; // poison does not follow you to the next floor
-    kills += enemies.filter((e) => e.health <= 0).length;
-    if (outcome === "dead") break;
-
+  // a fight room or the boss: fight, level up, and a reward unless you fled
+  const fight = async (foes: Enemy[], act: number, reward: { boss?: boolean; elite?: boolean }) => {
+    enemies = foes;
+    io.print(`[bold]${foes.map((e) => e.name).join(", ")}[/]`);
+    const outcome = await combat(player, foes, title);
+    player.poisoned.turns = 0; // poison does not follow you to the next room
+    kills += foes.filter((e) => e.health <= 0).length;
+    if (outcome === "dead") return (dead = true);
     await levelUps(player);
-    const boss = enemies[0].boss;
-    if (outcome === "won") await chooseReward(player, ACTS.indexOf(act), boss); // no reward for running away
+    if (outcome === "won") await chooseReward(player, act, reward);
+  };
 
-    // Rest: 20% health and 30 mana after each floor; a campfire (full heal) before each boss and after it.
-    const campfire = boss || floorInAct(floor + 1) === FLOORS_PER_ACT;
-    player.health = campfire ? player.maxHealth : Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * 0.2));
-    player.mana = campfire ? player.maxMana : Math.min(player.maxMana, player.mana + 30);
-    io.print(`${campfire ? "You rest at a campfire." : "You catch your breath."} Health ${player.health}/${player.maxHealth}, mana ${player.mana}/${player.maxMana}.`);
-
-    // Events after floors 2 and 3 of each act, two different kinds per act.
-    if (floorInAct(floor) === 2) events = actEvents();
-    if (floorInAct(floor) === 2 || floorInAct(floor) === 3) await runEvent(events[floorInAct(floor) - 2], player, ACTS.indexOf(act));
+  run: for (let a = 0; a < ACTS.length; a++) {
+    const act = ACTS[a];
+    if (a > 0) {
+      player.health = player.maxHealth;
+      player.mana = player.maxMana;
+      io.print("You rest before going deeper. Health and mana restored.");
+    }
+    io.print(`[panel bold]${act.name}[/]`);
+    const map = generateMap();
+    const path: MapRoom[] = [];
+    let reachable = map[0];
+    let choosing = false;
+    view = () => mapView(act.name, map, path, reachable, choosing);
+    for (let f = 1; f <= ROOMS_PER_ACT; f++) {
+      floor++;
+      enemies = [];
+      title = `${act.name} · Floor ${f} / ${ROOMS_PER_ACT + 1}`;
+      choosing = true;
+      const room = reachable[await io.ask("Choose your path", reachable.map(pathLabel))];
+      choosing = false;
+      path.push(room);
+      reachable = f < ROOMS_PER_ACT ? map[f].filter((r) => room.next.includes(r.lane)) : [];
+      if (room.kind === "fight" || room.kind === "elite") await fight(encounter(a, f, room.kind === "elite"), a, { elite: room.kind === "elite" });
+      else if (room.kind === "event") await eventRoom(player, a);
+      else if (room.kind === "merchant") await merchant(player, a);
+      else await restRoom(player);
+      if (dead) break run;
+    }
+    floor++;
+    title = `${act.name} · Floor ${ROOMS_PER_ACT + 1} / ${ROOMS_PER_ACT + 1}`;
+    const boss = bossOf(a);
+    io.print(`[bold red]${boss.name} blocks the way![/]`);
+    if (await fight([boss], a, { boss: true })) break;
   }
 
-  const won = player.health > 0;
-  const summary = { won, floor: Math.min(floor, FLOORS), level: player.level, kills, killedBy: won ? "" : player.lastHitBy };
-  if (won) io.print("[panel bold green]The Lich falls. You have conquered the Spire![/]");
-  else io.print(`[panel bold red]You died on floor ${summary.floor} (${actOf(summary.floor).name}), slain by the ${summary.killedBy}.[/]`);
+  const won = !dead;
+  const summary = { won, floor, level: player.level, kills, killedBy: won ? "" : player.lastHitBy };
+  const actName = ACTS[Math.floor((floor - 1) / (ROOMS_PER_ACT + 1))].name;
+  if (won) io.print(`[panel bold green]The ${ACTS.at(-1)!.boss.name} falls. You have survived all three acts![/]`);
+  else io.print(`[panel bold red]You died on floor ${floor} of ${FLOORS} (${actName}), slain by the ${summary.killedBy}.[/]`);
   io.print(`Level ${summary.level} · ${kills} enemies defeated.`);
   return summary;
 }

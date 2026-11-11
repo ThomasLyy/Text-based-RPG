@@ -9,6 +9,14 @@ export interface CombatView {
     potions: string[];
   };
   stats: [string, string | number][];
+  map: MapView | null;
+}
+
+// The act's map as the UI draws it. The boss sits above the last floor and is not in `floors`.
+export interface MapView {
+  act: string;
+  floors: { lane: number; label: string; next: number[]; state: "visited" | "current" | "reachable" | "other" }[][];
+  choosing: boolean; // the path question is open
 }
 
 export const io = {

@@ -1,4 +1,4 @@
-﻿import { io, type CombatView } from "./io";
+﻿import { io, type CombatView, type MapView } from "./io";
 import { spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
 import { DEFEND_MANA, SET_BONUS, type Player } from "./player";
@@ -15,7 +15,7 @@ export async function handleTargeting(question: string, enemies: Enemy[]): Promi
 }
 
 // Built from live state on every render, so the screen never lags behind the game.
-export function combatView(player: Player, enemies: Enemy[], title: string): CombatView {
+export function combatView(player: Player, enemies: Enemy[], title: string, map: MapView | null = null): CombatView {
   const set = player.setWeight();
   return {
     title,
@@ -37,6 +37,7 @@ export function combatView(player: Player, enemies: Enemy[], title: string): Com
       potions: player.potions.map(describe),
     },
     stats: sheet(player).map(([label, value, unit]) => [label, `${value}${unit}`]), // the same numbers the comparisons use
+    map,
   };
 }
 

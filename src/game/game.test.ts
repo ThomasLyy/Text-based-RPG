@@ -56,19 +56,73 @@ test("smoke: a seeded run plays to the end (win or game over) without crashing",
   io.ask = async (_q, options) => Math.max(0, options.findIndex((o) => o.startsWith("Fireball")));
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
-  const summary = await gameLoop(new Player());
-  expect(summary.floor).toBeGreaterThan(1);
+  const p = new Player();
+  p.equipWeapon((await import("./items")).makeWeapon(await family("Hammer"), 2, "Epic")); // strong enough to walk several rooms
+  const summary = await gameLoop(p);
+  expect(summary.floor).toBeGreaterThan(3);
   expect(log.at(-1)).toMatch(/^Level \d+ · \d+ enemies defeated\.$/);
 });
 
 test("death screen names the floor and the killer (here: poison)", async () => {
-  await play(["[white]", "Defend", "Defend"]); // starter weapon, then defend; the poison ticks after the hero's second turn
-  rolls(); // starter picks, then floor 1: Slime, starting on its Acid move
+  await play(["[white]", "Elite", "Defend", "Defend"]); // starter weapon, a room, then defend; the poison ticks after the hero's second turn
+  rolls(); // all rolls 0.5: every room is an Elite, and floor 1 holds Elite Slimes starting on their Acid move
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
   const p = new Player();
   p.health = 1;
-  expect(await gameLoop(p)).toEqual({ won: false, floor: 1, level: 1, kills: 0, killedBy: "Slime's poison" });
+  const summary = await gameLoop(p);
+  expect(summary).toMatchObject({ won: false, floor: 1, level: 1, kills: 0 });
+  expect(summary.killedBy).toMatch(/Slime's poison$/);
+});
+
+// Plays the start of a seeded run with a strong weapon, answering through `answer`; stops at the 2nd path choice.
+async function walk(answer: (q: string, o: string[]) => number) {
+  const { io } = await play([]);
+  const { Player } = await import("./player");
+  const { makeWeapon } = await import("./items");
+  const { gameLoop } = await import("./game");
+  const p = new Player();
+  p.equipWeapon(makeWeapon(await family("Hammer"), 2, "Epic"));
+  const asked: { q: string; o: string[]; health: number; map: import("./io").MapView | null }[] = [];
+  io.ask = async (q, o) => {
+    asked.push({ q, o, health: p.health, map: io.snapshot?.().map ?? null });
+    if (asked.filter((a) => a.q === "Choose your path").length === 2) throw new Error("script ended");
+    return answer(q, o);
+  };
+  await expect(gameLoop(p)).rejects.toThrow("script ended");
+  return asked;
+}
+
+test("path: you pick among the rooms linked to your last one; fleeing an elite or fight gives no reward and the path goes on", async () => {
+  const random = seeded(7);
+  let fleeing = false;
+  vi.spyOn(Math, "random").mockImplementation(() => (fleeing ? ((fleeing = false), 0) : random())); // the flee roll succeeds
+  const asked = await walk((q, o) => {
+    if (q === "Choose your path") return Math.max(0, o.findIndex((x) => /^(Fight|Elite)/.test(x)));
+    if (q === "Your turn") return (fleeing = true), o.indexOf("Flee");
+    return 0;
+  });
+  const paths = asked.filter((a) => a.q === "Choose your path");
+  const [first, second] = paths.map((a) => a.map!);
+  expect(first.choosing).toBe(true);
+  expect(paths[0].o.map((o) => o.split(" · ")[0])).toEqual(first.floors[0].filter((r) => r.state === "reachable").map((r) => r.label));
+  const current = second.floors[0].find((r) => r.state === "current")!;
+  expect(second.floors[1].filter((r) => r.state === "reachable").map((r) => r.lane)).toEqual(current.next);
+  expect(paths[1].o).toHaveLength(current.next.length);
+  expect(asked.some((a) => a.q === "Choose a reward")).toBe(false);
+});
+
+test("no healing between fights: health after a won fight stays as it was", async () => {
+  vi.spyOn(Math, "random").mockImplementation(seeded(11));
+  const asked = await walk((q, o) => {
+    if (q === "Choose your path") return Math.max(0, o.findIndex((x) => x.startsWith("Fight")));
+    if (q === "Choose a reward") return o.length - 1; // skip
+    return 0; // Attack, first target, first boost
+  });
+  const reward = asked.find((a) => a.q === "Choose a reward")!;
+  const next = asked.filter((a) => a.q === "Choose your path")[1];
+  expect(reward).toBeDefined();
+  expect(next.health).toBe(reward.health);
 });
 
 test("level-up: 3 different boosts offered, XP carries over, each level needs 5 more", async () => {
@@ -269,16 +323,6 @@ test("no fleeing from a boss", async () => {
   };
   await expect(combat(player, [new Enemy(dummy({ boss: true }))])).rejects.toThrow("stop");
   expect(offered).not.toContain("Flee");
-});
-
-test("fleeing a fight gives no reward", async () => {
-  const { log } = await play(["[white]", "Flee"]);
-  rolls(0, 0, 0, 0, 0, 0, 0); // 3 starter picks, starter spell, floor 1 enemy, its pattern start, then the flee roll succeeds
-  const { Player } = await import("./player");
-  const { gameLoop } = await import("./game");
-  await expect(gameLoop(new Player())).rejects.toThrow("script ended"); // stops on floor 2
-  expect(log).toContain("[bold yellow]You successfully fled the battle![/]");
-  expect(log.some((l) => l.includes("Choose your reward"))).toBe(false);
 });
 
 test("Use Potion drinks a potion and is only offered when you have one", async () => {
