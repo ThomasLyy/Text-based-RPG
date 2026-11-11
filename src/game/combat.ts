@@ -90,8 +90,10 @@ export async function combat(player: Player, enemies: Enemy[], title = ""): Prom
     const order = [...faster, "hero" as const, ...enemies.filter((e) => !faster.includes(e))];
     for (const who of order) {
       if (over()) break;
-      if (who === "hero") turn.run();
-      else if (who.health > 0) {
+      if (who === "hero") {
+        turn.run();
+        if (!over()) player.endOfTurn(); // a fight you just won leaves no poison tick
+      } else if (who.health > 0) {
         await io.sleep(400);
         who.act(player, enemies);
       }

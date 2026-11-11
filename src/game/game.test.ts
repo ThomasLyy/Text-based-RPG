@@ -62,7 +62,7 @@ test("smoke: a seeded run plays to the end (win or game over) without crashing",
 });
 
 test("death screen names the floor and the killer (here: poison)", async () => {
-  await play(["[white]", "Defend"]); // starter weapon, then defend
+  await play(["[white]", "Defend", "Defend"]); // starter weapon, then defend; the poison ticks after the hero's second turn
   rolls(); // starter picks, then floor 1: Slime, starting on its Acid move
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
@@ -148,7 +148,9 @@ test("Defend blocks 75% (rounded up); dodge avoids it; poison ticks and stacks",
   player.poison(3, 2, "Slime");
   player.poison(2, 1, "Slime");
   expect(player.poisoned).toMatchObject({ damage: 3, turns: 3 });
-  player.endOfRound();
+  player.endOfRound(); // poison counts the hero's turns, not rounds
+  expect(player.health).toBe(97);
+  player.endOfTurn();
   expect([player.health, player.poisoned.turns, player.lastHitBy]).toEqual([94, 2, "Slime's poison"]);
 });
 

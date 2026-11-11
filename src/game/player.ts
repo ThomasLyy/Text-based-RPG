@@ -297,14 +297,18 @@ export class Player {
     io.print(`The ${source} poisons you: ${damage} damage per turn for ${turns} turns.`);
   }
 
-  // poison, Regeneration, mana regen
-  endOfRound() {
+  // Effects on the hero count the hero's own turns, like effects on enemies count theirs.
+  endOfTurn() {
     if (this.poisoned.turns > 0) {
       this.health = Math.max(0, this.health - this.poisoned.damage);
       this.poisoned.turns--;
       this.lastHitBy = `${this.poisoned.source}'s poison`;
       io.print(`[green]Poison[/] deals ${this.poisoned.damage} damage.`);
     }
+  }
+
+  // Regeneration, mana regen
+  endOfRound() {
     if (this.health > 0) this.heal(2 * this.affixes("regeneration"));
     this.mana = Math.min(this.maxMana, this.mana + this.manaRegen());
   }
