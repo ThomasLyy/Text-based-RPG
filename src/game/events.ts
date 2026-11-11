@@ -14,13 +14,16 @@ async function merchant(player: Player, act: number) {
   io.print("[panel bold yellow]A wandering merchant spreads out her wares.[/]");
   const stock = rewardOffers(player, act, false, 4);
   for (;;) {
-    // a full pouch takes no potion
-    const affordable = stock.filter((i) => price(i) <= player.gold && (i.kind !== "potion" || player.potions.length < POUCH_SIZE));
+    const affordable = stock.filter((i) => price(i) <= player.gold);
     const heal = player.health < player.maxHealth && player.gold >= HEAL_PRICE;
     const options = [...affordable.map((i) => `${describe(i)} — ${comparison(player, i)} — ${price(i)} gold`), ...(heal ? [`Heal to full — ${HEAL_PRICE} gold`] : []), "Leave"];
     const i = await io.ask(`You have ${player.gold} gold`, options);
     if (i < affordable.length) {
       const item = affordable[i];
+      if (item.kind === "potion" && player.potions.length >= POUCH_SIZE) {
+        io.print(`"Sorry, I can't sell you that. You cannot hold more than ${POUCH_SIZE} potions."`);
+        continue;
+      }
       const hand = item.kind === "weapon" ? await askHand(player, item) : "main";
       const lost = item.kind === "weapon" || item.kind === "armor" ? player.wouldRemove(item, hand) : [];
       if (lost.length) {

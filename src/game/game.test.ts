@@ -638,24 +638,27 @@ test("merchant: warns before a purchase that makes you drop gear; Never mind kee
   expect(p.gold).toBeLessThan(1000);
 });
 
-test("merchant: no potions for sale when the pouch is full", async () => {
+test("merchant: with a full pouch, potions stay listed but she refuses to sell one", async () => {
   const { Player } = await import("./player");
   const { makePotion } = await import("./items");
   const { runEvent } = await import("./events");
-  const { io } = await play([]);
-  const seen = { false: 0, true: 0 };
-  for (let seed = 1; seed <= 30; seed++) {
-    for (const full of [false, true]) {
-      vi.spyOn(Math, "random").mockImplementation(seeded(seed));
-      const p = new Player();
-      p.gold = 1000;
-      if (full) p.potions = [0, 1, 2, 3, 4].map(() => makePotion(0));
-      io.ask = async (_q, o) => ((seen[`${full}`] += o.filter((x) => x.includes("Potion")).length), o.length - 1);
-      await runEvent("merchant", p, 0);
-    }
+  const { io, log } = await play([]);
+  let tried = 0;
+  for (let seed = 1; seed <= 30 && !tried; seed++) {
+    vi.spyOn(Math, "random").mockImplementation(seeded(seed));
+    const p = new Player();
+    p.gold = 1000;
+    p.potions = [0, 1, 2, 3, 4].map(() => makePotion(0));
+    io.ask = async (_q, o) => {
+      const potion = o.findIndex((x) => x.includes("Potion"));
+      if (potion < 0 || tried++) return o.length - 1; // no potion in stock, or already tried: leave
+      return potion;
+    };
+    await runEvent("merchant", p, 0);
+    if (tried) expect([p.gold, p.potions.length]).toEqual([1000, 5]);
   }
-  expect(seen.false).toBeGreaterThan(0); // the same stock with room in the pouch does list potions
-  expect(seen.true).toBe(0);
+  expect(tried).toBe(2); // tried to buy, then saw the potion still listed and left
+  expect(log).toContain(`"Sorry, I can't sell you that. You cannot hold more than 5 potions."`);
 });
 
 test("forge event upgrades the chosen item; shrine prays a spell up a rank", async () => {
