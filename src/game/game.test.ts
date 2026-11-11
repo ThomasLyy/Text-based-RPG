@@ -313,6 +313,21 @@ test("area spells hit every living enemy for one mana cost; mana regenerates eac
   expect(player.mana).toBe(89); // 100 - 16 + 5 regen
 });
 
+test("fights redraw through the run's snapshot, so the map stays on screen", async () => {
+  const { player, Enemy, combat } = await setup();
+  const { io } = await play(["Attack"]);
+  const { combatView } = await import("./combat");
+  const map = { act: "Test", floors: [], choosing: false };
+  const e = new Enemy(dummy());
+  io.snapshot = () => combatView(player, [e], "Test", map);
+  const seen: unknown[] = [];
+  io.render = (v) => void seen.push(v.map);
+  rolls(0);
+  await expect(combat(player, [e], "Test")).rejects.toThrow("script ended");
+  expect(seen.length).toBeGreaterThan(1);
+  expect(seen.every((m) => m === map)).toBe(true);
+});
+
 test("no fleeing from a boss", async () => {
   const { player, Enemy, combat } = await setup();
   const { io } = await play([]);

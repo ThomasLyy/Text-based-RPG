@@ -72,7 +72,7 @@ This map design only has to leave room for those.
 
 ## For the builder
 
-- **Map generation:** a function that, given random numbers, returns floors of rooms with links. It needs a test of the rules above: width, no crossing links, everything reachable, floor 1 all Fights, no early Elites, a Rest on floor 5 or 6 on some path.
+- **Map generation:** a function that, given random numbers, returns floors of rooms with links. It needs a test of the rules above: width, no crossing links, everything reachable, a Rest on floor 9 or 10 on some path.
 - **Game loop:** `gameLoop` walks the map. On each floor, ask which room to enter, then run it.
 - **Balance bots:** the bots must choose paths. The sensible bot prefers Rest when hurt, Elites when healthy, and Fights otherwise. Once the 20% heal is gone and the map is in, re-tune `DIFFICULTY` until the balance test passes again.
 - **Docs:** update the README's game description.

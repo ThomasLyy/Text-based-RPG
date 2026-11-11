@@ -79,7 +79,7 @@ async function chooseAction(player: Player, enemies: Enemy[]): Promise<Turn | "f
 }
 
 export async function combat(player: Player, enemies: Enemy[], title = ""): Promise<"won" | "fled" | "dead"> {
-  const render = () => io.render(combatView(player, enemies, title));
+  const render = () => io.render(io.snapshot?.() ?? combatView(player, enemies, title)); // the run's snapshot also carries the map
   const over = () => player.health <= 0 || enemies.every((e) => e.health <= 0);
 
   for (let round = 1; !over(); round++) {
