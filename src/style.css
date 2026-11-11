@@ -48,7 +48,8 @@ main {
 #log { max-height: 40dvh; }
 #compare { display: none; }
 
-/* Wide screens: map and hero | room, fight and choices | comparison and gear. Each column scrolls on its own. */
+/* Wide screens, a fixed HUD: map and hero | room, enemies and choices | comparison and gear.
+   Every box has a fixed slot; content that does not fit scrolls inside its box, so nothing ever moves. */
 @media (min-width: 1000px) {
   main {
     max-width: 1600px;
@@ -58,11 +59,19 @@ main {
     grid-template-rows: minmax(0, 1fr);
     gap: 16px;
   }
-  #left, #right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
-  #center { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
-  #log { max-height: 50dvh; }
-  #compare { display: block; white-space: pre-line; flex-shrink: 0; }
-  #compare:not(:empty) { border: 3px solid var(--blue); background: var(--panel); padding: 8px 10px; }
+  #left, #center, #right { display: grid; gap: 10px; min-height: 0; }
+  #left { grid-template-rows: 55% minmax(0, 1fr); }
+  #center { grid-template-rows: minmax(0, 1fr) 240px 270px; }
+  #right { grid-template-rows: 40% minmax(0, 1fr); }
+  #left > *, #center > *, #right > * { min-height: 0; overflow-y: auto; margin: 0; }
+  #mapbox { border: 3px solid var(--border); background: var(--panel); padding: 6px; }
+  #map, #map svg { height: 100%; max-height: none; }
+  #room { display: flex; flex-direction: column; }
+  #log { flex: 1; min-height: 0; max-height: none; }
+  #board > fieldset, #hero > fieldset { min-height: 100%; margin: 0; }
+  #prompt { border-top: 3px solid var(--border); padding-top: 8px; }
+  #compare { display: block; white-space: pre-line; border: 3px solid var(--border); background: var(--panel); padding: 8px 10px; }
+  #compare:empty::before { content: "Hover a choice to compare it with what you have."; color: var(--muted); }
 }
 
 /* Boxes: a hard 3px frame; the title is an inverted tab sitting on it. */

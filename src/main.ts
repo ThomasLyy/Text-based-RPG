@@ -109,11 +109,12 @@ const row = (name: string, value: string) => `<div class="line"><span class="dim
 
 io.render = (v: CombatView) => {
   const p = v.player;
-  $("mapbox").hidden = !v.map;
-  if (v.map) $("map").innerHTML = drawMap(v.map);
+  $("map").innerHTML = v.map ? drawMap(v.map) : ""; // the box keeps its place before the first map
   $("title").innerHTML = markup(v.title);
+  // always drawn, even empty, so nothing below it moves when a fight starts or ends
   $("board").innerHTML = `
-    ${v.enemies.length ? `<fieldset><legend>Enemies</legend>
+    <fieldset><legend>Enemies</legend>
+      ${v.enemies.length ? "" : '<div class="dim">No enemies here.</div>'}
       ${v.enemies
         .map((e) =>
           e.health > 0
@@ -121,7 +122,7 @@ io.render = (v: CombatView) => {
             : `<div class="unit dim">${e.name} — defeated</div>`,
         )
         .join("")}
-    </fieldset>` : ""}`;
+    </fieldset>`;
   $("hero").innerHTML = `
     <fieldset><legend>Hero · Level ${p.level} · <span class="yellow">${p.gold} gold</span></legend>
       <div class="unit"><div class="line"><span>Health</span><span>${p.health} / ${p.maxHealth}</span></div>${bar(p.health, p.maxHealth, "green")}</div>
