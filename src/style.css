@@ -63,7 +63,7 @@ main {
   #left { grid-template-rows: 55% minmax(0, 1fr); }
   #center { grid-template-rows: minmax(0, 1fr) 220px 400px; }
   #right { grid-template-rows: minmax(0, 1fr) 35%; }
-  #left > *, #center > *, #right > * { min-height: 0; overflow-y: auto; margin: 0; }
+  #left > *, #center > *, #right > * { min-height: 0; overflow-y: auto; margin: 0; order: 0; } /* order: undo the phone column's reordering */
   #mapbox { border: 3px solid var(--border); background: var(--panel); padding: 6px; }
   #map, #map svg { height: 100%; max-height: none; }
   #room { display: flex; flex-direction: column; }
