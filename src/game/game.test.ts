@@ -97,6 +97,60 @@ test("encounters: bosses on floors 5, 10, 15; floor 1 is a single enemy; templat
   expect(JSON.stringify(ACTS)).toBe(before);
 });
 
+// --- map ---
+
+async function checkMap(map: import("./map").ActMap) {
+  expect(map).toHaveLength(10);
+  map.forEach((floor, f) => {
+    const lanes = floor.map((r) => r.lane);
+    expect(floor.length).toBeGreaterThanOrEqual(2);
+    expect(floor.length).toBeLessThanOrEqual(4);
+    expect(new Set(lanes).size).toBe(lanes.length);
+    expect(lanes.every((l) => l >= 0 && l <= 3)).toBe(true);
+    const below = map[f - 1];
+    if (below) for (const r of floor) expect(below.some((b) => b.next.includes(r.lane))).toBe(true); // reachable
+    for (const r of floor) {
+      if (f === 9) {
+        expect(r.next).toEqual([]);
+        continue;
+      }
+      expect(r.next.length).toBeGreaterThanOrEqual(1);
+      expect(r.next.length).toBeLessThanOrEqual(3);
+      for (const n of r.next) {
+        expect(map[f + 1].some((x) => x.lane === n)).toBe(true);
+        expect(Math.abs(n - r.lane)).toBeLessThanOrEqual(1);
+      }
+      const right = floor.find((x) => x.lane === r.lane + 1);
+      if (right) expect(r.next.includes(r.lane + 1) && right.next.includes(r.lane)).toBe(false); // links never cross
+    }
+  });
+  expect([...map[8], ...map[9]].some((r) => r.kind === "rest")).toBe(true);
+}
+
+test("map: every rule holds over 200 seeded maps", async () => {
+  const { generateMap } = await import("./map");
+  const count: Record<string, number> = {};
+  let rooms = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    vi.spyOn(Math, "random").mockImplementation(seeded(seed));
+    const map = generateMap();
+    await checkMap(map);
+    for (const r of map.flat()) (count[r.kind] = (count[r.kind] ?? 0) + 1), rooms++;
+  }
+  const share = (k: string) => (100 * (count[k] ?? 0)) / rooms;
+  for (const [k, pct] of [["fight", 45], ["elite", 15], ["event", 20], ["merchant", 10]] as const) {
+    expect(Math.abs(share(k) - pct)).toBeLessThanOrEqual(5);
+  }
+  expect(share("rest")).toBeGreaterThanOrEqual(5);
+  expect(share("rest")).toBeLessThanOrEqual(18); // 10%, plus the rest-near-the-boss override
+});
+
+test("map: finishes and keeps the rules when Math.random always returns 0.5", async () => {
+  const { generateMap } = await import("./map");
+  rolls();
+  await checkMap(generateMap());
+});
+
 // --- enemies ---
 
 test("enemies follow their pattern and announce the next move", async () => {
