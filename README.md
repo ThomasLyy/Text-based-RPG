@@ -18,6 +18,7 @@ Designed for runs of about 20 minutes (not yet timed with real players): 3 acts 
 * **Rewards:** pick 1 of 3 after every fight (weapons, armor, spells, potions), from Common to Epic. Every choice shows what it changes, before and after (attack damage, max HP, stats, crit, dodge, Armor, Ward); spells show their damage for you.
 * **Events:** shrine, stat trial, Strange brew (+3 or -2 to a random stat) and Locked chest (gold and a reward, or a trap). Enemies drop gold.
 * **Bosses** enrage from their 8th turn.
+* **The room box:** titled with the act and the room ("The Sewers - Fight"), it shows only what happened in the current room; Continue moves on and clears it.
 
 ## Balance
 
@@ -27,10 +28,77 @@ Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health an
 
 ## Roadmap
 
-* **Done:** port from Python; combat core (intents, Defend, stats, bosses, level-up, end-of-run screen); variety (weapons, armor, sets, affixes, spells, rewards, events, gold, enrage, build parity); hero sheet and before/after comparisons; a branching map per act.
-* **Next:** enemies (4+ per act with coherent lore, 3 bosses per act picked at random), then an end-of-run screen with damage stats.
-* **Step 3, roguelite:** a home screen, a currency earned per run, permanent upgrades and unlocks, difficulty levels 1 to 10 (more elites, resistances, 2 bosses per act at level 10), high scores, and saving a run in progress.
-* **Step 4, release:** first Android build and test on a real phone, Play Store release, installable web version (PWA) and hosting, settings screen, possibly optional ads. The game stays free.
+Everything left before the game is complete, in the agreed order. Items marked *(to decide)* need a decision first.
+
+### Done
+
+* Port from Python; combat core (intents, Defend, 4 stats with roles, level-ups with 3 points, bosses, enrage, death line naming the killer).
+* Variety: 9 weapon families, armor and sets, affixes, 18 spells, potions, rewards, 4 events, gold, the merchant (with warnings before losing gear or a spell).
+* A branching map per act (Fight, Elite, Event, Shop, Rest), clicked on directly; 33 floors; no healing between fights.
+* Before/after comparisons on every choice; hero sheet.
+* Screen: a room box titled with the act and the room ("The Sewers - Fight") that only holds the current room, with Continue between rooms. On the `ui` branch: the 8-bit look and a fixed HUD on wide screens.
+* Balance bots on every test run (win rate, build parity, fight length).
+
+### 1. Enemies
+
+* At least 4 enemy types per act with coherent lore; act 3 (Hell) still uses placeholder enemies.
+* 3 bosses per act, one picked at random each run.
+* Re-tune balance afterwards (build parity is currently 14.7 points against a 15-point limit).
+
+### 2. End-of-run screen
+
+* Damage dealt, by type (each weapon family, each element, poison and burn).
+* The weapon and the spell that dealt the most.
+* The enemy that killed you, if one did.
+* Meta currency earned this run.
+* A Continue button back to the home screen.
+
+### 3. Home screen and meta-progression
+
+* Home screen: start a run, meta-progression store, unlocks, reset progression.
+* A currency earned per run; permanent upgrades and unlocks bought with it.
+* The first win should be relatively easy; harder content opens up after it.
+* Save progression on the device (web: browser storage; Android: app storage).
+* *(to decide)* What the store sells and what unlocks exist (new weapons, spells, events, starting options...).
+
+### 4. Difficulty levels 1 to 10
+
+* Unlocked one by one through meta-progression.
+* Higher levels: more elites, the same enemies pumped up, elemental resistances (30–40% less damage, e.g. a Fire Rat against fire) and weaknesses (10–20% more, e.g. to water).
+* Enemies that resist physical attacks, elites included, to force the use of spells.
+* Level 10: 2 bosses per act.
+
+### 5. Saving a run in progress
+
+* Closing the app or the tab mid-run must not lose the run (essential on phones, where the system closes apps in the background).
+
+### 6. Screen and controls
+
+* Merge the `ui` branch (8-bit look, fixed HUD) once checked in the browser.
+* Phone layout: a fixed HUD for small screens too (for example tabs for Map, Hero and Gear, with the room, enemies and choices always visible). Today it is one scrolling column.
+* Bundle the pixel fonts with the game (today they load from Google Fonts, so the Android app without internet falls back to a plain font).
+* A red flash when the hero is hit.
+* The comparison box: show only the stats that change, so it fits without scrolling.
+* Map: the boss tile never shows as "current"; the next floor's rooms already show as reachable during a room.
+* Pixel icons for the 5 room types (no emoji).
+* A short how-to-play for the first run (intents, Defend, the map).
+* Settings screen: animations on/off, reset progression, and sound volume if sound is added.
+* *(to decide)* Keyboard shortcuts (number keys for choices) on computers.
+* *(to decide)* Sound effects and music (chiptune would fit the 8-bit look).
+
+### 7. Balance and playtests
+
+* Re-tune with the bots after each of steps 1, 3 and 4.
+* Playtests with real players: check that a run takes about 20 minutes and that the first win is reachable.
+
+### 8. Release
+
+* First Android build, tested on a real phone (Android 7.0 and newer).
+* App icon and splash screen.
+* Play Store: listing (description, screenshots), signing key, content rating, data safety form, privacy policy.
+* Installable web version (PWA: works offline, can be added to the home screen) and hosting.
+* High scores / run history.
+* *(to decide)* Optional ads, and if so the consent screen they require in Europe. The game stays free.
 
 ## Code
 
