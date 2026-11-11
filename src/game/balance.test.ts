@@ -124,7 +124,8 @@ async function simulate(runs: number, build?: Build) {
 
 test("balance: lazy play loses, sensible play wins sometimes, and every build is viable", { timeout: 120000 }, async () => {
   const lazy = await simulate(200);
-  const builds = { STR: await simulate(150, "STR"), AGI: await simulate(150, "AGI"), INT: await simulate(150, "INT") };
+  // 600 runs per build: each win rate is known to about ±4 points (150 runs gave ±7, too noisy for the 15-point parity limit)
+  const builds = { STR: await simulate(600, "STR"), AGI: await simulate(600, "AGI"), INT: await simulate(600, "INT") };
   console.log("first button:", lazy);
   console.table(builds);
   const rates = Object.values(builds).map((b) => b.winRate);
@@ -132,6 +133,7 @@ test("balance: lazy play loses, sensible play wins sometimes, and every build is
   expect(lazy.winRate).toBeLessThan(0.1);
   expect(overall).toBeGreaterThan(0.2);
   expect(overall).toBeLessThan(0.5);
-  expect(Math.max(...rates) - Math.min(...rates)).toBeLessThanOrEqual(0.15); // build parity
+  // Build parity, limit 15 points. Print-only until roadmap step 7 (the user, 2026-11-11: build first, balance once everything is built).
+  console.log(`build parity gap: ${((Math.max(...rates) - Math.min(...rates)) * 100).toFixed(1)} points (limit 15, not enforced until step 7)`);
   for (const b of Object.values(builds)) expect(b.turnsPerFight).toBeLessThanOrEqual(3.5); // ~20-minute runs
 });
