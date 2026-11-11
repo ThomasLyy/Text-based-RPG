@@ -53,7 +53,7 @@ export class Enemy {
     this.xpReward = Math.round(t.xp * scale) * (elite ? 2 : 1);
     this.boss = t.boss ?? false;
     this.pattern = t.pattern.map((i) => ({ ...i, value: Math.round(i.value * scale) }));
-    this.step = this.boss ? 0 : randint(0, this.pattern.length - 1); // so two goblins don't swing in sync
+    this.step = this.boss ? 0 : randint(0, this.pattern.length - 1); // so two rats don't bite in sync
   }
 
   get intent() {
@@ -128,8 +128,10 @@ export class Enemy {
 export interface Act {
   name: string;
   enemies: EnemyTemplate[];
-  boss: EnemyTemplate;
+  bosses: EnemyTemplate[]; // each run meets one of them
 }
+
+const boss = (name: string, maxHealth: number, speed: number, xp: number, pattern: Intent[]): EnemyTemplate => ({ name, maxHealth, speed, xp, pattern, boss: true });
 
 // Act 1 is mostly physical, act 3 mostly magic: Armor shines early, Ward late.
 export const ACTS: Act[] = [
@@ -137,30 +139,42 @@ export const ACTS: Act[] = [
     name: "The Sewers",
     enemies: [
       { name: "Rat", maxHealth: 11, speed: 13, xp: 4, pattern: [attack("Bite", 4), attack("Bite", 4), attack("Frenzy", 9)] },
-      { name: "Goblin", maxHealth: 18, speed: 9, xp: 6, pattern: [attack("Stab", 6), attack("Stab", 6), attack("Heavy swing", 16)] },
-      { name: "Slime", maxHealth: 23, speed: 4, xp: 6, pattern: [attack("Slam", 5), poison("Acid", 3, 3)] },
-      { name: "Cultist", maxHealth: 15, speed: 8, xp: 7, pattern: [bolt("Dark bolt", 5), heal("Mend", 8), bolt("Dark bolt", 5)] },
+      { name: "Gutter Thief", maxHealth: 18, speed: 9, xp: 6, pattern: [attack("Stab", 6), attack("Stab", 6), attack("Heavy swing", 16)] },
+      { name: "Sludge", maxHealth: 23, speed: 4, xp: 6, pattern: [attack("Slam", 5), poison("Acid", 3, 3)] },
+      { name: "Drowned Cultist", maxHealth: 15, speed: 8, xp: 7, pattern: [bolt("Brine bolt", 5), heal("Mend", 8), bolt("Brine bolt", 5)] },
     ],
-    boss: { name: "Goblin Warlord", maxHealth: 83, speed: 10, xp: 30, boss: true, pattern: [attack("Cleave", 10), buff("War cry", 3), attack("Cleave", 10), attack("Crushing blow", 28)] },
+    bosses: [
+      boss("Gutter King", 83, 10, 30, [attack("Cleave", 10), buff("War cry", 3), attack("Cleave", 10), attack("Crushing blow", 28)]),
+      boss("Brood Mother", 83, 14, 30, [attack("Bite", 9), poison("Filth", 4, 3), attack("Bite", 9), attack("Frenzy", 24)]),
+      boss("Drowned Prophet", 83, 8, 30, [bolt("Brine bolt", 11), heal("Tide's mercy", 12), bolt("Brine bolt", 11), bolt("Drowning wave", 30)]),
+    ],
   },
   {
     name: "The Catacombs",
     enemies: [
       { name: "Skeleton", maxHealth: 26, speed: 10, xp: 9, pattern: [attack("Slash", 8), attack("Slash", 8), attack("Bone crush", 20)] },
-      { name: "Giant Spider", maxHealth: 23, speed: 14, xp: 9, pattern: [attack("Bite", 7), poison("Venom", 4, 3)] },
+      { name: "Crypt Spider", maxHealth: 23, speed: 14, xp: 9, pattern: [attack("Bite", 7), poison("Venom", 4, 3)] },
       { name: "Ghoul", maxHealth: 30, speed: 6, xp: 10, pattern: [attack("Claw", 10), attack("Claw", 10), heal("Feast", 12)] },
-      { name: "Dark Acolyte", maxHealth: 23, speed: 9, xp: 10, pattern: [bolt("Shadow bolt", 8), heal("Unholy mend", 14), buff("Dark rite", 3)] },
+      { name: "Gravekeeper", maxHealth: 23, speed: 9, xp: 10, pattern: [bolt("Shadow bolt", 8), heal("Unholy mend", 14), buff("Dark rite", 3)] },
     ],
-    boss: { name: "Bone Colossus", maxHealth: 128, speed: 7, xp: 60, boss: true, pattern: [attack("Stomp", 13), bolt("Grave curse", 13), heal("Gather bones", 20), attack("Earthshatter", 36)] },
+    bosses: [
+      boss("Bone Colossus", 128, 7, 60, [attack("Stomp", 13), bolt("Grave curse", 13), heal("Gather bones", 20), attack("Earthshatter", 36)]),
+      boss("Embalmer", 128, 9, 60, [poison("Embalming fluid", 7, 3), attack("Hook", 14), poison("Embalming fluid", 7, 3), heal("Stitch", 20)]),
+      boss("Hollow King", 128, 8, 60, [buff("Hollow crown", 3), buff("Hollow crown", 3), bolt("Void lance", 38), attack("Sceptre", 12)]),
+    ],
   },
   {
-    name: "Hell", // placeholder enemies until the enemies design
+    name: "Hell",
     enemies: [
-      { name: "Wraith", maxHealth: 33, speed: 15, xp: 13, pattern: [bolt("Chill touch", 10), poison("Soul drain", 5, 3)] },
-      { name: "Troll", maxHealth: 47, speed: 6, xp: 14, pattern: [attack("Club", 12), heal("Regenerate", 14), attack("Smash", 34)] },
-      { name: "Fire Imp", maxHealth: 29, speed: 17, xp: 12, pattern: [bolt("Firebolt", 9), bolt("Firebolt", 9), poison("Ignite", 5, 3)] },
-      { name: "Dread Knight", maxHealth: 41, speed: 9, xp: 15, pattern: [attack("Strike", 12), buff("Battle focus", 3), attack("Execute", 38)] },
+      { name: "Ash Shade", maxHealth: 33, speed: 15, xp: 13, pattern: [bolt("Cinder touch", 10), poison("Smother", 5, 3)] },
+      { name: "Chained Brute", maxHealth: 47, speed: 6, xp: 14, pattern: [attack("Chain swing", 12), heal("Knit flesh", 14), attack("Smash", 34)] },
+      { name: "Ember Imp", maxHealth: 29, speed: 17, xp: 12, pattern: [bolt("Firebolt", 9), bolt("Firebolt", 9), poison("Ignite", 5, 3)] },
+      { name: "Oathbreaker", maxHealth: 41, speed: 9, xp: 15, pattern: [attack("Strike", 12), buff("Dark vow", 3), attack("Execute", 38)] },
     ],
-    boss: { name: "Lich", maxHealth: 210, speed: 11, xp: 0, boss: true, pattern: [bolt("Death bolt", 16), poison("Plague", 6, 3), heal("Raise dead", 25), bolt("Doom", 58)] },
+    bosses: [
+      boss("Ashen Warden", 210, 11, 0, [bolt("Ash bolt", 16), poison("Searing ash", 6, 3), heal("Rekindle", 25), bolt("Doom", 58)]),
+      boss("Iron Judge", 210, 9, 0, [attack("Chain lash", 18), attack("Chain lash", 18), buff("Sentence", 4), attack("Execution", 52)]),
+      boss("Pyre Mother", 210, 16, 0, [bolt("Flame lash", 20), bolt("Flame lash", 20), bolt("Flame lash", 20), bolt("Pyre", 38)]),
+    ],
   },
 ];

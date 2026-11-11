@@ -51,9 +51,15 @@ A step is done when every "Done when" line of that step is true. Stop after one 
 
 **Decided by the user on 2026-11-11: build first, balance once everything is built.** Steps 1 to 6 do not re-tune. Each step notes the bots' numbers before and after and reports them; tuning happens in step 7.
 
-Numbers on 2026-11-11, at 600 runs: Strength 31.8%, Agility 40%, Intelligence 24.2%. The gap is 15.8 points against the 15-point limit, so **the parity check fails today**. (At 150 runs it read 14.7 and passed; the user asked for 600.)
+**Also decided: the parity check is print-only until step 7.** It prints the gap and does not fail the test run; the other three checks still do. Step 7 turns it back on.
 
-- Open question for the user: what the parity check does until step 7. Proposed: it prints the gap and does not fail the test run until step 7 turns it back on; the other three checks keep failing the run. The alternative is to leave `npm test` red.
+Numbers at 600 runs, 2026-11-11:
+
+| | Strength | Agility | Intelligence | Gap |
+|---|---|---|---|---|
+| Before step 1 | 31.8% | 40% | 24.2% | 15.8 |
+| After step 1 (3 bosses per act) | 25.2% | 35.5% | 25.5% | 10.3 |
+
 - **Noise:** with 600 runs a build's win rate is known to about ±4 points. Any change that adds or removes one random draw (a random boss, for example) reorders every run and can move the gap by a few points with no real change in balance.
 - When tuning (step 7): change `DIFFICULTY` or enemy numbers, never the thresholds. Show the user the before and after table.
 - Intelligence is the weakest build today. A change that makes enemies more magical, or adds physical resistance (step 4), moves the builds in different directions; say which way in the spec.
@@ -66,8 +72,9 @@ Numbers on 2026-11-11, at 600 runs: Strength 31.8%, Agility 40%, Intelligence 24
 - Before/after comparisons on every choice; hero sheet.
 - Screen: a room box titled with the act and the room ("The Sewers - Fight") that only holds the current room, with Continue between rooms. The 8-bit look and a fixed HUD on wide screens.
 - Balance bots on every test run (win rate, build parity, fight length).
+- Step 1, enemies: 4 enemies per act with lore, act 3's placeholders replaced, 3 bosses per act with one picked at random per run (spec: `docs/superpowers/specs/2026-11-11-enemies-design.md`, which also records each enemy's element for step 4). Enemy behaviours are to be revisited later, at the user's request.
 
-## 1. Enemies
+## 1. Enemies (done, kept for reference)
 
 Today each act has 4 enemies and 1 boss in `ACTS` (`src/game/enemy.ts`); act 3's are placeholders.
 
@@ -80,7 +87,7 @@ Today each act has 4 enemies and 1 boss in `ACTS` (`src/game/enemy.ts`); act 3's
 
 Open questions: the lore of each act; the enemy and boss names; whether to add an element field to enemies now or in step 4.
 
-**Proposed by the agent on 2026-11-11. The spec is `docs/superpowers/specs/2026-11-11-enemies-design.md`, waiting for the user's approval:**
+**Approved by the user on 2026-11-11 and built:**
 
 | Act | Lore | Enemies (today → proposed) | Elements |
 |---|---|---|---|
@@ -110,7 +117,7 @@ Done when: every act has at least 4 non-placeholder enemies and 3 bosses; a test
 Shown on death and on victory.
 
 - Damage dealt by the hero, by type: each weapon family, each element, and burn. (The hero has no poison; only enemies poison.)
-- Open question: should the screen also list the damage the hero received, per enemy (for example "Rat 42, Sludge's poison 18")?
+- Decided by the user on 2026-11-11: only the damage the hero dealt; no list of damage received.
 - The weapon and the spell that dealt the most damage.
 - The enemy that killed the hero, if one did.
 - Meta currency earned this run (the currency itself comes in step 3; show 0 or leave the line out until then, as the user prefers).
@@ -211,7 +218,7 @@ Done when: `npm test` passes at levels 1 and 10 with every check on, and the use
 ## 8. Release
 
 - Testing before release is done by the user, with an `.apk` or through Android Studio, whichever is simpler then. The user wants no public test phase.
-- Open question, to settle before this step: is the user's Play account a personal account created after 13 November 2023? Google makes those run a closed test with 12 testers for 14 days before it allows a production release; older accounts and organization accounts are not concerned. See https://support.google.com/googleplay/android-developer/answer/14151465.
+- The user's Play account was created before November 2023, so Google's closed test for new personal accounts (12 testers for 14 days) does not apply.
 - Choose the game's name with the user ("Text-based RPG" no longer fits), then update the page title, the README, `package.json`, `capacitor.config.json` and the app name.
 - First Android build (`npm run android`), tested by the user on a real phone (Android 7.0 and newer).
 - App icon and splash screen, in the game's pixel style.

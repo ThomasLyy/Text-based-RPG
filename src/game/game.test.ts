@@ -65,14 +65,14 @@ test("smoke: a seeded run plays to the end (win or game over) without crashing",
 
 test("death screen names the floor and the killer (here: poison)", async () => {
   await play(["[white]", "Elite", "Defend", "Defend"]); // starter weapon, a room, then defend; the poison ticks after the hero's second turn
-  rolls(); // all rolls 0.5: every room is an Elite, and floor 1 holds Elite Slimes starting on their Acid move
+  rolls(); // all rolls 0.5: every room is an Elite, and floor 1 holds Elite Sludges starting on their Acid move
   const { Player } = await import("./player");
   const { gameLoop } = await import("./game");
   const p = new Player();
   p.health = 1;
   const summary = await gameLoop(p);
   expect(summary).toMatchObject({ won: false, floor: 1, level: 1, kills: 0 });
-  expect(summary.killedBy).toMatch(/Slime's poison$/);
+  expect(summary.killedBy).toMatch(/Sludge's poison$/);
 });
 
 // Plays the start of a seeded run with a strong weapon, answering through `answer`; stops at the 2nd path choice.
@@ -184,7 +184,17 @@ test("encounters: counts by floor, elites are 40% tougher with double XP, bosses
   rolls(0, 0, 0); // one elite, the first template (Rat)
   const [elite] = encounter(0, 1, true);
   expect([elite.name, elite.maxHealth, elite.xpReward]).toEqual(["Elite Rat", Math.round(11 * DIFFICULTY[0] * 1.4), 2 * Math.round(4 * DIFFICULTY[0] * 1.4)]);
-  expect([0, 1, 2].map((a) => bossOf(a).name)).toEqual(ACTS.map((a) => a.boss.name));
+  const names = ACTS.flatMap((a) => [...a.enemies, ...a.bosses].map((t) => t.name));
+  expect(new Set(names).size).toBe(names.length);
+  expect(names.filter((n) => /Wraith|Troll|Fire Imp|Dread Knight|Lich|Goblin/.test(n))).toEqual([]); // the old placeholders
+  for (const [a, act] of ACTS.entries()) {
+    expect(act.enemies.length).toBeGreaterThanOrEqual(4);
+    expect(act.bosses).toHaveLength(3);
+    for (const [i, roll] of [0, 0.5, 0.99].entries()) {
+      rolls(roll); // each run meets one of the act's 3 bosses
+      expect(bossOf(a).name).toBe(act.bosses[i].name);
+    }
+  }
   expect(ACTS[2].name).toBe("Hell");
   encounter(1, 8).forEach((e) => (e.health = 0));
   expect(JSON.stringify(ACTS)).toBe(before);

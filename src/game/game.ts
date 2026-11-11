@@ -19,7 +19,7 @@ export function encounter(act: number, floor: number, elite = false): Enemy[] {
   const count = elite || floor <= 3 ? randint(1, 2) : floor <= 7 ? 2 : randint(2, 3);
   return choices(ACTS[act].enemies, count).map((t) => new Enemy(t, scale, elite));
 }
-export const bossOf = (act: number) => new Enemy(ACTS[act].boss, DIFFICULTY[act]);
+export const bossOf = (act: number) => new Enemy(choices(ACTS[act].bosses, 1)[0], DIFFICULTY[act]);
 
 // Level-up points: each one is +1 to a stat, or +5 max health. Perception only comes from gear.
 export const LEVEL_POINTS = 3;
@@ -109,6 +109,7 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     io.clear();
   };
 
+  let lastBoss = "";
   run: for (let a = 0; a < ACTS.length; a++) {
     const act = ACTS[a];
     if (a > 0) {
@@ -142,6 +143,7 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     floor++;
     title = `${act.name} - Boss`;
     const boss = bossOf(a);
+    lastBoss = boss.name;
     io.print(`[bold red]${boss.name} blocks the way![/]`);
     if (await fight([boss], a, { boss: true })) break;
     if (a < ACTS.length - 1) await leaveRoom();
@@ -150,7 +152,7 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
   const won = !dead;
   const summary = { won, floor, level: player.level, kills, killedBy: won ? "" : player.lastHitBy };
   const actName = ACTS[Math.floor((floor - 1) / (ROOMS_PER_ACT + 1))].name;
-  if (won) io.print(`[panel bold green]The ${ACTS.at(-1)!.boss.name} falls. You have survived all three acts![/]`);
+  if (won) io.print(`[panel bold green]The ${lastBoss} falls. You have survived all three acts![/]`);
   else io.print(`[panel bold red]You died on floor ${floor} of ${FLOORS} (${actName}), slain by the ${summary.killedBy}.[/]`);
   io.print(`Level ${summary.level} · ${kills} enemies defeated.`);
   return summary;

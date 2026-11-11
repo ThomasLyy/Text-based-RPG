@@ -1,6 +1,6 @@
 # Enemies: lore per act and three bosses per act
 
-Date: 2026-11-11. Status: waiting for approval.
+Date: 2026-11-11. Status: approved by the user and built on 2026-11-11.
 
 ## Why
 

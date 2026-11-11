@@ -17,12 +17,13 @@ Designed for runs of about 20 minutes (not yet timed with real players): 3 acts 
 * **18 spells:** 6 elements × (single target, all enemies, powerful), each element with a signature effect (burn, chill, stun, chain, heal, curse). Ranks I to IV, and a 4-slot spellbook.
 * **Rewards:** pick 1 of 3 after every fight (weapons, armor, spells, potions), from Common to Epic. Every choice shows what it changes, before and after (attack damage, max HP, stats, crit, dodge, Armor, Ward); spells show their damage for you.
 * **Events:** shrine, stat trial, Strange brew (+3 or -2 to a random stat) and Locked chest (gold and a reward, or a trap). Enemies drop gold.
-* **Bosses** enrage from their 8th turn.
+* **Enemies:** 4 per act, fitting the place: vermin, outlaws and a drowned cult in The Sewers; the restless dead and their keepers in The Catacombs; ash, chains and fire in Hell.
+* **Bosses:** each act has 3 (for example the Gutter King, the Brood Mother and the Drowned Prophet in The Sewers) and a run meets one of them, picked at random. Bosses enrage from their 8th turn.
 * **The room box:** titled with the act and the room ("The Sewers - Fight"), it shows only what happened in the current room; Continue moves on and clears it.
 
 ## Balance
 
-`src/game/balance.test.ts` plays hundreds of simulated runs on every `npm test`. A "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, no build (Strength, Agility, Intelligence) may be more than 15 points ahead of another, and fights must average 3.5 turns or fewer (for 20-minute runs). To see the numbers: `npx vitest run balance --reporter=verbose`.
+`src/game/balance.test.ts` plays 2,000 simulated runs on every `npm test` (about 25 seconds). A "first button" bot must lose, a sensible bot must win between 20% and 50% of runs, and fights must average 3.5 turns or fewer (for 20-minute runs). The gap between builds (Strength, Agility, Intelligence) has a 15-point limit; it is printed but not enforced until the final balance pass (roadmap step 7). To see the numbers: `npx vitest run balance --reporter=verbose`.
 
 Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health and damage per act). All tuning so far comes from bots, not human players.
 
