@@ -1,4 +1,8 @@
 ﻿/* 8-bit look: our own 12 flat colours, two pixel fonts, square shapes, no gradients, no smooth motion. */
+/* The fonts ship with the game (public/fonts, SIL Open Font License): no request to another site, and they work offline. */
+@font-face { font-family: "Press Start 2P"; src: url("/fonts/PressStart2P-Regular.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "VT323"; src: url("/fonts/VT323-Regular.woff2") format("woff2"); font-display: swap; }
+
 :root {
   --bg: #12101c;
   --panel: #1e1a2e;
@@ -28,25 +32,36 @@ body {
   font-smooth: never;
 }
 
-/* Phone: one scrolling column. Hero, the room, the fight and the choices, then the map (it takes the path clicks)
-   and gear. The comparison panel needs hover, so it only exists on wide screens. */
+/* Phone, a fixed HUD that never scrolls as a page: a status line with tabs, one panel (the room, the map, the
+   hero or the gear), then the enemies and the choices, always visible. Each part scrolls inside itself if it
+   must. The comparison panel needs hover, so it only exists on wide screens. */
 main {
-  max-width: 900px;
+  max-width: 700px;
+  height: 100dvh;
   margin: 0 auto;
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 6px;
 }
 #left, #center, #right { display: contents; }
-#hero { order: 1; }
-#room { order: 2; }
-#board { order: 3; }
-#prompt { order: 4; }
-#mapbox { order: 5; }
-#gear { order: 6; }
-#log { max-height: 40dvh; }
+#tabs { grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+#status { flex: 1 1 100%; display: flex; gap: 12px; }
+#tabs button { min-height: 36px; padding: 4px 10px; font: 10px/1 var(--pixel); flex: 1; text-align: center; }
+#tabs button.on { background: var(--fg); color: var(--bg); }
+#room, #mapbox, #hero, #gear { grid-row: 2; grid-column: 1; min-height: 0; overflow-y: auto; display: none; margin: 0; }
+body[data-tab="room"] #room { display: flex; flex-direction: column; }
+body[data-tab="map"] #mapbox, body[data-tab="hero"] #hero, body[data-tab="gear"] #gear { display: block; }
+#log { flex: 1; min-height: 0; }
+#board { grid-row: 3; max-height: 36dvh; overflow-y: auto; }
+#board > fieldset { margin: 0; }
+#prompt { grid-row: 4; max-height: 38dvh; overflow-y: auto; }
+/* nobody left to fight: on phones the enemies' box gives its place to the map or to the choices */
+#board.idle { display: none; }
+#board.idle ~ #prompt { max-height: 62dvh; }
 #compare { display: none; }
+kbd { display: none; }
 
 /* Wide screens, a fixed HUD: map and hero | room, enemies and choices | comparison and gear.
    Every box has a fixed slot; content that does not fit scrolls inside its box, so nothing ever moves. */
@@ -59,15 +74,19 @@ main {
     grid-template-rows: minmax(0, 1fr);
     gap: 16px;
   }
+  #tabs { display: none; }
+  #room, #mapbox, #hero, #gear { display: block; grid-row: auto; grid-column: auto; }
+  #board, #board.idle { display: block; }
+  #board, #prompt, #board.idle ~ #prompt { grid-row: auto; max-height: none; }
   #left, #center, #right { display: grid; gap: 10px; min-height: 0; }
   #left { grid-template-rows: 55% minmax(0, 1fr); }
   #center { grid-template-rows: minmax(0, 1fr) 290px 340px; }
   #right { grid-template-rows: minmax(0, 1fr) 25%; }
   #left > *, #center > *, #right > * { min-height: 0; overflow-y: auto; margin: 0; order: 0; } /* order: undo the phone column's reordering */
   #mapbox { border: 3px solid var(--border); background: var(--panel); padding: 6px; }
-  #map, #map svg { height: 100%; max-height: none; }
-  #room { display: flex; flex-direction: column; }
-  #log { flex: 1; min-height: 0; max-height: none; }
+  #center > #room { display: flex; flex-direction: column; }
+  /* the number key that picks a choice: shown where there is a keyboard */
+  kbd { display: inline-block; font: 8px/1 var(--pixel); color: var(--bg); background: var(--muted); padding: 3px 4px; margin-right: 8px; vertical-align: middle; }
   #board > fieldset, #hero > fieldset { min-height: 100%; margin: 0; }
   #prompt { border-top: 3px solid var(--border); padding-top: 8px; }
   #compare { display: block; white-space: pre-line; border: 3px solid var(--border); background: var(--panel); padding: 8px 10px; }
@@ -135,12 +154,15 @@ body.hurt #fx { animation: flash 0.3s steps(3); }
 .fill.cyan { background: var(--cyan); }
 
 /* The map: square tiles. Rooms you can walk to blink, your room is drawn inverted. */
-#map svg { display: block; width: 100%; max-height: 55dvh; margin: 0 auto; shape-rendering: crispEdges; }
+#map { height: 100%; }
+#map svg { display: block; width: 100%; height: 100%; margin: 0 auto; shape-rendering: crispEdges; } /* the whole map always fits its box */
 #map .link { stroke: var(--border); stroke-width: 3; stroke-dasharray: 6 4; }
 #map .link.walked { stroke: var(--fg); stroke-dasharray: none; }
 #map .node rect { fill: var(--panel); stroke: var(--border); stroke-width: 3; }
 #map .node text { fill: var(--muted); font: 9px var(--pixel); text-anchor: middle; pointer-events: none; }
 #map .node .sprite { pointer-events: none; }
+#map .node text.key { fill: var(--bg); font-size: 8px; paint-order: stroke; stroke: var(--blue); stroke-width: 6px; }
+@media (max-width: 999px) { #map .node text.key { display: none; } }
 #map .reachable rect { stroke: var(--blue); animation: blink 1s steps(2, jump-none) infinite; }
 #map .reachable text { fill: var(--fg); }
 #map [data-i] { cursor: pointer; outline: none; }
@@ -153,10 +175,9 @@ body.hurt #fx { animation: flash 0.3s steps(3); }
 #map .boss text { fill: var(--red); }
 @keyframes blink { 50% { stroke: var(--border); } }
 
-#log { min-height: 3em; white-space: pre-wrap; overflow-y: auto; }
+#log { white-space: pre-wrap; overflow-y: auto; }
 
-#prompt { padding-bottom: 8px; flex-shrink: 0; }
-#board { flex-shrink: 0; }
+#prompt { padding-bottom: 8px; }
 #question { font: 12px/1.4 var(--pixel); color: var(--yellow); margin: 4px 0 12px; }
 #question:empty { display: none; }
 #question::before { content: "> "; animation: cursor 1s steps(2, jump-none) infinite; }

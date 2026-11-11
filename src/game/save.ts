@@ -6,7 +6,7 @@ import { io } from "./io";
 
 import { newProfile, type Profile } from "./meta";
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 // Bump whenever a change would make an old run play out differently: new or changed enemies, items, odds, or the order of random draws.
 export const RULES = 2;
 
@@ -22,9 +22,19 @@ export interface Save {
   version: number;
   run: RunSave | null;
   profile: Profile;
+  options: Options;
 }
 
-export const newSave = (): Save => ({ version: SAVE_VERSION, run: null, profile: newProfile() });
+// What the settings screen changes. Not progression: resetting progression keeps it.
+export interface Options {
+  animations: boolean;
+  music: number; // volume, 0 to 100
+  sound: number;
+  howToSeen: boolean; // the how-to-play is shown once, before the first run
+}
+export const newOptions = (): Options => ({ animations: true, music: 60, sound: 60, howToSeen: false });
+
+export const newSave = (): Save => ({ version: SAVE_VERSION, run: null, profile: newProfile(), options: newOptions() });
 export const newRun = (seed: number, level = 1): RunSave => ({ seed, rules: RULES, level, answers: [], floor: 0 });
 
 // Old formats are converted one version at a time, never dropped. Unreadable text gives a new save.
@@ -32,6 +42,8 @@ export const newRun = (seed: number, level = 1): RunSave => ({ seed, rules: RULE
 const MIGRATIONS: ((old: any) => any)[] = [
   // 1 -> 2: the profile (store, levels, best results) arrives; a run in progress was at level 1
   (v1) => ({ version: 2, run: v1.run && { ...v1.run, level: 1 }, profile: newProfile() }),
+  // 2 -> 3: the settings arrive
+  (v2) => ({ ...v2, version: 3, options: newOptions() }),
 ];
 
 export function loadSave(text: string | null): Save {

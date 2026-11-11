@@ -142,7 +142,10 @@ test("save: unreadable or unknown saves give a new save; a saved answer that no 
   expect(loadSave(JSON.stringify(save))).toEqual(save);
   // a version 1 save (before the store existed) is converted: the run is kept, a profile is added
   const v1 = { version: 1, run: { seed: 5, rules: 1, answers: [0, 2], floor: 4 } };
-  expect(loadSave(JSON.stringify(v1))).toEqual({ version: SAVE_VERSION, run: { ...v1.run, level: 1 }, profile: newSave().profile });
+  expect(loadSave(JSON.stringify(v1))).toEqual({ version: SAVE_VERSION, run: { ...v1.run, level: 1 }, profile: newSave().profile, options: newSave().options });
+  // a version 2 save (before the settings existed) keeps its profile and gains the default settings
+  const v2 = { version: 2, run: null, profile: { ...newSave().profile, ash: 77 } };
+  expect(loadSave(JSON.stringify(v2))).toEqual({ ...v2, version: SAVE_VERSION, options: newSave().options });
   expect(loadSave(JSON.stringify({ version: 1, run: null })).run).toBeNull();
   io.ask = async () => 0;
   record(save.run, () => {});
@@ -185,17 +188,35 @@ test("home: buying in the store and resetting are stored; reset asks first; Star
   const { newProfile } = await import("./meta");
   const p = { ...newProfile(), ash: 100, level: 3, bestFloor: 12 };
   let stored = 0;
+  const { newOptions } = await import("./save");
+  const o = { ...newOptions(), howToSeen: true };
   const { log } = await play(["Store", "Unlock Bows", "Vigor 0/5", "Back", "Change the difficulty", "Level 2", "Reset progression", "Keep", "Start a run"]);
-  expect(await home(p, () => stored++)).toBe(2);
+  expect(await home(p, o, () => stored++)).toBe(2);
   expect(p).toMatchObject({ ash: 40, bought: { "family:Bow": 1, vigor: 1 }, level: 3 });
   expect(stored).toBe(2);
   expect(log.some((l) => l.includes("Furthest floor: 12"))).toBe(true);
   await play(["Reset progression", "Erase everything", "Start a run"]);
-  expect(await home(p, () => stored++)).toBe(1);
+  expect(await home(p, o, () => stored++)).toBe(1);
   expect(p).toEqual(newProfile());
   expect(stored).toBe(3);
   await play(["Store", "Unlock Hammers"]); // 0 Ash: the button is disabled
-  await expect(home(p, () => {})).rejects.toThrow("picked a disabled option");
+  await expect(home(p, o, () => {})).rejects.toThrow("picked a disabled option");
+});
+
+test("settings and how-to-play: each press changes one setting and is stored; the how-to is shown once and can be skipped", async () => {
+  const { home } = await import("./home");
+  const { newProfile } = await import("./meta");
+  const { newOptions } = await import("./save");
+  const o = newOptions();
+  let stored = 0;
+  const { log } = await play(["Settings", "Animations: on", "Music volume: 60%", "Music volume: 80%", "Music volume: 100%", "Sound volume: 60%", "Back", "Start a run", "Next", "Skip"]);
+  await home(newProfile(), o, () => stored++);
+  expect(o).toEqual({ animations: false, music: 0, sound: 80, howToSeen: true }); // the volume goes up a step, then back to 0
+  expect(stored).toBe(6); // 5 presses and the how-to seen
+  expect(log.filter((l) => l.includes("How to play (")).length).toBe(2); // skipped on the second of 3 pages
+  await play(["Start a run"]); // seen: not shown again
+  await home(newProfile(), o, () => stored++);
+  expect(stored).toBe(6);
 });
 
 test("a new profile: 2-handed weapons, powerful spells and two events are locked; boosts change the hero at the start", async () => {
@@ -583,7 +604,7 @@ test("fights redraw through the run's snapshot, so the map stays on screen", asy
   const { player, Enemy, combat } = await setup();
   const { io } = await play(["Attack"]);
   const { combatView } = await import("./combat");
-  const map = { act: "Test", floors: [], choosing: false };
+  const map = { act: "Test", floors: [], choosing: false, boss: false };
   const e = new Enemy(dummy());
   io.snapshot = () => combatView(player, [e], "Test", map);
   const seen: unknown[] = [];
@@ -701,7 +722,7 @@ test("comparisons: gear shows what changes, before -> after; spells show their d
   player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common")); // 9-13: 11 per Attack
   const hammer = gearChanges(player, makeWeapon(await family("Hammer"), 0, "Common")); // 14-20
   expect(hammer.line).toBe("Attack 12 dmg → [green]17 dmg[/]");
-  expect(hammer.full.split("\n")).toHaveLength(13); // every number, for the side panel
+  expect(hammer.full).toBe(hammer.line); // one change here; the side panel lists only what changes, one per line
   const chest = gearChanges(player, makeArmor("chest", 0, "Common", { weight: "heavy", affixes: [] })); // +18 HP, +4 Armor, +3 STR, -1 AGI
   expect(chest.line).toContain("Max HP 100 → [green]118[/]");
   expect(chest.line).toContain("Armor 0% → [green]5%[/]"); // 4, plus 1 for the 3 Strength

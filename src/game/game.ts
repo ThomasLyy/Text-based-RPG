@@ -110,9 +110,9 @@ const LANE_NAME = ["far left", "left", "right", "far right"];
 const ROOM_TITLE = { ...ROOM_LABEL, elite: "Elite Fight" };
 export const pathLabel =(r: MapRoom) => `${ROOM_LABEL[r.kind]} · ${LANE_NAME[r.lane]}`;
 
-function mapView(act: string, map: ActMap, path: MapRoom[], reachable: MapRoom[], choosing: boolean): MapView {
-  const state = (r: MapRoom) => (r === path.at(-1) ? "current" : path.includes(r) ? "visited" : reachable.includes(r) ? "reachable" : "other");
-  return { act, choosing, floors: map.map((floor) => floor.map((r) => ({ lane: r.lane, label: ROOM_LABEL[r.kind], next: r.next, state: state(r) }))) };
+function mapView(act: string, map: ActMap, path: MapRoom[], reachable: MapRoom[], choosing: boolean, boss: boolean): MapView {
+  const state = (r: MapRoom) => (r === path.at(-1) && !boss ? "current" : path.includes(r) ? "visited" : choosing && reachable.includes(r) ? "reachable" : "other");
+  return { act, choosing, boss, floors: map.map((floor) => floor.map((r) => ({ lane: r.lane, label: ROOM_LABEL[r.kind], next: r.next, state: state(r) }))) };
 }
 
 // Each act: walk its map floor by floor, picking a room linked to the last one, then fight the boss.
@@ -160,7 +160,8 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     const path: MapRoom[] = [];
     let reachable = map[0];
     let choosing = false;
-    view = () => mapView(act.name, map, path, reachable, choosing);
+    let atBoss = false;
+    view = () => mapView(act.name, map, path, reachable, choosing, atBoss);
     for (let f = 1; f <= ROOMS_PER_ACT; f++) {
       floor++;
       enemies = [];
@@ -179,7 +180,8 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
       await leaveRoom();
     }
     floor++;
-    title = `${act.name} - Boss`;
+    title = ` - Boss`;
+    atBoss = true;
     for (const boss of bossesOf(a)) {
       lastBoss = boss.name;
       io.print(`[bold red]${boss.name} blocks the way![/]`);

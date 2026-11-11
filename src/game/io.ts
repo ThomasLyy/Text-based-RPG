@@ -17,7 +17,8 @@ export interface CombatView {
 export interface MapView {
   act: string;
   floors: { lane: number; label: string; next: number[]; state: "visited" | "current" | "reachable" | "other" }[][];
-  choosing: boolean; // the path question is open
+  choosing: boolean; // the path question is open: only then are the next rooms shown as reachable
+  boss: boolean; // the hero is at the boss
 }
 
 // A hit that just landed, for the UI to animate: on an enemy (its id) or on the hero.

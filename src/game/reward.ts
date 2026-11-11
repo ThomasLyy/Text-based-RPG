@@ -1,4 +1,4 @@
-﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Armor, type Item, type Scroll, type Weapon } from "./items";
+import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Armor, type Item, type Scroll, type Weapon } from "./items";
 import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName, type KnownSpell } from "./spell";
 import { io, randint, random } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
@@ -77,7 +77,7 @@ export function sheet(p: Player): [string, number, string][] {
 
 const arrow = (label: string, a: number, b: number, unit: string) => `${label} ${a}${unit} → [${b > a ? "green" : "red"}]${b}${unit}[/]`;
 
-// Before -> after of wearing this: `line` lists only what changes (for the button), `full` every number (for the side panel).
+// Before -> after of wearing this, only the numbers that change: `line` on one line (for the button), `full` one per line (for the side panel).
 export function gearChanges(p: Player, item: Weapon | Armor, hand: "main" | "off" = "main") {
   const before = sheet(p);
   const after = p.tryOn(item, hand, () => sheet(p));
@@ -87,7 +87,7 @@ export function gearChanges(p: Player, item: Weapon | Armor, hand: "main" | "off
   });
   return {
     line: rows.filter(Boolean).join(" · ") || "[dim]no stat change[/]",
-    full: after.map(([label, b, unit], i) => rows[i] ?? `[dim]${label} ${b}${unit}[/]`).join("\n"),
+    full: rows.filter(Boolean).join("\n") || "[dim]no stat change[/]",
   };
 }
 

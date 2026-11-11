@@ -1,4 +1,4 @@
-﻿import { io, seedRandom, type CombatView, type Fx, type MapView } from "./game/io";
+import { io, seedRandom, type CombatView, type Fx, type MapView } from "./game/io";
 import { FAMILIES } from "./game/items";
 import { SPELLS } from "./game/spell";
 import { ELEMENT_ICONS, FAMILY_ICONS, ROOM_ICONS, enemySprite, svg } from "./sprites";
@@ -8,7 +8,13 @@ import { home } from "./game/home";
 import { ROOMS_PER_ACT, ROOM_LABEL } from "./game/map";
 import { POUCH_SIZE, Player } from "./game/player";
 import { SPELLBOOK_SIZE } from "./game/spell";
-import { gameLoop } from "./game/game";
+import { FLOORS, gameLoop } from "./game/game";
+import { ACTS } from "./game/enemy";
+import { music, setVolumes, sfx, type Sound } from "./audio";
+
+// While a saved run is being replayed nothing is drawn, so nothing should be heard either.
+let live = true;
+const replaying = () => !live;
 
 const $ = (id: string) => document.getElementById(id)!;
 
@@ -25,7 +31,17 @@ const bar = (value: number, max: number, color: string) =>
 // Keep the newest log line visible; board and buttons change size, so re-stick after each of them.
 const stick = () => ($("log").scrollTop = $("log").scrollHeight);
 
+// Sounds that go with a line of the log.
+const SOUNDS: [RegExp, Sound][] = [
+  [/^\[panel bold cyan\]Level \d+!/, "level"],
+  [/^You (equip|pack|learn)|grows stronger|salve closes/, "buy"],
+  [/You have survived all three acts/, "win"],
+  [/^\[panel bold red\]You died/, "lose"],
+];
+
 io.print = (msg) => {
+  const sound = SOUNDS.find(([pattern]) => pattern.test(msg));
+  if (sound && !replaying()) sfx(sound[1]);
   const line = document.createElement("div");
   line.innerHTML = markup(msg);
   $("log").append(line);
@@ -55,11 +71,14 @@ io.ask = (question, options, disabled, details) =>
     const view = io.snapshot?.();
     if (view) io.render(view);
     showCompare();
+    live = true;
     if (view?.map?.choosing) {
-      $("question").textContent = "Click a highlighted room on the map.";
+      $("question").textContent = "Pick a highlighted room on the map.";
       $("options").replaceChildren();
+      showTab("map"); // phones: the map comes forward for the choice, then the room comes back
       pickRoom = (i) => {
         pickRoom = null;
+        showTab("room");
         $("question").textContent = "";
         io.print(`[dim]> ${options[i]}[/]`);
         resolve(i);
@@ -70,7 +89,7 @@ io.ask = (question, options, disabled, details) =>
     $("options").replaceChildren(
       ...options.map((label, i) => {
         const b = document.createElement("button");
-        b.innerHTML = icon(label) + markup(label);
+        b.innerHTML = (i < 9 ? `<kbd>${i + 1}</kbd>` : "") + icon(label) + markup(label);
         b.disabled = disabled?.[i] ?? false;
         if (label.includes("\n") || label.length > 40) b.classList.add("wide"); // item choices get a full row
         b.onmouseenter = b.onfocus = () => showCompare(details?.[i]);
@@ -88,6 +107,29 @@ io.ask = (question, options, disabled, details) =>
     stick();
   });
 
+// Keyboard: a number picks that choice (or that highlighted room); Space or Enter continues when there is one choice.
+addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const buttons = [...$("options").querySelectorAll("button")];
+  const n = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1;
+  if (n >= 0 && pickRoom && $("map").querySelector(`[data-i="${n}"]`)) pickRoom(n);
+  else if (n >= 0) buttons[n]?.click(); // a disabled button ignores the click
+  else if ((e.key === " " || e.key === "Enter") && buttons.length === 1 && !(document.activeElement instanceof HTMLButtonElement)) buttons[0].click();
+  else return;
+  e.preventDefault();
+});
+
+// Phones show one panel at a time above the enemies and the choices: the room, the map, the hero or the gear.
+function showTab(tab: string) {
+  document.body.dataset.tab = tab;
+  for (const b of $("tabs").querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
+}
+$("tabs").addEventListener("click", (e) => {
+  const tab = (e.target as HTMLElement).closest("button")?.dataset.tab;
+  if (tab) showTab(tab);
+});
+showTab("room");
+
 // The act map as SVG: floor 1 at the bottom, the boss on top. Reachable rooms are buttons, numbered in order.
 const STEP = 56;
 function drawMap(m: MapView): string {
@@ -103,12 +145,13 @@ function drawMap(m: MapView): string {
     floor.forEach((r) => {
       const ends = f === m.floors.length - 1 ? [{ ...boss, state: "other" }] : r.next.map((n) => ({ x: x(n), y: y(f + 1), state: m.floors[f + 1].find((o) => o.lane === n)!.state }));
       for (const e of ends) lines.push(`<line class="link${walked(r.state) && walked(e.state) ? " walked" : ""}" x1="${x(r.lane)}" y1="${y(f)}" x2="${e.x}" y2="${e.y}"/>`);
+      const key = m.choosing && r.state === "reachable" ? `<text class="key" x="${x(r.lane) + 40}" y="${y(f) - 7}">${pick + 1}</text>` : "";
       const button = m.choosing && r.state === "reachable" ? ` data-i="${pick++}" role="button" tabindex="0" aria-label="${r.label}"` : "";
       const kind = Object.keys(ROOM_LABEL).find((k) => ROOM_LABEL[k as keyof typeof ROOM_LABEL] === r.label)!;
-      nodes.push(`<g class="node ${r.state}"${button}><rect x="${x(r.lane) - 44}" y="${y(f) - 15}" width="88" height="30"/>${svg(ROOM_ICONS[kind], 20, `x="${x(r.lane) - 40}" y="${y(f) - 10}"`)}<text x="${x(r.lane) + 11}" y="${y(f) + 5}">${r.label}</text></g>`);
+      nodes.push(`<g class="node ${r.state}"${button}><rect x="${x(r.lane) - 44}" y="${y(f) - 15}" width="88" height="30"/>${svg(ROOM_ICONS[kind], 20, `x="${x(r.lane) - 40}" y="${y(f) - 10}"`)}<text x="${x(r.lane) + 11}" y="${y(f) + 5}">${r.label}</text>${key}</g>`);
     }),
   );
-  nodes.push(`<g class="node boss"><rect x="${boss.x - 44}" y="${boss.y - 15}" width="88" height="30" rx="5"/><text x="${boss.x}" y="${boss.y + 5}">Boss</text></g>`);
+  nodes.push(`<g class="node boss${m.boss ? " current" : ""}"><rect x="${boss.x - 44}" y="${boss.y - 15}" width="88" height="30" rx="5"/><text x="${boss.x}" y="${boss.y + 5}">Boss</text></g>`);
   return `<svg viewBox="0 0 400 ${h}" role="img" aria-label="${m.act} map">${lines.join("")}${nodes.join("")}</svg>`;
 }
 
@@ -131,9 +174,10 @@ function foe(e: CombatView["enemies"][number]): string {
 // Hit feedback. The game reports hits as they land; they are shown on the next draw, when the enemies' boxes exist again.
 const still = () => document.body.classList.contains("still") || matchMedia("(prefers-reduced-motion: reduce)").matches;
 const hits: Fx[] = [];
-io.fx = (hit) => void hits.push(hit);
+io.fx = (hit) => void (live && hits.push(hit));
 function playFx() {
   for (const hit of hits.splice(0)) {
+    sfx(hit.on === "hero" ? "hurt" : hit.crit ? "crit" : "hit");
     if (still()) continue;
     const box = hit.on === "hero" ? $("hero") : $("board").querySelector(`[data-id="${hit.on}"]`);
     if (!box) continue;
@@ -167,6 +211,9 @@ const row = (name: string, value: string) => `<div class="line"><span class="dim
 
 io.render = (v: CombatView) => {
   const p = v.player;
+  const act = ACTS.findIndex((a) => v.title.startsWith(a.name));
+  music(act >= 0 ? act : null);
+  $("status").innerHTML = `<span class="green">HP ${p.health}/${p.maxHealth}</span> <span class="blue">MP ${p.mana}/${p.maxMana}</span> <span class="yellow">${p.gold}g</span>${v.floor ? ` <span class="dim">Floor ${v.floor}/${FLOORS}</span>` : ""}`;
   $("map").innerHTML = v.map ? drawMap(v.map) : ""; // the box keeps its place before the first map
   $("title").innerHTML = markup(v.title);
   // always drawn, even empty, so nothing below it moves when a fight starts or ends
@@ -175,6 +222,7 @@ io.render = (v: CombatView) => {
       ${v.enemies.length ? "" : '<div class="dim">No enemies here.</div>'}
       <div class="foes">${v.enemies.map(foe).join("")}</div>
     </fieldset>`;
+  $("board").classList.toggle("idle", !v.enemies.some((e) => e.health > 0));
   if (!v.enemies.length) fallen.clear();
   playFx();
   $("hero").innerHTML = `
@@ -216,6 +264,12 @@ const store = () => {
   }
 };
 
+const applyOptions = () => {
+  document.body.classList.toggle("still", !save.options.animations);
+  setVolumes(save.options.sound, save.options.music);
+};
+applyOptions();
+
 async function runForever() {
   let notice = "";
   for (;;) {
@@ -234,7 +288,15 @@ async function runForever() {
     if (!save.run) {
       io.snapshot = null; // no hero on the home screen
       $("title").textContent = "Home";
-      const level = await home(save.profile, store);
+      $("status").textContent = "";
+      music(null);
+      let ash = save.profile.ash;
+      const level = await home(save.profile, save.options, () => {
+        if (save.profile.ash < ash) sfx("buy");
+        ash = save.profile.ash;
+        store();
+        applyOptions();
+      });
       save.run = newRun((Math.random() * 2 ** 32) >>> 0, level);
       store();
       io.clear();
@@ -243,6 +305,7 @@ async function runForever() {
     settings.bought = save.profile.bought;
     settings.level = run.level;
     seedRandom(run.seed);
+    live = run.answers.length === 0;
     const undo = record(run, store); // every answer is stored at once: closing the tab loses nothing
     try {
       finishRun(save.profile, await gameLoop(new Player()), run.level);
