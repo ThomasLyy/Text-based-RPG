@@ -588,6 +588,26 @@ test("merchant: after buying a two-hander, the shield in stock is no longer for 
   expect(checked).toBeGreaterThan(0); // some seed did stock both a shield and a two-hander
 });
 
+test("merchant: no potions for sale when the pouch is full", async () => {
+  const { Player } = await import("./player");
+  const { makePotion } = await import("./items");
+  const { runEvent } = await import("./events");
+  const { io } = await play([]);
+  const seen = { false: 0, true: 0 };
+  for (let seed = 1; seed <= 30; seed++) {
+    for (const full of [false, true]) {
+      vi.spyOn(Math, "random").mockImplementation(seeded(seed));
+      const p = new Player();
+      p.gold = 1000;
+      if (full) p.potions = [0, 1, 2, 3, 4].map(() => makePotion(0));
+      io.ask = async (_q, o) => ((seen[`${full}`] += o.filter((x) => x.includes("Potion")).length), o.length - 1);
+      await runEvent("merchant", p, 0);
+    }
+  }
+  expect(seen.false).toBeGreaterThan(0); // the same stock with room in the pouch does list potions
+  expect(seen.true).toBe(0);
+});
+
 test("forge event upgrades the chosen item; shrine prays a spell up a rank", async () => {
   const { player } = await setup();
   const { runEvent } = await import("./events");
