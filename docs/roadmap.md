@@ -40,20 +40,22 @@ A turn-based roguelite: 3 acts, a branching map per act, one hero who adapts to 
 4. **Spec:** write `docs/superpowers/specs/<date>-<topic>-design.md` in the format of the floor-map spec (Why, Decided by the user, the design, what's out of scope). Get the user's approval.
 5. **Plan:** small tasks in order, each with the files it touches and its test. For a step that changes three files or fewer, the plan is a "Tasks" section at the end of the spec; otherwise it is `docs/superpowers/plans/<date>-<topic>.md`.
 6. **Build** it, test first for rules (a failing test in `game.test.ts`, then the code).
-7. **Check:** `npm test` and `npm run build` both pass, and for anything visible, run `npm run dev` and look at it in a browser at computer width and at phone width (360 px). If the step changed enemies, items, rewards or the order of random draws, compare the bots' numbers with the baseline and follow **Balance** below.
+7. **Check:** `npm test` and `npm run build` both pass, and for anything visible, run `npm run dev` and look at it in a browser at computer width and at phone width (360 px). Report the bots' numbers next to the baseline; do not re-tune before step 7 (see **Balance** below).
 8. **Close:** update the README's "The game" section to describe the new behaviour, move the step's items into **Done** below (one line), commit, and tell the user what was done and what is left.
 
 A step is done when every "Done when" line of that step is true. Stop after one step and wait for the user before starting the next.
 
 ## Balance
 
-`balance.test.ts` is the balance contract. It plays 100 "first button" runs and 150 runs per build (Strength, Agility, Intelligence) with a fixed seed, and requires: the first-button bot wins under 10%; the sensible bot wins between 20% and 50% overall; no build is more than 15 points ahead of another; fights average 3.5 turns or fewer.
+`balance.test.ts` is the balance contract. It plays 200 "first button" runs and 600 runs per build (Strength, Agility, Intelligence) with a fixed seed, and requires: the first-button bot wins under 10%; the sensible bot wins between 20% and 50% overall; no build is more than 15 points ahead of another; fights average 3.5 turns or fewer. It takes about 25 seconds.
 
-Numbers on 2026-11-11: Strength 30%, Agility 37.3%, Intelligence 22.7%. The gap is 14.7 points against the 15-point limit.
+**Decided by the user on 2026-11-11: build first, balance once everything is built.** Steps 1 to 6 do not re-tune. Each step notes the bots' numbers before and after and reports them; tuning happens in step 7.
 
-- **The gap is inside the noise.** With 150 runs, a build's win rate is only known to about ±7 points. Any change that adds or removes one random draw (a random boss, for example) reorders every run and can move the gap by several points with no real change in balance. A failing parity check after such a change is not proof that a build got weaker.
-- Open question for the user, before step 1's balance check: raise the runs per build (600 runs takes about 25 seconds per `npm test` instead of 6, and halves the noise), or keep 150 and accept re-tuning against noise. Raising the run count does not loosen a threshold, but it changes the test, so the user decides.
-- When tuning is needed: change `DIFFICULTY` or enemy numbers, never the thresholds. Show the user the before and after table.
+Numbers on 2026-11-11, at 600 runs: Strength 31.8%, Agility 40%, Intelligence 24.2%. The gap is 15.8 points against the 15-point limit, so **the parity check fails today**. (At 150 runs it read 14.7 and passed; the user asked for 600.)
+
+- Open question for the user: what the parity check does until step 7. Proposed: it prints the gap and does not fail the test run until step 7 turns it back on; the other three checks keep failing the run. The alternative is to leave `npm test` red.
+- **Noise:** with 600 runs a build's win rate is known to about ±4 points. Any change that adds or removes one random draw (a random boss, for example) reorders every run and can move the gap by a few points with no real change in balance.
+- When tuning (step 7): change `DIFFICULTY` or enemy numbers, never the thresholds. Show the user the before and after table.
 - Intelligence is the weakest build today. A change that makes enemies more magical, or adds physical resistance (step 4), moves the builds in different directions; say which way in the spec.
 
 ## Done
@@ -73,12 +75,12 @@ Today each act has 4 enemies and 1 boss in `ACTS` (`src/game/enemy.ts`); act 3's
 - 3 bosses per act; each run picks one per act at random.
 - Enemies use the existing intent kinds (physical attack, magic bolt, poison, heal, buff). Each should play differently: a distinct pattern, not just different numbers.
 - Step 4 will give enemies elemental resistances and weaknesses (e.g. a Fire Rat resists fire), so pick themes that suggest an element where it fits. The spell elements are Fire, Water, Earth, Lightning, Light and Shadow.
-- Keep the health, speed, XP and pattern of the existing regular enemies unless the user asks otherwise: the balance has no room (see **Balance**).
+- Decided by the user on 2026-11-11: the existing regular enemies keep their health, speed, XP and pattern for now; enemy behaviours are decided later.
 - Code this must reach: `boss` becomes `bosses` in the `Act` type; `bossOf` in `game.ts` picks one; the victory line in `game.ts` names `ACTS.at(-1).boss` and must name the boss that was beaten; the encounters test in `game.test.ts` compares `bossOf` with `boss.name`.
 
-Open questions: the lore of each act; the enemy and boss names; whether to add an element field to enemies now or in step 4; whether Rat, Gutter Thief and Skeleton may keep the same pattern shape (two light hits, then a heavy one).
+Open questions: the lore of each act; the enemy and boss names; whether to add an element field to enemies now or in step 4.
 
-**Proposed by the agent on 2026-11-11, not yet approved by the user:**
+**Proposed by the agent on 2026-11-11. The spec is `docs/superpowers/specs/2026-11-11-enemies-design.md`, waiting for the user's approval:**
 
 | Act | Lore | Enemies (today → proposed) | Elements |
 |---|---|---|---|
@@ -100,15 +102,15 @@ Open questions: the lore of each act; the enemy and boss names; whether to add a
 
 - The two new bosses of each act get the health of the act's current boss and a similar damage total over one loop of the pattern. Exact numbers go in the spec.
 - Element field: add it in step 4, when something reads it; the spec records each enemy's intended element.
-- Pattern shapes: leave the three alike; they differ by speed and act, and changing them moves the balance.
 
-Done when: every act has at least 4 non-placeholder enemies and 3 bosses; a test shows the boss is picked among the act's 3; the victory line names the boss that was beaten; `npm test` passes (see **Balance** if the bots fail).
+Done when: every act has at least 4 non-placeholder enemies and 3 bosses; a test shows the boss is picked among the act's 3; the victory line names the boss that was beaten; `npm test` passes apart from the parity check (see **Balance**).
 
 ## 2. End-of-run screen
 
 Shown on death and on victory.
 
-- Damage dealt, by type: each weapon family, each element, and burn. (The hero has no poison; only enemies poison. Ask the user whether they also want damage taken, by enemy.)
+- Damage dealt by the hero, by type: each weapon family, each element, and burn. (The hero has no poison; only enemies poison.)
+- Open question: should the screen also list the damage the hero received, per enemy (for example "Rat 42, Sludge's poison 18")?
 - The weapon and the spell that dealt the most damage.
 - The enemy that killed the hero, if one did.
 - Meta currency earned this run (the currency itself comes in step 3; show 0 or leave the line out until then, as the user prefers).
@@ -125,7 +127,7 @@ Two parts, in this order, each with its own spec and its own stop for the user.
 - Save progression on the device, and save the run in progress with the same storage: closing the tab or the app mid-run must not lose the run (phones close background apps).
 - Saves carry a version number; when an update changes the format, old saves are converted, never lost.
 - **This is the riskiest item of the roadmap.** A run is one async function waiting on `io.ask`, so its position cannot be written to storage as it is. Two ways:
-  - **Replay (proposed):** give the run one seeded random generator in place of `Math.random`, save the seed and the list of answers given to `io.ask`, and on reload play the run again silently up to the last answer. Small change to the logic; the limit is that an update which changes the rules makes an in-progress run impossible to replay, so such a run is ended and paid out as it stood.
+  - **Replay (the agent's recommendation, the user asked which is better on 2026-11-11; confirm in the 3a spec):** give the run one seeded random generator in place of `Math.random`, save the seed and the list of answers given to `io.ask`, and on reload play the run again silently up to the last answer. Small change to the logic; the limit is that an update which changes the rules makes an in-progress run impossible to replay, so such a run is ended and paid out as it stood.
   - **State machine:** rewrite the run so every screen is a state that can be saved. Survives rule changes, but rewrites `game.ts`, `combat.ts`, `reward.ts` and `events.ts`.
 - A seeded generator also makes any bug report reproducible from its seed.
 
@@ -154,7 +156,7 @@ Done when: the store works and persists across a page reload; reset progression 
 - Some enemies resist physical attacks (elites included), so the player has to use spells.
 - Level 10: 2 bosses per act.
 
-Open questions: what each level adds exactly (propose a table, levels 1 to 10); whether the 15-point build parity still applies at high levels (physical resistance is meant to hurt Strength and Agility builds, so it will not hold unless those builds get spells); the target win rate at level 10.
+Open questions: what each level adds exactly (propose a table, levels 1 to 10). For step 7, not now (the user: build first): whether the 15-point build parity still applies at high levels (physical resistance is meant to hurt Strength and Agility builds), and the target win rate at level 10.
 
 Done when: each level's changes are data in one table; tests cover resistances, weaknesses and the 2 bosses of level 10; the balance bots run at levels 1 and 10 and the user has seen their win rates.
 
@@ -198,17 +200,18 @@ Open questions: how the music is made or licensed (made in code like the effects
 
 Done when: every listed effect plays; each act has its track; both volumes in the settings work and are saved.
 
-## 7. Playtests
-
-Re-tuning with the bots is part of every step (see **Balance**). This step is the test with real players.
+## 7. Balance and playtests
 
 - Check that a run takes about 20 minutes and that the first win is reachable. You can't run these: prepare what the user needs (a build to share, the questions to ask, what to time) and adjust from their notes.
 
-Done when: `npm test` passes at levels 1 and 10, and the user reports playtest runs of about 20 minutes.
+- Tune with the bots here, once everything is built (the user's decision): turn the parity check back on, and settle the questions left in **Balance** and in step 4.
+
+Done when: `npm test` passes at levels 1 and 10 with every check on, and the user reports playtest runs of about 20 minutes.
 
 ## 8. Release
 
-- **For the user, to start early:** Google asks new personal developer accounts to run a closed test with a minimum number of testers for two weeks before a game can go public (12 testers for 14 days when this was written; check the current rule in the Play Console). Opening the account and finding testers can start during step 5.
+- Testing before release is done by the user, with an `.apk` or through Android Studio, whichever is simpler then. The user wants no public test phase.
+- Open question, to settle before this step: is the user's Play account a personal account created after 13 November 2023? Google makes those run a closed test with 12 testers for 14 days before it allows a production release; older accounts and organization accounts are not concerned. See https://support.google.com/googleplay/android-developer/answer/14151465.
 - Choose the game's name with the user ("Text-based RPG" no longer fits), then update the page title, the README, `package.json`, `capacitor.config.json` and the app name.
 - First Android build (`npm run android`), tested by the user on a real phone (Android 7.0 and newer).
 - App icon and splash screen, in the game's pixel style.
