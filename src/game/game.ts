@@ -71,7 +71,8 @@ export interface RunSummary {
 
 const LANE_NAME = ["far left", "left", "right", "far right"];
 // A path button: the room, and which lane it is in (two rooms of one kind can be side by side).
-export const pathLabel = (r: MapRoom) => `${ROOM_LABEL[r.kind]} · ${LANE_NAME[r.lane]}`;
+const ROOM_TITLE = { ...ROOM_LABEL, elite: "Elite Fight" };
+export const pathLabel =(r: MapRoom) => `${ROOM_LABEL[r.kind]} · ${LANE_NAME[r.lane]}`;
 
 function mapView(act: string, map: ActMap, path: MapRoom[], reachable: MapRoom[], choosing: boolean): MapView {
   const state = (r: MapRoom) => (r === path.at(-1) ? "current" : path.includes(r) ? "visited" : reachable.includes(r) ? "reachable" : "other");
@@ -102,6 +103,12 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     if (outcome === "won") await chooseReward(player, act, reward);
   };
 
+  // the log only holds the current room: the player confirms, then it is wiped for the next one
+  const leaveRoom = async () => {
+    await io.ask("Room cleared", ["Continue"]);
+    io.clear();
+  };
+
   run: for (let a = 0; a < ACTS.length; a++) {
     const act = ACTS[a];
     if (a > 0) {
@@ -118,10 +125,11 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     for (let f = 1; f <= ROOMS_PER_ACT; f++) {
       floor++;
       enemies = [];
-      title = `${act.name} · Floor ${f} / ${ROOMS_PER_ACT + 1}`;
+      title = `${act.name} - Choose your path`;
       choosing = true;
       const room = reachable[await io.ask("Choose your path", reachable.map(pathLabel))];
       choosing = false;
+      title = `${act.name} - ${ROOM_TITLE[room.kind]}`;
       path.push(room);
       reachable = f < ROOMS_PER_ACT ? map[f].filter((r) => room.next.includes(r.lane)) : [];
       if (room.kind === "fight" || room.kind === "elite") await fight(encounter(a, f, room.kind === "elite"), a, { elite: room.kind === "elite" });
@@ -129,12 +137,14 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
       else if (room.kind === "merchant") await merchant(player, a);
       else await restRoom(player);
       if (dead) break run;
+      await leaveRoom();
     }
     floor++;
-    title = `${act.name} · Floor ${ROOMS_PER_ACT + 1} / ${ROOMS_PER_ACT + 1}`;
+    title = `${act.name} - Boss`;
     const boss = bossOf(a);
     io.print(`[bold red]${boss.name} blocks the way![/]`);
     if (await fight([boss], a, { boss: true })) break;
+    if (a < ACTS.length - 1) await leaveRoom();
   }
 
   const won = !dead;

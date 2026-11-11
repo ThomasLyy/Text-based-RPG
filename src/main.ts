@@ -25,6 +25,8 @@ io.print = (msg) => {
   stick();
 };
 
+io.clear = () => $("log").replaceChildren();
+
 // Wide screens: the hovered or focused choice, compared in full with what you wear.
 const showCompare = (detail?: string) => void ($("compare").innerHTML = detail ? markup(detail) : "");
 
@@ -108,8 +110,8 @@ io.render = (v: CombatView) => {
   const p = v.player;
   $("mapbox").hidden = !v.map;
   if (v.map) $("map").innerHTML = drawMap(v.map);
+  $("title").innerHTML = markup(v.title);
   $("board").innerHTML = `
-    <h1>${markup(v.title)}</h1>
     ${v.enemies.length ? `<fieldset><legend>Enemies</legend>
       ${v.enemies
         .map((e) =>
@@ -142,7 +144,7 @@ io.render = (v: CombatView) => {
 
 async function runForever() {
   for (;;) {
-    for (const id of ["log", "board", "hero", "gear", "map"]) $(id).replaceChildren();
+    for (const id of ["title", "log", "board", "hero", "gear", "map"]) $(id).replaceChildren();
     await gameLoop(new Player());
     await io.ask("Run over", ["New run"]);
   }

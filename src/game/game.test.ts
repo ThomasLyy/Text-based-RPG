@@ -112,6 +112,25 @@ test("path: you pick among the rooms linked to your last one; fleeing an elite o
   expect(asked.some((a) => a.q === "Choose a reward")).toBe(false);
 });
 
+test("room box: titled '<act> - <room>'; after a room you confirm with Continue, then the log is wiped", async () => {
+  vi.spyOn(Math, "random").mockImplementation(seeded(11));
+  const { io } = await import("./io");
+  const events: string[] = [];
+  const titles: string[] = [];
+  const asked = await walk((q, o) => {
+    titles.push(io.snapshot!().title);
+    if (q === "Choose your path") return Math.max(0, o.findIndex((x) => x.startsWith("Fight")));
+    if (q === "Room cleared") io.clear = () => void events.push("clear");
+    return 0;
+  });
+  const qs = asked.map((a) => a.q);
+  expect(titles[0]).toBe("The Sewers - Choose your path");
+  expect(titles[qs.indexOf("Your turn")]).toBe("The Sewers - Fight");
+  expect(asked.find((a) => a.q === "Room cleared")!.o).toEqual(["Continue"]);
+  expect(qs.indexOf("Room cleared")).toBe(qs.lastIndexOf("Choose your path") - 1); // the last question of the room
+  expect(events).toEqual(["clear"]);
+});
+
 test("no healing between fights: health after a won fight stays as it was", async () => {
   vi.spyOn(Math, "random").mockImplementation(seeded(11));
   const asked = await walk((q, o) => {

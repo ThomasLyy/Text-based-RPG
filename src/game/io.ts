@@ -21,6 +21,7 @@ export interface MapView {
 
 export const io = {
   print(_msg: string): void {},
+  clear(): void {}, // wipe the log: a new room starts
   // disabled[i] = shown greyed out, cannot be picked; details[i] = the full comparison for that option (side panel)
   ask(_prompt: string, _options: string[], _disabled?: boolean[], _details?: string[]): Promise<number> {
     throw new Error("io.ask not set");

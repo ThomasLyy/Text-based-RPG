@@ -33,11 +33,12 @@ main {
 }
 #left, #center, #right { display: contents; }
 #hero { order: 1; }
-#board { order: 2; }
-#prompt { order: 3; }
-#mapbox { order: 4; }
-#log { order: 5; max-height: 30dvh; }
+#room { order: 2; }
+#board { order: 3; }
+#prompt { order: 4; }
+#mapbox { order: 5; }
 #gear { order: 6; }
+#log { max-height: 40dvh; }
 #compare { display: none; }
 
 /* Wide screens: map and hero | log, fight and choices | comparison and gear. Each column scrolls on its own. */
@@ -52,7 +53,7 @@ main {
   }
   #left, #right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
   #center { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-  #log { max-height: none; flex: 1; }
+  #log { max-height: 50dvh; }
   #compare { display: block; white-space: pre-line; flex-shrink: 0; }
   #compare:not(:empty) { border: 1px solid var(--blue); border-radius: 4px; padding: 8px 10px; }
 }
