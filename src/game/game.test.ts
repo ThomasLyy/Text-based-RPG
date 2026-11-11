@@ -491,6 +491,21 @@ test("Earth stuns, Lightning chains, Light heals you", async () => {
   expect(player.health).toBe(54);
 });
 
+test("spells skip targets that died before they went off; a single-target spell moves on", async () => {
+  const { player, Enemy } = await setup();
+  await play([]);
+  const dead = new Enemy(dummy());
+  const alive = new Enemy(dummy());
+  dead.health = 0;
+  player.health = 50;
+  rolls(0.9);
+  player.cast(await known("Ray of Light"), [dead], [dead, alive]); // 13, heals 30% -> 4
+  expect([dead.health, alive.health, player.health]).toEqual([0, 50 - 13, 54]);
+  rolls(0.9, 0.9);
+  player.cast(await known("Purifying Light"), [dead, alive], [dead, alive]); // 7 to the living one only, heals 2
+  expect([dead.health, alive.health, player.health]).toEqual([0, 37 - 7, 56]);
+});
+
 test("spell ranks scale damage; the wand cuts cost", async () => {
   const { player, Enemy } = await setup();
   await play([]);

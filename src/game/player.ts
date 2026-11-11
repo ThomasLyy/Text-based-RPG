@@ -243,7 +243,10 @@ export class Player {
     this.mana -= cost; // once per cast, however many targets
     const sp = k.spell;
     const m = RANK_MULT[k.rank - 1];
-    for (const target of targets) {
+    for (const chosen of targets) {
+      // a target can die before the spell goes off (thorns): a single-target spell moves on, like an attack
+      const target = chosen.health > 0 ? chosen : targets.length === 1 ? enemies.find((e) => e.health > 0) : undefined;
+      if (!target) continue;
       const { damage, crit } = this.strike(target, sp.damage * m * this.spellPower(), sp.element === "Lightning" ? OVERCHARGE : 0);
       io.print(`${crit ? "[bold yellow]Critical![/] " : ""}Your ${spellName(k)} hits the ${target.name} for ${damage}!`);
       if (sp.element === "Fire" && target.health > 0) {
