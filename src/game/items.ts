@@ -1,5 +1,5 @@
 ﻿import { randint } from "./io";
-import { SPELLS, describeSpell, RANK_NAME, type Spell } from "./spell";
+import { describeSpell, RANK_NAME, type Spell } from "./spell";
 
 export type Stat = "strength" | "agility" | "intelligence" | "perception";
 export const STATS: Stat[] = ["strength", "agility", "intelligence", "perception"];
@@ -190,7 +190,6 @@ export interface Scroll {
 }
 
 export const makeScroll = (spell: Spell, rank = 1): Scroll => ({ kind: "spell", name: spell.name, spell, rank });
-export const randomSpell = () => pick(SPELLS);
 
 export type Item = Weapon | Armor | Potion | Scroll;
 

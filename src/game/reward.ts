@@ -1,5 +1,5 @@
-﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, randomSpell, rollQuality, type Item, type Scroll, type Weapon } from "./items";
-import { RANK_NAME, SPELLBOOK_SIZE, spellName } from "./spell";
+﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Item, type Scroll, type Weapon } from "./items";
+import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName } from "./spell";
 import { io, randint } from "./io";
 import type { Player } from "./player";
 
@@ -12,7 +12,8 @@ function randomScroll(player: Player): Scroll {
     const k = upgradable[randint(0, upgradable.length - 1)];
     return makeScroll(k.spell, k.rank + 1);
   }
-  const sp = randomSpell();
+  const pool = SPELLS.filter((s) => (player.knows(s.name)?.rank ?? 0) < RANK_NAME.length); // a rank IV spell cannot grow
+  const sp = pool[randint(0, pool.length - 1)];
   const known = player.knows(sp.name);
   return makeScroll(sp, known ? Math.min(RANK_NAME.length, known.rank + 1) : 1);
 }

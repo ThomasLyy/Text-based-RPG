@@ -506,6 +506,14 @@ test("spellbook: 4 slots, a 5th spell asks what to forget; known spells rank up"
   expect(player.knows("Judgment")?.rank).toBe(2);
 });
 
+test("scrolls never offer a spell you already have at rank IV", async () => {
+  const { player } = await setup();
+  const { rewardOffers } = await import("./reward");
+  player.spells = [await known("Fireball", 4)]; // Fireball is the first spell in the list
+  rolls(0.7, 0); // a scroll, then the first spell of the pool
+  expect(rewardOffers(player, 0, false, 1)[0].name).toBe("Flame Wall");
+});
+
 // --- events and gold ---
 
 test("fights pay gold (1.5 per XP)", async () => {
