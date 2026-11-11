@@ -42,8 +42,9 @@ interface Turn { run: () => void; first?: boolean }
 // Choices (target, potion) are made now; run() happens on the hero's turn in agility order.
 async function chooseAction(player: Player, enemies: Enemy[]): Promise<Turn | "fled"> {
   const spells = player.spells.filter((k) => player.spellCost(k) <= player.mana);
-  const label = (k: KnownSpell) => `${spellName(k)} (${player.spellCost(k)} MP)`;
-  const actions = ["Attack", "Defend", ...spells.map(label), ...(player.potions.length ? ["Use Potion"] : []), ...(enemies.some((e) => e.boss) ? [] : ["Flee"])];
+  const label = (k: KnownSpell) => `${spellName(k)} (${player.spellCost(k)} MP, ${Math.round(player.spellDamage(k))} dmg)`;
+  const attack = `Attack (${Math.round(player.attackDamage())} dmg)`;
+  const actions = [attack, "Defend", ...spells.map(label), ...(player.potions.length ? ["Use Potion"] : []), ...(enemies.some((e) => e.boss) ? [] : ["Flee"])];
   const action = actions[await io.ask("Your turn", actions)];
 
   const known = spells.find((k) => action === label(k));
@@ -51,7 +52,7 @@ async function chooseAction(player: Player, enemies: Enemy[]): Promise<Turn | "f
     const targets = known.spell.shape === "all" ? enemies.filter((e) => e.health > 0) : [await handleTargeting(`Cast ${known.spell.name} on`, enemies)];
     return { run: () => player.cast(known, targets, enemies) };
   }
-  if (action === "Attack") {
+  if (action === attack) {
     const target = await handleTargeting("Attack", enemies);
     return { run: () => player.attack(target, enemies), first: player.weapons().some(([w]) => w.family.trait === "quick") };
   }

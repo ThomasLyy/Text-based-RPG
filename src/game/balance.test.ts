@@ -27,8 +27,10 @@ function sensibleBot(build: Build, shapes: Record<string, string>): Bot {
   let defendedLastTurn = false;
   const score = (o: string) => {
     if (o === "Skip") return 0;
-    const avg = /avg (\d+) dmg, yours (\d+)/.exec(o);
-    if (avg) return o.includes(` ${build} `) && +avg[1] > +avg[2] ? +avg[1] - +avg[2] + 5 : -1;
+    if (/ — (yours|unarmed)/.test(o)) {
+      const atk = /Attack (\d+) dmg → \[\w+\](\d+) dmg/.exec(o); // the button's before -> after
+      return o.includes(` ${build} `) && atk && +atk[2] > +atk[1] ? +atk[2] - +atk[1] + 5 : -1;
+    }
     if (o.startsWith("Learn") || o.startsWith("Upgrade")) {
       if (build !== "INT") return -1;
       return o.includes("you have rank") ? 5 : /spellbook [0-3]\//.test(o) ? 6 : -1;

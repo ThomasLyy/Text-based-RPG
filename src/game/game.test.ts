@@ -306,6 +306,24 @@ test("a shield or focus that does not fit pushes the weapon out; wouldRemove onl
   expect(player.mainHand).toBeNull();
 });
 
+test("comparisons: gear shows what changes, before -> after; spells show their damage for you", async () => {
+  const { player } = await setup();
+  const { makeWeapon, makeArmor, makeScroll } = await import("./items");
+  const { gearChanges, comparison } = await import("./reward");
+  player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common")); // 9-13: 11 per Attack
+  const hammer = gearChanges(player, makeWeapon(await family("Hammer"), 0, "Common")); // 14-20
+  expect(hammer.line).toBe("Attack 11 dmg → [green]17 dmg[/]");
+  expect(hammer.full.split("\n")).toHaveLength(13); // every number, for the side panel
+  const chest = gearChanges(player, makeArmor("chest", 0, "Common", { weight: "heavy", affixes: [] })); // +18 HP, +4 Armor, +3 STR, -2 AGI
+  expect(chest.line).toContain("Max HP 100 → [green]121[/]"); // 18 + 3 from Strength
+  expect(chest.line).toContain("AGI 10 → [red]8[/]");
+  expect(chest.line).toContain("Attack 11 dmg → [green]13 dmg[/]"); // Strength scales the sword
+  expect([player.maxHealth, player.armor.chest]).toEqual([100, undefined]); // only a preview
+  player.spells = [await known("Fireball")];
+  const fireball = (await import("./spell")).SPELLS[0];
+  expect(comparison(player, makeScroll(fireball, 2))).toBe("you have rank I, dmg 13 → [green]15[/]");
+});
+
 test("traits: cleave splashes, crush hits bosses harder, stagger cancels the next move", async () => {
   const { player, Enemy } = await setup();
   const { makeWeapon } = await import("./items");
@@ -625,7 +643,7 @@ test("merchant: warns before a purchase that makes you drop gear; Never mind kee
     questions.push(q);
     if (q.startsWith("Equip the")) return 0;
     if (q.startsWith('"Oh, if you buy this')) return questions.filter((x) => x === q).length === 1 ? 1 : 0; // Never mind, then Buy it
-    if (pick === -1) pick = o.findIndex((x) => / — (avg|replaces)/.test(x)); // first piece of gear
+    if (pick === -1) pick = o.findIndex((x) => / — (yours|unarmed|replaces)/.test(x)); // first piece of gear
     expect(pick).toBeGreaterThanOrEqual(0);
     const visits = questions.filter((x) => x.startsWith("You have")).length;
     return visits <= 2 ? pick : o.length - 1; // try it twice, then leave
@@ -654,7 +672,7 @@ test("merchant: a new spell with a full spellbook asks to confirm, which spell t
     io.ask = async (q, o) => {
       const n = visits.length; // which visit we are on
       if (q.startsWith('"Your spellbook is full')) return n === 1 ? 1 : 0; // 1st try: Never mind
-      if (q === "Choose a spell to forget") return n === 2 ? o.length - 1 : 0; // 2nd try: Never mind, then Fireball I
+      if (q.startsWith("Choose a spell to forget")) return n === 2 ? o.length - 1 : 0; // 2nd try: Never mind, then Fireball I
       if (q.startsWith('"You\'ll forget')) return n === 3 ? 1 : 0; // 3rd try: Never mind; 4th: Buy it
       visits.push(q);
       const learn = o.findIndex((x) => x.startsWith("Learn"));

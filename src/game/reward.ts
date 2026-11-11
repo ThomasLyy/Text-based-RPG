@@ -1,9 +1,7 @@
-﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Item, type Scroll, type Weapon } from "./items";
-import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName } from "./spell";
+﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Armor, type Item, type Scroll, type Weapon } from "./items";
+import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName, type KnownSpell } from "./spell";
 import { io, randint } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
-
-const avg = (w: Weapon | null) => (w ? Math.round((w.min + w.max) / 2) : 0);
 
 // Half the time, upgrade a spell you know (if any is below rank IV); otherwise a random spell.
 function randomScroll(player: Player): Scroll {
@@ -42,14 +40,67 @@ export function comparison(player: Player, item: Item): string {
   if (item.kind === "potion") return player.potions.length >= POUCH_SIZE ? "pouch full" : `pouch ${player.potions.length}/${POUCH_SIZE}`;
   if (item.kind === "spell") {
     const known = player.knows(item.name);
-    return known ? `you have rank ${RANK_NAME[known.rank - 1]}` : `spellbook ${player.spells.length}/${SPELLBOOK_SIZE}`;
+    const dmg = Math.round(player.spellDamage(item));
+    return known
+      ? `you have rank ${RANK_NAME[known.rank - 1]}, ${arrow("dmg", Math.round(player.spellDamage(known)), dmg, "")}`
+      : `spellbook ${player.spells.length}/${SPELLBOOK_SIZE}, ${dmg} dmg for you`;
   }
   if (item.kind === "armor") {
     const current = player.armorIn(item.slot);
     return current ? `replaces ${current.name} (${bonusText(current.bonuses)})` : "empty slot";
   }
-  return `avg ${avg(item)} dmg, yours ${avg(player.mainHand)}`;
+  return player.mainHand ? `yours: ${player.mainHand.name}` : "unarmed";
 }
+
+// The numbers gear can change, read off the hero: [label, value, unit].
+export function sheet(p: Player): [string, number, string][] {
+  const t = p.stats();
+  return [
+    ["Attack", Math.round(p.attackDamage()), " dmg"],
+    ["Spell power", Math.round(p.spellPower() * 100), "%"],
+    ["Max HP", p.maxHealth, ""],
+    ["Max MP", p.maxMana, ""],
+    ["MP per turn", p.manaRegen(), ""],
+    ["STR", t.strength, ""],
+    ["AGI", t.agility, ""],
+    ["INT", t.intelligence, ""],
+    ["PER", t.perception, ""],
+    ["Crit", Math.round(p.critChance() * 100), "%"],
+    ["Dodge", Math.round(p.dodgeChance() * 100), "%"],
+    ["Armor", p.armorPct(), "%"],
+    ["Ward", p.wardPct(), "%"],
+  ];
+}
+
+const arrow = (label: string, a: number, b: number, unit: string) => `${label} ${a}${unit} → [${b > a ? "green" : "red"}]${b}${unit}[/]`;
+
+// Before -> after of wearing this: `line` lists only what changes (for the button), `full` every number (for the side panel).
+export function gearChanges(p: Player, item: Weapon | Armor, hand: "main" | "off" = "main") {
+  const before = sheet(p);
+  const after = p.tryOn(item, hand, () => sheet(p));
+  const rows = after.map(([label, b, unit], i) => {
+    const a = before[i][1];
+    return a === b ? null : arrow(label, a, b, unit);
+  });
+  return {
+    line: rows.filter(Boolean).join(" · ") || "[dim]no stat change[/]",
+    full: after.map(([label, b, unit], i) => rows[i] ?? `[dim]${label} ${b}${unit}[/]`).join("\n"),
+  };
+}
+
+// A button for an item: its description and what it replaces, then (gear only) what changes on a second line.
+export function offer(player: Player, item: Item, suffix = ""): { label: string; detail: string } {
+  const head = `${describe(item)} — ${comparison(player, item)}${suffix}`;
+  if (item.kind !== "weapon" && item.kind !== "armor") return { label: head, detail: head };
+  const c = gearChanges(player, item);
+  return { label: `${head}\n${c.line}`, detail: `${describe(item)}\n\n${c.full}` };
+}
+
+export const spellLine = (player: Player, k: KnownSpell) => `${spellName(k)} · ${Math.round(player.spellDamage(k))} dmg, ${player.spellCost(k)} MP`;
+
+// Full spellbook: pick a spell to forget for the new one, or the last option to keep them all.
+export const forgetQuestion = (player: Player, scroll: Scroll, keep: string) =>
+  io.ask(`Your spellbook is full. Forget a spell for ${spellLine(player, scroll)}?`, [...player.spells.map((k) => spellLine(player, k)), keep]);
 
 async function learn(player: Player, scroll: Scroll) {
   const known = player.knows(scroll.name);
@@ -58,7 +109,7 @@ async function learn(player: Player, scroll: Scroll) {
     return io.print(`Your ${spellName(known)} grows stronger.`);
   }
   if (player.spells.length >= SPELLBOOK_SIZE) {
-    const i = await io.ask(`Your spellbook is full. Forget a spell for ${scroll.name}?`, [...player.spells.map(spellName), "Keep my spells"]);
+    const i = await forgetQuestion(player, scroll, "Keep my spells");
     if (i === player.spells.length) return io.print("You keep your spells.");
     io.print(`You forget ${spellName(player.spells[i])}.`);
     player.spells.splice(i, 1);
@@ -71,10 +122,13 @@ async function learn(player: Player, scroll: Scroll) {
 export async function askHand(player: Player, item: Weapon): Promise<"main" | "off"> {
   if (item.family.hands !== 1 || player.mainHand?.family.hands !== 1) return "main";
   const off = player.offHand;
-  const hand = await io.ask(`Equip the ${item.name} in`, [
-    `Main hand (replaces ${player.mainHand.name})`,
-    `Off hand (${off ? `replaces ${off.name}` : "dual-wield"})`,
-  ]);
+  const [main, second] = (["main", "off"] as const).map((h) => gearChanges(player, item, h));
+  const hand = await io.ask(
+    `Equip the ${item.name} in`,
+    [`Main hand (replaces ${player.mainHand.name})\n${main.line}`, `Off hand (${off ? `replaces ${off.name}` : "dual-wield"})\n${second.line}`],
+    undefined,
+    [main.full, second.full],
+  );
   return hand === 0 ? "main" : "off";
 }
 
@@ -90,6 +144,7 @@ export async function take(player: Player, item: Item, hand?: "main" | "off") {
 export async function chooseReward(player: Player, act: number, boss = false) {
   const offers = rewardOffers(player, act, boss);
   io.print(`[panel bold blue]${boss ? "The boss drops a treasure!" : "Choose your reward"}[/]`);
-  const choice = await io.ask("Choose a reward", [...offers.map((o) => `${describe(o)} — ${comparison(player, o)}`), "Skip"]);
+  const buttons = offers.map((o) => offer(player, o));
+  const choice = await io.ask("Choose a reward", [...buttons.map((b) => b.label), "Skip"], undefined, buttons.map((b) => b.detail));
   if (choice < offers.length) await take(player, offers[choice]);
 }

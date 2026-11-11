@@ -23,6 +23,7 @@ type ArmorKey = "head" | "chest" | "legs" | "feet" | "amulet" | "ring1" | "ring2
 
 const UNARMED: Weapon = { kind: "weapon", name: "Fists", family: FISTS, quality: "Common", min: FISTS.min, max: FISTS.max };
 const isWeapon = (i: Item | null | undefined): i is Weapon => i?.kind === "weapon";
+const hitsOf = (w: Weapon) => (w.family.trait === "twin" ? [0.6, 0.6] : [1]); // Twin strike: two hits at 60%
 
 export class Player {
   level = 1;
@@ -113,6 +114,18 @@ export class Player {
   spellCost(k: KnownSpell) {
     return Math.round(k.spell.cost * (this.hasTrait("arcane") ? 0.8 : 1));
   }
+  // one target's damage before crit and curse
+  spellDamage(k: KnownSpell) {
+    return k.spell.damage * RANK_MULT[k.rank - 1] * this.spellPower();
+  }
+  // a weapon's damage multiplier from its stat and Fury
+  private weaponScale(w: Weapon) {
+    return Math.max(0.5, 1 + w.family.grade * (this.stat(w.family.stat) - 10)) * (1 + 0.1 * this.affixes("fury"));
+  }
+  // average damage of one Attack, before crits and target-dependent traits (Crush, Cleave)
+  attackDamage() {
+    return this.weapons().reduce((sum, [w, power]) => sum + ((w.min + w.max) / 2) * this.weaponScale(w) * power * hitsOf(w).reduce((a, b) => a + b), 0);
+  }
 
   // --- equipment. Each equip returns what it took off, so callers can report it. ---
 
@@ -164,12 +177,17 @@ export class Player {
     return this.settle(removed);
   }
 
-  // What equipping would take off, without changing anything: a dry run of the real equip, then a restore.
-  wouldRemove(item: Weapon | Armor, hand: "main" | "off" = "main"): Item[] {
+  // Equip for real, let `read` look at the result, then put everything back: previews always match the real rules.
+  tryOn<T>(item: Weapon | Armor, hand: "main" | "off", read: (removed: Item[]) => T): T {
     const saved = { mainHand: this.mainHand, offHand: this.offHand, armor: { ...this.armor }, health: this.health, mana: this.mana };
-    const removed = item.kind === "weapon" ? this.equipWeapon(item, hand) : this.equipArmor(item);
-    Object.assign(this, saved);
-    return removed;
+    try {
+      return read(item.kind === "weapon" ? this.equipWeapon(item, hand) : this.equipArmor(item));
+    } finally {
+      Object.assign(this, saved);
+    }
+  }
+  wouldRemove(item: Weapon | Armor, hand: "main" | "off" = "main"): Item[] {
+    return this.tryOn(item, hand, (removed) => removed);
   }
 
   armorIn(slot: Armor["slot"]): Armor | undefined {
@@ -216,10 +234,8 @@ export class Player {
 
   // damage = roll(weapon) × (1 + grade × (stat − 10)) × hand power, then traits
   private weaponHit(w: Weapon, target: Enemy, power: number, enemies: Enemy[]) {
-    const scale = Math.max(0.5, 1 + w.family.grade * (this.stat(w.family.stat) - 10));
     const crush = w.family.trait === "crush" && target.boss ? 1.3 : 1;
-    const fury = 1 + 0.1 * this.affixes("fury");
-    const { damage, crit } = this.strike(target, randint(w.min, w.max) * scale * power * crush * fury);
+    const { damage, crit } = this.strike(target, randint(w.min, w.max) * this.weaponScale(w) * power * crush);
     io.print(`${crit ? "[bold yellow]Critical![/] " : ""}You hit the ${target.name} for ${damage} damage!`);
     if (w.family.trait === "cleave") {
       const other = enemies.find((e) => e !== target && e.health > 0);
@@ -237,7 +253,7 @@ export class Player {
 
   attack(target: Enemy, enemies: Enemy[]) {
     for (const [w, power] of this.weapons()) {
-      for (const hit of w.family.trait === "twin" ? [0.6, 0.6] : [1]) {
+      for (const hit of hitsOf(w)) {
         const t = target.health > 0 ? target : enemies.find((e) => e.health > 0);
         if (!t) return;
         this.weaponHit(w, t, power * hit, enemies);
@@ -254,7 +270,7 @@ export class Player {
       // a target can die before the spell goes off (thorns): a single-target spell moves on, like an attack
       const target = chosen.health > 0 ? chosen : targets.length === 1 ? enemies.find((e) => e.health > 0) : undefined;
       if (!target) continue;
-      const { damage, crit } = this.strike(target, sp.damage * m * this.spellPower(), sp.element === "Lightning" ? OVERCHARGE : 0);
+      const { damage, crit } = this.strike(target, this.spellDamage(k),sp.element === "Lightning" ? OVERCHARGE : 0);
       io.print(`${crit ? "[bold yellow]Critical![/] " : ""}Your ${spellName(k)} hits the ${target.name} for ${damage}!`);
       if (sp.element === "Fire" && target.health > 0) {
         target.burn = { damage: target.burn.damage + Math.round(sp.effect * m), turns: BURN_TURNS };

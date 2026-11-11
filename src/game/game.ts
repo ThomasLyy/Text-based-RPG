@@ -1,8 +1,8 @@
 ﻿import { io, randint, choices } from "./io";
 import { ACTS, Enemy, FLOORS, FLOORS_PER_ACT } from "./enemy";
 import { combat, combatView } from "./combat";
-import { chooseReward } from "./reward";
-import { FAMILIES, describe, makeWeapon } from "./items";
+import { chooseReward, offer as button } from "./reward";
+import { FAMILIES, makeWeapon } from "./items";
 import { SPELLS, describeSpell } from "./spell";
 import { actEvents, runEvent, type EventKind } from "./events";
 import type { Player } from "./player";
@@ -37,7 +37,8 @@ export async function chooseStarter(player: Player) {
   const pool = [...FAMILIES];
   const offer = [0, 1, 2].map(() => makeWeapon(pool.splice(randint(0, pool.length - 1), 1)[0], 0, "Common"));
   io.print("[panel bold]Choose your weapon[/]");
-  player.equipWeapon(offer[await io.ask("Choose your starting weapon", offer.map(describe))]);
+  const buttons = offer.map((w) => button(player, w));
+  player.equipWeapon(offer[await io.ask("Choose your starting weapon", buttons.map((b) => b.label), undefined, buttons.map((b) => b.detail))]);
   grantStarterSpell(player);
 }
 

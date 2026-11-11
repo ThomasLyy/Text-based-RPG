@@ -1,7 +1,7 @@
 ﻿// Events between fights: 2 per act (after floors 2 and 3), picked from 4 kinds.
 import { describe, price, upgradeQuality, QUALITIES, type Armor, type Stat, type Weapon } from "./items";
 import { RANK_NAME, SPELLBOOK_SIZE, spellName } from "./spell";
-import { askHand, chooseReward, comparison, rewardOffers, take } from "./reward";
+import { askHand, chooseReward, offer, rewardOffers, spellLine, take } from "./reward";
 import { io, randint } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
 
@@ -16,8 +16,9 @@ async function merchant(player: Player, act: number) {
   for (;;) {
     const affordable = stock.filter((i) => price(i) <= player.gold);
     const heal = player.health < player.maxHealth && player.gold >= HEAL_PRICE;
-    const options = [...affordable.map((i) => `${describe(i)} — ${comparison(player, i)} — ${price(i)} gold`), ...(heal ? [`Heal to full — ${HEAL_PRICE} gold`] : []), "Leave"];
-    const i = await io.ask(`You have ${player.gold} gold`, options);
+    const buttons = affordable.map((i) => offer(player, i, ` — ${price(i)} gold`));
+    const options = [...buttons.map((b) => b.label), ...(heal ? [`Heal to full — ${HEAL_PRICE} gold`] : []), "Leave"];
+    const i = await io.ask(`You have ${player.gold} gold`, options, undefined, buttons.map((b) => b.detail));
     if (i < affordable.length) {
       const item = affordable[i];
       if (item.kind === "potion" && player.potions.length >= POUCH_SIZE) {
@@ -31,8 +32,8 @@ async function merchant(player: Player, act: number) {
       if (lost.length && !(await sure(`Oh, if you buy this, you'll lose ${names}. Are you sure?`))) continue;
       if (item.kind === "spell" && !player.knows(item.name) && player.spells.length >= SPELLBOOK_SIZE) {
         if (!(await sure(`Your spellbook is full. To learn ${item.name}, you'll have to forget a spell. Are you sure?`))) continue;
-        const f = await io.ask("Choose a spell to forget", [...player.spells.map(spellName), "Never mind"]);
-        if (f === player.spells.length || !(await sure(`You'll forget ${spellName(player.spells[f])} for ${item.name}. Are you sure?`))) continue;
+        const f = await io.ask(`Choose a spell to forget for ${spellLine(player, item)}`, [...player.spells.map((k) => spellLine(player, k)), "Never mind"]);
+        if (f === player.spells.length || !(await sure(`You'll forget ${spellLine(player, player.spells[f])} for ${spellLine(player, item)}. Are you sure?`))) continue;
         io.print(`You forget ${spellName(player.spells[f])}.`);
         player.spells.splice(f, 1); // room made now, so learning below asks nothing more
       }
