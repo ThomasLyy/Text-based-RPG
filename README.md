@@ -43,7 +43,6 @@ Everything left before the game is complete, in the agreed order.
 
 * At least 4 enemy types per act with coherent lore; act 3 (Hell) still uses placeholder enemies.
 * 3 bosses per act, one picked at random each run.
-* Re-tune balance afterwards (build parity is currently 14.7 points against a 15-point limit).
 
 ### 2. End-of-run screen
 
@@ -53,12 +52,15 @@ Everything left before the game is complete, in the agreed order.
 * Meta currency earned this run.
 * A Continue button back to the home screen.
 
-### 3. Home screen and meta-progression
+### 3. Home screen, meta-progression and saving
 
-* Home screen: start a run, meta-progression store, unlocks, reset progression.
+* Home screen: start a run, meta-progression store, unlocks, best results, reset progression.
 * A currency earned per run; permanent upgrades and unlocks bought with it.
 * The first win should be relatively easy; harder content opens up after it.
+* Best results (for example the furthest floor reached and wins per difficulty level); no run history.
 * Save progression on the device (web: browser storage; Android: app storage).
+* Save the run in progress with the same storage: closing the app or the tab mid-run must not lose the run (essential on phones, where the system closes apps in the background).
+* Saves carry a version number; when an update changes the format, old saves are converted, never lost.
 * The store sells two things:
   * **Unlocks:** new content (weapon families, spells, events, enemies) that only appears in runs once bought.
   * **Permanent boosts with levels:** each can be bought up to 5 times, each level costing more than the last (e.g. "+1 point per level-up" per level).
@@ -71,36 +73,31 @@ Everything left before the game is complete, in the agreed order.
 * Enemies that resist physical attacks, elites included, to force the use of spells.
 * Level 10: 2 bosses per act.
 
-### 5. Saving a run in progress
+### 5. Screen and controls
 
-* Closing the app or the tab mid-run must not lose the run (essential on phones, where the system closes apps in the background).
-
-### 6. Screen and controls
-
-* **Full UI review (mandatory):** go through every screen (weapon choice, map, fight, rewards, shop, rest, events, level-up, death and victory) on a computer and on a phone, with screenshots, and judge it as a game HUD: where the eye goes, what moves, what is hard to read. Fix what it finds before merging the `ui` branch (8-bit look, fixed HUD).
+* **Full UI review (mandatory):** go through every screen (weapon choice, map, fight, rewards, shop, rest, events, level-up, death and victory) on a computer and on a phone, with screenshots, and judge it as a game HUD: where the eye goes, what moves, what is hard to read. Also check a minimum text size on phones, and that each enemy intent can be told apart without relying on its color (a word or an icon), for colorblind players. Fix what it finds before merging the `ui` branch (8-bit look, fixed HUD).
 * Phone layout: a fixed HUD for small screens too (for example tabs for Map, Hero and Gear, with the room, enemies and choices always visible). Today it is one scrolling column.
-* Bundle the pixel fonts with the game (today they load from Google Fonts, so the Android app without internet falls back to a plain font).
 * A red flash when the hero is hit.
 * The comparison box: show only the stats that change, so it fits without scrolling.
 * Map: the boss tile never shows as "current"; the next floor's rooms already show as reachable during a room.
 * Pixel icons for the 5 room types (no emoji).
 * A short how-to-play for the first run (intents, Defend, the map).
-* Settings screen: animations on/off, reset progression, and sound volume if sound is added.
+* Settings screen: animations on/off, reset progression, music and sound volume.
 * Keyboard shortcuts on computers: number keys pick choices (the number shown on each button), Space continues.
 * Sound effects (hits, crits, level-ups, buying) and music (a track per act), chiptune to match the 8-bit look. Still open: making or licensing the tracks.
 
-### 7. Balance and playtests
+### 6. Balance and playtests
 
-* Re-tune with the bots after each of steps 1, 3 and 4.
+* Re-tune with the bots after each of steps 1, 3 and 4 (build parity is currently 14.7 points against a 15-point limit, so step 1 will likely break it).
 * Playtests with real players: check that a run takes about 20 minutes and that the first win is reachable.
 
-### 8. Release
+### 7. Release
 
 * First Android build, tested on a real phone (Android 7.0 and newer).
+* Bundle the pixel fonts with the game (required: today they load from Google Fonts, so the Android app without internet falls back to a plain font).
 * App icon and splash screen.
 * Play Store: listing (description, screenshots), signing key, content rating, data safety form, privacy policy.
 * Installable web version (PWA: works offline, can be added to the home screen) and hosting.
-* High scores / run history.
 * No ads at release; reconsider afterwards (ads would also need the consent screen required in Europe). The game stays free.
 
 ## Code
