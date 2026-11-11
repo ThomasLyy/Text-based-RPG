@@ -17,7 +17,7 @@
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; border-radius: 0; }
+* { box-sizing: border-box; border-radius: 0; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
 body {
   margin: 0;
@@ -61,8 +61,8 @@ main {
   }
   #left, #center, #right { display: grid; gap: 10px; min-height: 0; }
   #left { grid-template-rows: 55% minmax(0, 1fr); }
-  #center { grid-template-rows: minmax(0, 1fr) 240px 270px; }
-  #right { grid-template-rows: 40% minmax(0, 1fr); }
+  #center { grid-template-rows: minmax(0, 1fr) 220px 400px; }
+  #right { grid-template-rows: minmax(0, 1fr) 35%; }
   #left > *, #center > *, #right > * { min-height: 0; overflow-y: auto; margin: 0; }
   #mapbox { border: 3px solid var(--border); background: var(--panel); padding: 6px; }
   #map, #map svg { height: 100%; max-height: none; }
