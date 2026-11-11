@@ -72,6 +72,20 @@ h1 { font-size: 1rem; margin: 0 0 8px; }
 .fill.blue { background: var(--blue); }
 .fill.cyan { background: var(--cyan); }
 
+#mapbox summary { cursor: pointer; color: var(--muted); }
+#map svg { display: block; width: 100%; max-height: 60dvh; margin: 6px auto; }
+#map .link { stroke: var(--border); stroke-width: 2; }
+#map .link.walked { stroke: var(--fg); }
+#map .node rect { fill: #1b1f27; stroke: var(--border); stroke-width: 1.5; }
+#map .node text { fill: var(--muted); font: 13px ui-monospace, Consolas, monospace; text-anchor: middle; }
+#map .reachable rect { stroke: var(--blue); stroke-width: 2.5; }
+#map .reachable text { fill: var(--fg); font-weight: bold; }
+#map .current rect { stroke: var(--yellow); stroke-width: 2.5; }
+#map .current text { fill: var(--yellow); }
+#map .visited text { fill: var(--fg); }
+#map .boss rect { stroke: var(--red); }
+#map .boss text { fill: var(--red); font-weight: bold; }
+
 #log { flex: 1; min-height: 4em; white-space: pre-wrap; overflow-y: auto; }
 
 #prompt { padding-bottom: 8px; }

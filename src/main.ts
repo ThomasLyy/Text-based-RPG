@@ -1,4 +1,5 @@
-﻿import { io, type CombatView } from "./game/io";
+﻿import { io, type CombatView, type MapView } from "./game/io";
+import { ROOMS_PER_ACT } from "./game/map";
 import { POUCH_SIZE, Player } from "./game/player";
 import { SPELLBOOK_SIZE } from "./game/spell";
 import { gameLoop } from "./game/game";
@@ -53,10 +54,40 @@ io.ask = (question, options, disabled, details) =>
     stick();
   });
 
+// The act map as SVG: floor 1 at the bottom, the boss on top. The buttons below make the choice.
+const STEP = 56;
+function drawMap(m: MapView): string {
+  const h = (ROOMS_PER_ACT + 1) * STEP;
+  const x = (lane: number) => 50 + lane * 100;
+  const y = (floor: number) => h - STEP / 2 - floor * STEP; // floor index 0 = floor 1
+  const boss = { x: 200, y: STEP / 2 };
+  const walked = (s: string) => s === "visited" || s === "current";
+  const lines: string[] = [];
+  const nodes: string[] = [];
+  m.floors.forEach((floor, f) =>
+    floor.forEach((r) => {
+      const ends = f === m.floors.length - 1 ? [{ ...boss, state: "other" }] : r.next.map((n) => ({ x: x(n), y: y(f + 1), state: m.floors[f + 1].find((o) => o.lane === n)!.state }));
+      for (const e of ends) lines.push(`<line class="link${walked(r.state) && walked(e.state) ? " walked" : ""}" x1="${x(r.lane)}" y1="${y(f)}" x2="${e.x}" y2="${e.y}"/>`);
+      nodes.push(`<g class="node ${r.state}"><rect x="${x(r.lane) - 38}" y="${y(f) - 15}" width="76" height="30" rx="5"/><text x="${x(r.lane)}" y="${y(f) + 5}">${r.label}</text></g>`);
+    }),
+  );
+  nodes.push(`<g class="node boss"><rect x="${boss.x - 44}" y="${boss.y - 15}" width="88" height="30" rx="5"/><text x="${boss.x}" y="${boss.y + 5}">Boss</text></g>`);
+  return `<svg viewBox="0 0 400 ${h}" role="img" aria-label="${m.act} map">${lines.join("")}${nodes.join("")}</svg>`;
+}
+
+let mapChoosing: boolean | null = null; // open the map when the path question starts, fold it when it ends
+
 const row = (name: string, value: string) => `<div class="line"><span class="dim">${name}</span><span>${value}</span></div>`;
 
 io.render = (v: CombatView) => {
   const p = v.player;
+  const box = $("mapbox") as HTMLDetailsElement;
+  box.hidden = !v.map;
+  if (v.map) {
+    $("map").innerHTML = drawMap(v.map);
+    if (v.map.choosing !== mapChoosing) box.open = v.map.choosing;
+    mapChoosing = v.map.choosing;
+  }
   $("board").innerHTML = `
     <h1>${markup(v.title)}</h1>
     ${v.enemies.length ? `<fieldset><legend>Enemies</legend>
