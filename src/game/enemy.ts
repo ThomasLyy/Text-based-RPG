@@ -1,6 +1,7 @@
-﻿import type { Player } from "./player";
-import { CHILL } from "./spell";
+import type { Player } from "./player";
+import { CHILL, OPPOSITE, type Element } from "./spell";
 import { io, randint } from "./io";
+import { ARMORED, RESIST, WEAK, level } from "./meta";
 
 // What an enemy will do on its next turn. Shown to the player in advance.
 export interface Intent {
@@ -18,6 +19,8 @@ export interface EnemyTemplate {
   xp: number;
   pattern: Intent[]; // played in order, looping
   boss?: boolean;
+  element?: Element; // at higher difficulty levels: resists it, weak to its opposite
+  armored?: boolean; // at higher difficulty levels: takes less weapon damage
 }
 
 const attack = (name: string, value: number): Intent => ({ name, kind: "attack", value });
@@ -44,9 +47,14 @@ export class Enemy {
   burn = { damage: 0, turns: 0 };
   chilled = 0; // turns left dealing reduced damage
   cursed = 0; // turns left taking extra damage
+  element: Element | null; // null below the level where elements count
+  armored: boolean;
 
   // scale multiplies health and intent values; the template itself is never changed. An elite pays double XP.
   constructor(t: EnemyTemplate, scale = 1, elite = false) {
+    const lvl = level();
+    this.element = lvl.elements ? (t.element ?? null) : null;
+    this.armored = lvl.armored !== "none" && (!!t.armored || (elite && lvl.armored === "elites"));
     this.name = elite ? `Elite ${t.name}` : t.name;
     this.maxHealth = this.health = Math.round(t.maxHealth * scale);
     this.speed = t.speed;
@@ -74,8 +82,16 @@ export class Enemy {
     return `${i.name}, +${i.value} damage from now on`;
   }
 
+  // share of a hit this enemy takes, by what hit it
+  taken(kind: Element | "weapon") {
+    if (kind === "weapon") return this.armored ? ARMORED : 1;
+    return !this.element ? 1 : kind === this.element ? RESIST : kind === OPPOSITE[this.element] ? WEAK : 1;
+  }
+
   statusText(): string[] {
     return [
+      ...(this.element ? [`Resists ${this.element}, weak to ${OPPOSITE[this.element]}`] : []),
+      ...(this.armored ? ["Armored: weapons deal 30% less"] : []),
       ...(this.burn.turns > 0 ? [`Burning ${this.burn.damage} (${this.burn.turns})`] : []),
       ...(this.chilled > 0 ? [`Chilled (${this.chilled})`] : []),
       ...(this.cursed > 0 ? [`Cursed (${this.cursed})`] : []),
@@ -131,7 +147,7 @@ export interface Act {
   bosses: EnemyTemplate[]; // each run meets one of them
 }
 
-const boss = (name: string, maxHealth: number, speed: number, xp: number, pattern: Intent[]): EnemyTemplate => ({ name, maxHealth, speed, xp, pattern, boss: true });
+const boss = (name: string, maxHealth: number, speed: number, xp: number, pattern: Intent[], element?: Element): EnemyTemplate => ({ name, maxHealth, speed, xp, pattern, boss: true, element });
 
 // Act 1 is mostly physical, act 3 mostly magic: Armor shines early, Ward late.
 export const ACTS: Act[] = [
@@ -140,41 +156,41 @@ export const ACTS: Act[] = [
     enemies: [
       { name: "Rat", maxHealth: 11, speed: 13, xp: 4, pattern: [attack("Bite", 4), attack("Bite", 4), attack("Frenzy", 9)] },
       { name: "Gutter Thief", maxHealth: 18, speed: 9, xp: 6, pattern: [attack("Stab", 6), attack("Stab", 6), attack("Heavy swing", 16)] },
-      { name: "Sludge", maxHealth: 23, speed: 4, xp: 6, pattern: [attack("Slam", 5), poison("Acid", 3, 3)] },
-      { name: "Drowned Cultist", maxHealth: 15, speed: 8, xp: 7, pattern: [bolt("Brine bolt", 5), heal("Mend", 8), bolt("Brine bolt", 5)] },
+      { name: "Sludge", element: "Earth", armored: true, maxHealth: 23, speed: 4, xp: 6, pattern: [attack("Slam", 5), poison("Acid", 3, 3)] },
+      { name: "Drowned Cultist", element: "Water", maxHealth: 15, speed: 8, xp: 7, pattern: [bolt("Brine bolt", 5), heal("Mend", 8), bolt("Brine bolt", 5)] },
     ],
     bosses: [
       boss("Gutter King", 83, 10, 30, [attack("Cleave", 10), buff("War cry", 3), attack("Cleave", 10), attack("Crushing blow", 28)]),
-      boss("Brood Mother", 83, 14, 30, [attack("Bite", 9), poison("Filth", 4, 3), attack("Bite", 9), attack("Frenzy", 24)]),
-      boss("Drowned Prophet", 83, 8, 30, [bolt("Brine bolt", 11), heal("Tide's mercy", 12), bolt("Brine bolt", 11), bolt("Drowning wave", 30)]),
+      boss("Brood Mother", 83, 14, 30, [attack("Bite", 9), poison("Filth", 4, 3), attack("Bite", 9), attack("Frenzy", 24)], "Earth"),
+      boss("Drowned Prophet", 83, 8, 30, [bolt("Brine bolt", 11), heal("Tide's mercy", 12), bolt("Brine bolt", 11), bolt("Drowning wave", 30)], "Water"),
     ],
   },
   {
     name: "The Catacombs",
     enemies: [
-      { name: "Skeleton", maxHealth: 26, speed: 10, xp: 9, pattern: [attack("Slash", 8), attack("Slash", 8), attack("Bone crush", 20)] },
-      { name: "Crypt Spider", maxHealth: 23, speed: 14, xp: 9, pattern: [attack("Bite", 7), poison("Venom", 4, 3)] },
-      { name: "Ghoul", maxHealth: 30, speed: 6, xp: 10, pattern: [attack("Claw", 10), attack("Claw", 10), heal("Feast", 12)] },
-      { name: "Gravekeeper", maxHealth: 23, speed: 9, xp: 10, pattern: [bolt("Shadow bolt", 8), heal("Unholy mend", 14), buff("Dark rite", 3)] },
+      { name: "Skeleton", armored: true, maxHealth: 26, speed: 10, xp: 9, pattern: [attack("Slash", 8), attack("Slash", 8), attack("Bone crush", 20)] },
+      { name: "Crypt Spider", element: "Earth", maxHealth: 23, speed: 14, xp: 9, pattern: [attack("Bite", 7), poison("Venom", 4, 3)] },
+      { name: "Ghoul", element: "Shadow", maxHealth: 30, speed: 6, xp: 10, pattern: [attack("Claw", 10), attack("Claw", 10), heal("Feast", 12)] },
+      { name: "Gravekeeper", element: "Shadow", maxHealth: 23, speed: 9, xp: 10, pattern: [bolt("Shadow bolt", 8), heal("Unholy mend", 14), buff("Dark rite", 3)] },
     ],
     bosses: [
-      boss("Bone Colossus", 128, 7, 60, [attack("Stomp", 13), bolt("Grave curse", 13), heal("Gather bones", 20), attack("Earthshatter", 36)]),
-      boss("Embalmer", 128, 9, 60, [poison("Embalming fluid", 7, 3), attack("Hook", 14), poison("Embalming fluid", 7, 3), heal("Stitch", 20)]),
-      boss("Hollow King", 128, 8, 60, [buff("Hollow crown", 3), buff("Hollow crown", 3), bolt("Void lance", 38), attack("Sceptre", 12)]),
+      boss("Bone Colossus", 128, 7, 60, [attack("Stomp", 13), bolt("Grave curse", 13), heal("Gather bones", 20), attack("Earthshatter", 36)], "Earth"),
+      boss("Embalmer", 128, 9, 60, [poison("Embalming fluid", 7, 3), attack("Hook", 14), poison("Embalming fluid", 7, 3), heal("Stitch", 20)], "Earth"),
+      boss("Hollow King", 128, 8, 60, [buff("Hollow crown", 3), buff("Hollow crown", 3), bolt("Void lance", 38), attack("Sceptre", 12)], "Shadow"),
     ],
   },
   {
     name: "Hell",
     enemies: [
-      { name: "Ash Shade", maxHealth: 33, speed: 15, xp: 13, pattern: [bolt("Cinder touch", 10), poison("Smother", 5, 3)] },
-      { name: "Chained Brute", maxHealth: 47, speed: 6, xp: 14, pattern: [attack("Chain swing", 12), heal("Knit flesh", 14), attack("Smash", 34)] },
-      { name: "Ember Imp", maxHealth: 29, speed: 17, xp: 12, pattern: [bolt("Firebolt", 9), bolt("Firebolt", 9), poison("Ignite", 5, 3)] },
-      { name: "Oathbreaker", maxHealth: 41, speed: 9, xp: 15, pattern: [attack("Strike", 12), buff("Dark vow", 3), attack("Execute", 38)] },
+      { name: "Ash Shade", element: "Shadow", maxHealth: 33, speed: 15, xp: 13, pattern: [bolt("Cinder touch", 10), poison("Smother", 5, 3)] },
+      { name: "Chained Brute", armored: true, maxHealth: 47, speed: 6, xp: 14, pattern: [attack("Chain swing", 12), heal("Knit flesh", 14), attack("Smash", 34)] },
+      { name: "Ember Imp", element: "Fire", maxHealth: 29, speed: 17, xp: 12, pattern: [bolt("Firebolt", 9), bolt("Firebolt", 9), poison("Ignite", 5, 3)] },
+      { name: "Oathbreaker", element: "Lightning", maxHealth: 41, speed: 9, xp: 15, pattern: [attack("Strike", 12), buff("Dark vow", 3), attack("Execute", 38)] },
     ],
     bosses: [
-      boss("Ashen Warden", 210, 11, 0, [bolt("Ash bolt", 16), poison("Searing ash", 6, 3), heal("Rekindle", 25), bolt("Doom", 58)]),
-      boss("Iron Judge", 210, 9, 0, [attack("Chain lash", 18), attack("Chain lash", 18), buff("Sentence", 4), attack("Execution", 52)]),
-      boss("Pyre Mother", 210, 16, 0, [bolt("Flame lash", 20), bolt("Flame lash", 20), bolt("Flame lash", 20), bolt("Pyre", 38)]),
+      boss("Ashen Warden", 210, 11, 0, [bolt("Ash bolt", 16), poison("Searing ash", 6, 3), heal("Rekindle", 25), bolt("Doom", 58)], "Fire"),
+      boss("Iron Judge", 210, 9, 0, [attack("Chain lash", 18), attack("Chain lash", 18), buff("Sentence", 4), attack("Execution", 52)], "Lightning"),
+      boss("Pyre Mother", 210, 16, 0, [bolt("Flame lash", 20), bolt("Flame lash", 20), bolt("Flame lash", 20), bolt("Pyre", 38)], "Fire"),
     ],
   },
 ];

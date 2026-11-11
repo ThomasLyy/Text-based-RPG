@@ -1,6 +1,7 @@
 ﻿// 6 elements × 3 spells. Each element has one signature effect (see `effect`).
 export type Element = "Fire" | "Water" | "Earth" | "Lightning" | "Light" | "Shadow";
-export type Shape = "single" | "all" | "power";
+export const OPPOSITE: Record<Element, Element> = { Fire: "Water", Water: "Fire", Earth: "Lightning", Lightning: "Earth", Light: "Shadow", Shadow: "Light" };
+export type Shape ="single" | "all" | "power";
 
 export interface Spell {
   name: string;

@@ -90,11 +90,14 @@ function sensibleBot(build: Build, shapes: Record<string, string>): Bot {
   };
 }
 
-async function simulate(runs: number, build?: Build) {
+// `bought` is the profile the runs are played with: {} is a new player (nothing unlocked, no boosts).
+async function simulate(runs: number, build?: Build, bought: Record<string, number> = {}, level = 1) {
   vi.spyOn(Math, "random").mockImplementation(seeded(build ? build.charCodeAt(0) : 1));
   let wins = 0, floors = 0, turns = 0, fights = 0;
   for (let r = 0; r < runs; r++) {
     vi.resetModules();
+    const { settings, available } = await import("./meta");
+    Object.assign(settings, { bought, level });
     const { io } = await import("./io");
     const { Player } = await import("./player");
     const { gameLoop, grantStarterSpell } = await import("./game");
@@ -108,7 +111,7 @@ async function simulate(runs: number, build?: Build) {
     let bot = firstButton;
     if (build) {
       // start armed with a random Common weapon of the build's stat, plus the usual starter spell
-      const families = FAMILIES.filter((f) => f.stat === BUILD_STAT[build]);
+      const families = available("family", FAMILIES, (f) => f.name).filter((f) => f.stat === BUILD_STAT[build]);
       player.equipWeapon(makeWeapon(families[Math.floor(Math.random() * families.length)], 0, "Common"));
       grantStarterSpell(player);
       bot = sensibleBot(build, Object.fromEntries(SPELLS.map((s) => [s.name, s.shape])));
@@ -122,7 +125,19 @@ async function simulate(runs: number, build?: Build) {
   return { winRate: wins / runs, avgFloor: +(floors / runs).toFixed(1), turnsPerFight: +(turns / fights).toFixed(1) };
 }
 
-test("balance: lazy play loses, sensible play wins sometimes, and every build is viable", { timeout: 120000 }, async () => {
+// Not a contract yet: the user sees these numbers, and step 7 of the roadmap decides what they should be.
+test("balance, print only: everything bought in the store, at difficulty levels 1 and 10", { timeout: 120000 }, async () => {
+  const { UNLOCKS, BOOSTS, BOOST_PRICES } = await import("./meta");
+  const all = Object.fromEntries([...UNLOCKS.map((u) => [u.id, 1]), ...BOOSTS.map((b) => [b.id, BOOST_PRICES.length])]);
+  for (const level of [1, 10]) {
+    const rows: Record<string, unknown> = {};
+    for (const b of ["STR", "AGI", "INT"] as const) rows[b] = await simulate(200, b, all, level);
+    console.log(`everything bought, level ${level}:`);
+    console.table(rows);
+  }
+});
+
+test("balance on a new profile: lazy play loses, sensible play wins sometimes, and every build is viable", { timeout: 120000 }, async () => {
   const lazy = await simulate(200);
   // 600 runs per build: each win rate is known to about ±4 points (150 runs gave ±7, too noisy for the 15-point parity limit)
   const builds = { STR: await simulate(600, "STR"), AGI: await simulate(600, "AGI"), INT: await simulate(600, "INT") };

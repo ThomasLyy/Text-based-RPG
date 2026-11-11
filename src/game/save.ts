@@ -4,13 +4,16 @@
 // saved floor; upgrade to saving the full state if updates during a run must keep the run.
 import { io } from "./io";
 
-export const SAVE_VERSION = 1;
+import { newProfile, type Profile } from "./meta";
+
+export const SAVE_VERSION = 2;
 // Bump whenever a change would make an old run play out differently: new or changed enemies, items, odds, or the order of random draws.
-export const RULES = 1;
+export const RULES = 2;
 
 export interface RunSave {
   seed: number;
   rules: number;
+  level: number; // difficulty level
   answers: number[]; // the index picked at each question, in order
   floor: number; // furthest floor reached, kept so a run that cannot be replayed can still be paid out
 }
@@ -18,13 +21,18 @@ export interface RunSave {
 export interface Save {
   version: number;
   run: RunSave | null;
+  profile: Profile;
 }
 
-export const newSave = (): Save => ({ version: SAVE_VERSION, run: null });
-export const newRun = (seed: number): RunSave => ({ seed, rules: RULES, answers: [], floor: 0 });
+export const newSave = (): Save => ({ version: SAVE_VERSION, run: null, profile: newProfile() });
+export const newRun = (seed: number, level = 1): RunSave => ({ seed, rules: RULES, level, answers: [], floor: 0 });
 
 // Old formats are converted one version at a time, never dropped. Unreadable text gives a new save.
-const MIGRATIONS: ((old: any) => any)[] = [];
+// MIGRATIONS[n - 1] turns version n into version n + 1.
+const MIGRATIONS: ((old: any) => any)[] = [
+  // 1 -> 2: the profile (store, levels, best results) arrives; a run in progress was at level 1
+  (v1) => ({ version: 2, run: v1.run && { ...v1.run, level: 1 }, profile: newProfile() }),
+];
 
 export function loadSave(text: string | null): Save {
   let data: any;

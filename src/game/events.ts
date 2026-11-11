@@ -4,6 +4,7 @@ import { RANK_NAME, SPELLBOOK_SIZE, spellName } from "./spell";
 import { askHand, chooseReward, offer, rewardOffers, spellLine, take } from "./reward";
 import { io, randint, random } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
+import { available } from "./meta";
 
 export const HEAL_PRICE = 30;
 export const REST_HEAL = 0.4; // Rest room: share of max health
@@ -161,6 +162,6 @@ export const EVENTS: Record<string, (player: Player, act: number) => Promise<voi
 
 // Event room: one random event.
 export async function eventRoom(player: Player, act: number) {
-  const all = Object.values(EVENTS);
-  await all[randint(0, all.length - 1)](player, act);
+  const all = available("event", Object.entries(EVENTS), ([name]) => name);
+  await all[randint(0, all.length - 1)][1](player, act);
 }

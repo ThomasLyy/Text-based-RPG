@@ -7,6 +7,7 @@ import { FAMILIES, makeWeapon } from "./items";
 import { SPELLS, describeSpell } from "./spell";
 import { eventRoom, merchant, restRoom } from "./events";
 import type { Player } from "./player";
+import { CURRENCY, ashEarned, available, boost, level, settings } from "./meta";
 
 // Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
 export const DIFFICULTY = [1.4, 1.75, 1.85];
@@ -15,11 +16,15 @@ export const FLOORS = ACTS.length * (ROOMS_PER_ACT + 1); // 10 rooms and a boss 
 
 // Floors 1-3 of an act: 1-2 enemies, 4-7: 2, 8-10: 2-3, each floor 3% tougher. Elites: 1-2 enemies, 40% tougher.
 export function encounter(act: number, floor: number, elite = false): Enemy[] {
-  const scale = DIFFICULTY[act] * (1 + 0.03 * (floor - 1)) * (elite ? ELITE_SCALE : 1);
+  const scale = DIFFICULTY[act] * level().scale * (1 + 0.03 * (floor - 1)) * (elite ? ELITE_SCALE : 1);
   const count = elite || floor <= 3 ? randint(1, 2) : floor <= 7 ? 2 : randint(2, 3);
   return choices(ACTS[act].enemies, count).map((t) => new Enemy(t, scale, elite));
 }
-export const bossOf = (act: number) => new Enemy(choices(ACTS[act].bosses, 1)[0], DIFFICULTY[act]);
+// The act's boss, picked among its 3; at the last difficulty level, two different ones, fought one after the other.
+export function bossesOf(act: number): Enemy[] {
+  const pool = [...ACTS[act].bosses];
+  return Array.from({ length: level().bosses }, () => new Enemy(pool.splice(randint(0, pool.length - 1), 1)[0], DIFFICULTY[act] * level().scale));
+}
 
 // Level-up points: each one is +1 to a stat, or +5 max health. Perception only comes from gear.
 export const LEVEL_POINTS = 3;
@@ -33,12 +38,26 @@ const POINTS: { label: string; apply: (p: Player) => void }[] = [
 
 // Start of run: pick one of 3 random Common weapons from different families, so each run starts differently.
 export async function chooseStarter(player: Player) {
-  const pool = [...FAMILIES];
+  const pool = available("family", FAMILIES, (f) => f.name);
   const offer = [0, 1, 2].map(() => makeWeapon(pool.splice(randint(0, pool.length - 1), 1)[0], 0, "Common"));
   io.print("[panel bold]Choose your weapon[/]");
   const buttons = offer.map((w) => button(player, w));
   player.equipWeapon(offer[await io.ask("Choose your starting weapon", buttons.map((b) => b.label), undefined, buttons.map((b) => b.detail))]);
   grantStarterSpell(player);
+  await spendPoints(player, boost("training"));
+}
+
+// The store's boosts that change the hero at the start of a run. Might is read where damage is computed.
+function applyBoosts(player: Player) {
+  player.baseMaxHealth += boost("vigor");
+  player.health += boost("vigor");
+  player.baseMaxMana += boost("focus");
+  player.mana += boost("focus");
+  player.gold += boost("purse");
+}
+
+async function spendPoints(player: Player, count: number) {
+  for (let n = 1; n <= count; n++) POINTS[await io.ask(`Spend a point (${n} of ${count})`, POINTS.map((b) => b.label))].apply(player);
 }
 
 // Every hero also starts with one random single-target spell.
@@ -57,7 +76,7 @@ export async function levelUps(player: Player) {
     player.level++;
     player.health = Math.min(player.maxHealth, player.health + 10);
     io.print(`[panel bold cyan]Level ${player.level}![/]`);
-    for (let n = 1; n <= LEVEL_POINTS; n++) POINTS[await io.ask(`Spend a point (${n} of ${LEVEL_POINTS})`, POINTS.map((b) => b.label))].apply(player);
+    await spendPoints(player, LEVEL_POINTS);
   }
 }
 
@@ -66,6 +85,7 @@ export interface RunSummary {
   floor: number;
   level: number;
   kills: number;
+  bosses: number; // bosses beaten
   killedBy: string;
   dealt: Record<string, number>; // see Player.dealt
 }
@@ -103,8 +123,10 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
   let view: () => MapView | null = () => null;
   let floor = 0; // overall, 1-33
   io.snapshot = () => combatView(player, enemies, title, view(), floor); // the hero sheet from the start, no enemies left over from the last run
+  applyBoosts(player);
   if (!player.mainHand) await chooseStarter(player); // already armed: a test set the build
   let kills = 0;
+  let bosses = 0;
   let dead = false;
 
   // a fight room or the boss: fight, level up, and a reward unless you fled
@@ -158,15 +180,17 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
     }
     floor++;
     title = `${act.name} - Boss`;
-    const boss = bossOf(a);
-    lastBoss = boss.name;
-    io.print(`[bold red]${boss.name} blocks the way![/]`);
-    if (await fight([boss], a, { boss: true })) break;
+    for (const boss of bossesOf(a)) {
+      lastBoss = boss.name;
+      io.print(`[bold red]${boss.name} blocks the way![/]`);
+      if (await fight([boss], a, { boss: true })) break run;
+      bosses++;
+    }
     if (a < ACTS.length - 1) await leaveRoom();
   }
 
   const won = !dead;
-  const summary: RunSummary = { won, floor, level: player.level, kills, killedBy: won ? "" : player.lastHitBy, dealt: player.dealt };
+  const summary: RunSummary = { won, floor, level: player.level, kills, bosses, killedBy: won ? "" : player.lastHitBy, dealt: player.dealt };
   const actName = ACTS[Math.floor((floor - 1) / (ROOMS_PER_ACT + 1))].name;
   // the end-of-run screen: its own room box, nothing left over from the last fight
   io.clear();
@@ -176,5 +200,6 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
   else io.print(`[panel bold red]You died on floor ${floor} of ${FLOORS} (${actName}), slain by the ${summary.killedBy}.[/]`);
   io.print(`Level ${summary.level} · ${kills} enemies defeated.`);
   for (const line of damageReport(player.dealt)) io.print(line);
+  io.print(`${CURRENCY} earned: [yellow]${ashEarned(summary, settings.level)}[/]`);
   return summary;
 }

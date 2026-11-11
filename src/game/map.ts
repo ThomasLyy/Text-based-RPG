@@ -1,5 +1,6 @@
 // One act's map: 10 floors of rooms on 4 lanes, each room linked to rooms on the floor above. The boss sits on top.
 import { randint, random } from "./io";
+import { level } from "./meta";
 
 export type RoomKind = "fight" | "elite" | "event" | "merchant" | "rest";
 export interface MapRoom {
@@ -12,11 +13,12 @@ export type ActMap = MapRoom[][]; // index 0 = floor 1, rooms sorted by lane
 export const ROOMS_PER_ACT = 10;
 export const LANES = 4;
 export const ROOM_LABEL: Record<RoomKind | "boss", string> = { fight: "Fight", elite: "Elite", event: "Event", merchant: "Shop", rest: "Rest", boss: "Boss" };
-const ODDS: [RoomKind, number][] = [["fight", 45], ["elite", 15], ["event", 20], ["merchant", 10], ["rest", 10]];
-
+// Fight and Elite share 60%: 45 and 15 at difficulty level 1, more Elites at higher levels.
 function rollKind(): RoomKind {
+  const elites = level().elites;
+  const odds: [RoomKind, number][] = [["fight", 60 - elites], ["elite", elites], ["event", 20], ["merchant", 10], ["rest", 10]];
   let r = random() * 100;
-  for (const [kind, pct] of ODDS) if ((r -= pct) < 0) return kind;
+  for (const [kind, pct] of odds) if ((r -= pct) < 0) return kind;
   return "rest";
 }
 

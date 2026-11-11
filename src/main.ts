@@ -1,5 +1,7 @@
 ﻿import { io, seedRandom, type CombatView, type MapView } from "./game/io";
 import { RULES, SaveMismatch, loadSave, newRun, record } from "./game/save";
+import { CURRENCY, finishRun, settings } from "./game/meta";
+import { home } from "./game/home";
 import { ROOMS_PER_ACT } from "./game/map";
 import { POUCH_SIZE, Player } from "./game/player";
 import { SPELLBOOK_SIZE } from "./game/spell";
@@ -170,15 +172,29 @@ async function runForever() {
     if (notice) io.print(notice);
     notice = "";
     if (save.run && save.run.rules !== RULES) {
+      // the rules changed under a run in progress: it cannot be replayed, so it ends here and is paid as it stood
+      const { floor, level } = save.run;
+      const earned = finishRun(save.profile, { won: false, floor, bosses: Math.max(0, Math.floor((floor - 1) / (ROOMS_PER_ACT + 1))) }, level);
       save.run = null;
-      io.print("[yellow]The game was updated: your run in progress could not be continued.[/]");
+      store();
+      notice = `[yellow]The game was updated: your run in progress could not be continued. It earned you ${earned} ${CURRENCY}.[/]`;
+      continue;
     }
-    const run = (save.run ??= newRun((Math.random() * 2 ** 32) >>> 0));
-    store();
+    if (!save.run) {
+      io.snapshot = null; // no hero on the home screen
+      $("title").textContent = "Home";
+      const level = await home(save.profile, store);
+      save.run = newRun((Math.random() * 2 ** 32) >>> 0, level);
+      store();
+      io.clear();
+    }
+    const run = save.run;
+    settings.bought = save.profile.bought;
+    settings.level = run.level;
     seedRandom(run.seed);
     const undo = record(run, store); // every answer is stored at once: closing the tab loses nothing
     try {
-      await gameLoop(new Player());
+      finishRun(save.profile, await gameLoop(new Player()), run.level);
     } catch (e) {
       if (!(e instanceof SaveMismatch)) throw e;
       save.run = null;

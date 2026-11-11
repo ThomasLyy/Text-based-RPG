@@ -1,5 +1,6 @@
 ﻿import { BODY_SLOTS, FISTS, STATS, type AffixId, type Armor, type BonusKey, type Item, type Potion, type Stat, type Weapon, type Weight } from "./items";
-import { BURN_TURNS, CURSE, OVERCHARGE, RANK_MULT, spellName, type KnownSpell } from "./spell";
+import { BURN_TURNS, CURSE, OVERCHARGE, RANK_MULT, spellName, type Element, type KnownSpell } from "./spell";
+import { boost } from "./meta";
 import type { Enemy } from "./enemy";
 import { io, randint, random } from "./io";
 
@@ -115,7 +116,7 @@ export class Player {
   }
   // same shape as weapons: Intelligence is the spells' grade B stat
   spellPower() {
-    return Math.max(0.5, 1 + SPELL_GRADE * (this.stat("intelligence") - 10)) * (this.hasTrait("channel") ? 1.2 : 1) * (1 + this.bonus("spellPower") / 100);
+    return Math.max(0.5, 1 + SPELL_GRADE * (this.stat("intelligence") - 10)) * (this.hasTrait("channel") ? 1.2 : 1) * (1 + this.bonus("spellPower") / 100) * (1 + boost("might") / 100);
   }
   spellCost(k: KnownSpell) {
     return Math.round(k.spell.cost * (this.hasTrait("arcane") ? 0.8 : 1));
@@ -126,7 +127,7 @@ export class Player {
   }
   // a weapon's damage multiplier from its stat and Fury
   private weaponScale(w: Weapon) {
-    return Math.max(0.5, 1 + w.family.grade * (this.stat(w.family.stat) - 10)) * (1 + 0.1 * this.affixes("fury"));
+    return Math.max(0.5, 1 + w.family.grade * (this.stat(w.family.stat) - 10)) * (1 + 0.1 * this.affixes("fury")) * (1 + boost("might") / 100);
   }
   // average damage of one Attack, before crits and target-dependent traits (Crush, Cleave)
   attackDamage() {
@@ -237,9 +238,10 @@ export class Player {
     for (const s of sources) this.dealt[s] = (this.dealt[s] ?? 0) + lost;
   }
 
-  private strike(target: Enemy, base: number, sources: string[], extraCrit = 0) {
+  // sources[0] is what hits: a weapon family or a spell's element. Resistances, weaknesses and armor apply here.
+  private strike(target: Enemy, base: number, sources: string[], kind: Element | "weapon", extraCrit = 0) {
     const crit = random() < this.critChance() + extraCrit;
-    const damage = Math.max(1, Math.round(base * (crit ? this.critMultiplier() : 1) * (target.cursed > 0 ? CURSE : 1)));
+    const damage = Math.max(1, Math.round(base * (crit ? this.critMultiplier() : 1) * (target.cursed > 0 ? CURSE : 1) * target.taken(kind)));
     this.hurt(target, damage, ...sources);
     if (this.affixes("vampirism")) this.heal(damage * 0.05 * this.affixes("vampirism"));
     return { damage, crit };
@@ -248,7 +250,7 @@ export class Player {
   // damage = roll(weapon) × (1 + grade × (stat − 10)) × hand power, then traits
   private weaponHit(w: Weapon, target: Enemy, power: number, enemies: Enemy[]) {
     const crush = w.family.trait === "crush" && target.boss ? 1.3 : 1;
-    const { damage, crit } = this.strike(target, randint(w.min, w.max) * this.weaponScale(w) * power * crush, [w.family.name]);
+    const { damage, crit } = this.strike(target, randint(w.min, w.max) * this.weaponScale(w) * power * crush, [w.family.name], "weapon");
     io.print(`${crit ? "[bold yellow]Critical![/] " : ""}You hit the ${target.name} for ${damage} damage!`);
     if (w.family.trait === "cleave") {
       const other = enemies.find((e) => e !== target && e.health > 0);
@@ -284,7 +286,7 @@ export class Player {
       const target = chosen.health > 0 ? chosen : targets.length === 1 ? enemies.find((e) => e.health > 0) : undefined;
       if (!target) continue;
       const sources = [sp.element, `spell:${sp.name}`];
-      const { damage, crit } = this.strike(target, this.spellDamage(k), sources, sp.element === "Lightning" ? OVERCHARGE : 0);
+      const { damage, crit } = this.strike(target, this.spellDamage(k), sources, sp.element, sp.element === "Lightning" ? OVERCHARGE : 0);
       io.print(`${crit ? "[bold yellow]Critical![/] " : ""}Your ${spellName(k)} hits the ${target.name} for ${damage}!`);
       if (sp.element === "Fire" && target.health > 0) {
         target.burn = { damage: target.burn.damage + Math.round(sp.effect * m), turns: BURN_TURNS };

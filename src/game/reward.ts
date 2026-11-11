@@ -2,6 +2,7 @@
 import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName, type KnownSpell } from "./spell";
 import { io, randint, random } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
+import { available } from "./meta";
 
 // Half the time, upgrade a spell you know (if any is below rank IV); otherwise a random spell.
 function randomScroll(player: Player): Scroll {
@@ -10,7 +11,7 @@ function randomScroll(player: Player): Scroll {
     const k = upgradable[randint(0, upgradable.length - 1)];
     return makeScroll(k.spell, k.rank + 1);
   }
-  const pool = SPELLS.filter((s) => (player.knows(s.name)?.rank ?? 0) < RANK_NAME.length); // a rank IV spell cannot grow
+  const pool = available("spell", SPELLS, (s) => s.name).filter((s) => (player.knows(s.name)?.rank ?? 0) < RANK_NAME.length); // a rank IV spell cannot grow
   const sp = pool[randint(0, pool.length - 1)];
   const known = player.knows(sp.name);
   return makeScroll(sp, known ? Math.min(RANK_NAME.length, known.rank + 1) : 1);
@@ -21,7 +22,8 @@ function randomItem(player: Player, act: number, boss: boolean, step: number): I
   const r = random();
   if (!boss && r >= 0.85) return makePotion(act, random() < 0.35);
   if (r >= 0.65) return randomScroll(player);
-  if (r < 0.3) return makeWeapon(FAMILIES[randint(0, FAMILIES.length - 1)], act, rollQuality(act, boss, step));
+  const families = available("family", FAMILIES, (f) => f.name);
+  if (r < 0.3) return makeWeapon(families[randint(0, families.length - 1)], act, rollQuality(act, boss, step));
   const slots = ARMOR_SLOTS.filter((s) => (s !== "shield" || player.canHoldShield()) && (s !== "focus" || player.canHoldFocus()));
   return makeArmor(slots[randint(0, slots.length - 1)], act, rollQuality(act, boss, step));
 }

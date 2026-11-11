@@ -138,11 +138,155 @@ test("save: unreadable or unknown saves give a new save; a saved answer that no 
   const { loadSave, newSave, record, SaveMismatch, SAVE_VERSION } = await import("./save");
   const { io } = await import("./io");
   for (const text of [null, "", "{", "{}", JSON.stringify({ version: SAVE_VERSION + 1 })]) expect(loadSave(text)).toEqual(newSave());
-  const save = { ...newSave(), run: { seed: 1, rules: 1, answers: [3], floor: 2 } };
+  const save = { ...newSave(), run: { seed: 1, rules: 1, level: 3, answers: [3], floor: 2 } };
   expect(loadSave(JSON.stringify(save))).toEqual(save);
+  // a version 1 save (before the store existed) is converted: the run is kept, a profile is added
+  const v1 = { version: 1, run: { seed: 5, rules: 1, answers: [0, 2], floor: 4 } };
+  expect(loadSave(JSON.stringify(v1))).toEqual({ version: SAVE_VERSION, run: { ...v1.run, level: 1 }, profile: newSave().profile });
+  expect(loadSave(JSON.stringify({ version: 1, run: null })).run).toBeNull();
   io.ask = async () => 0;
   record(save.run, () => {});
   await expect(io.ask("Pick", ["a", "b"])).rejects.toThrow(SaveMismatch);
+});
+
+// --- between runs: the store, the profile, the difficulty levels ---
+
+test("profile: Ash by floor, bosses and win, more at higher levels; a win at the top unlocked level opens the next", async () => {
+  const { ashEarned, finishRun, newProfile, buy, boostPrice, BOOST_PRICES, LEVELS } = await import("./meta");
+  expect(ashEarned({ won: false, floor: 17, bosses: 1 }, 1)).toBe(27);
+  expect(ashEarned({ won: true, floor: 33, bosses: 3 }, 1)).toBe(88);
+  expect(ashEarned({ won: true, floor: 33, bosses: 3 }, 6)).toBe(176); // +20% per level
+  const p = newProfile();
+  expect(finishRun(p, { won: false, floor: 17, bosses: 1 }, 1)).toBe(27);
+  expect(p).toMatchObject({ ash: 27, bestFloor: 17, level: 1, wins: {} });
+  finishRun(p, { won: true, floor: 33, bosses: 3 }, 1);
+  expect(p).toMatchObject({ ash: 115, bestFloor: 33, level: 2, wins: { 1: 1 } });
+  finishRun(p, { won: true, floor: 33, bosses: 3 }, 1); // winning below the top level opens nothing
+  expect(p.level).toBe(2);
+  p.level = LEVELS.length;
+  finishRun(p, { won: true, floor: 33, bosses: 6 }, LEVELS.length); // there is no level 11
+  expect(p.level).toBe(LEVELS.length);
+
+  // the store: an unlock is bought once, a boost 5 times at rising prices, never on credit
+  p.ash = 60;
+  expect(buy(p, "family:Bow")).toBe(true);
+  expect(buy(p, "family:Bow")).toBe(false);
+  expect(buy(p, "vigor")).toBe(true);
+  expect([p.ash, p.bought.vigor, boostPrice(p, "vigor")]).toEqual([0, 1, BOOST_PRICES[1]]);
+  expect(buy(p, "vigor")).toBe(false);
+  p.ash = 1000;
+  while (buy(p, "vigor"));
+  expect([p.bought.vigor, boostPrice(p, "vigor")]).toEqual([5, null]);
+  expect(p.ash).toBe(1000 - 40 - 70 - 110 - 160);
+});
+
+test("home: buying in the store and resetting are stored; reset asks first; Start returns the chosen level", async () => {
+  const { home } = await import("./home");
+  const { newProfile } = await import("./meta");
+  const p = { ...newProfile(), ash: 100, level: 3, bestFloor: 12 };
+  let stored = 0;
+  const { log } = await play(["Store", "Unlock Bows", "Vigor 0/5", "Back", "Change the difficulty", "Level 2", "Reset progression", "Keep", "Start a run"]);
+  expect(await home(p, () => stored++)).toBe(2);
+  expect(p).toMatchObject({ ash: 40, bought: { "family:Bow": 1, vigor: 1 }, level: 3 });
+  expect(stored).toBe(2);
+  expect(log.some((l) => l.includes("Furthest floor: 12"))).toBe(true);
+  await play(["Reset progression", "Erase everything", "Start a run"]);
+  expect(await home(p, () => stored++)).toBe(1);
+  expect(p).toEqual(newProfile());
+  expect(stored).toBe(3);
+  await play(["Store", "Unlock Hammers"]); // 0 Ash: the button is disabled
+  await expect(home(p, () => {})).rejects.toThrow("picked a disabled option");
+});
+
+test("a new profile: 2-handed weapons, powerful spells and two events are locked; boosts change the hero at the start", async () => {
+  const { settings } = await import("./meta");
+  const { rewardOffers } = await import("./reward");
+  const { gameLoop } = await import("./game");
+  const { Player } = await import("./player");
+  vi.spyOn(Math, "random").mockImplementation(seeded(3));
+  settings.bought = {};
+  const offers = Array.from({ length: 150 }, () => rewardOffers(new Player(), 2)).flat();
+  expect(offers.filter((o) => o.kind === "weapon" && o.family.hands === 2)).toEqual([]);
+  expect(offers.filter((o) => o.kind === "spell" && o.spell.shape === "power")).toEqual([]);
+  expect(offers.some((o) => o.kind === "weapon") && offers.some((o) => o.kind === "spell")).toBe(true);
+  settings.bought = { "family:Bow": 1, "spell:Inferno": 1 };
+  const more = Array.from({ length: 150 }, () => rewardOffers(new Player(), 2)).flat();
+  expect(more.some((o) => o.name.endsWith("Bow"))).toBe(true);
+  expect(more.some((o) => o.name === "Inferno")).toBe(true);
+  expect(more.some((o) => o.name.endsWith("Staff") || o.name === "Soul Rend")).toBe(false);
+
+  // boosts: Vigor 2 (+16 health), Focus 1 (+10 mana), Purse 3 (+45 gold), Might 5 (+15% damage), Training 2 (2 points at the start)
+  settings.bought = { vigor: 2, focus: 1, purse: 3, might: 5, training: 2 };
+  const asked: string[] = [];
+  const { io } = await play(["", "+1 Strength", "+5 Max Health"]);
+  const script = io.ask;
+  io.ask = (q, o, d) => (asked.push(q), script(q, o, d));
+  const p = new Player();
+  const before = p.spellPower();
+  await expect(gameLoop(p)).rejects.toThrow("script ended");
+  expect(asked.slice(0, 3)).toEqual(["Choose your starting weapon", "Spend a point (1 of 2)", "Spend a point (2 of 2)"]);
+  expect([p.maxHealth, p.health, p.maxMana, p.gold, p.base.strength]).toEqual([121, 121, 110, 45, 11]);
+  expect(before).toBeCloseTo(1.15);
+});
+
+test("difficulty levels: tougher enemies, more Elites, resistances and weaknesses, armored enemies, two bosses at level 10", async () => {
+  const { settings, LEVELS } = await import("./meta");
+  const { Enemy, ACTS } = await import("./enemy");
+  const { Player } = await import("./player");
+  const { encounter, bossesOf, DIFFICULTY } = await import("./game");
+  const { generateMap } = await import("./map");
+  const { makeWeapon } = await import("./items");
+  expect(LEVELS).toHaveLength(10);
+  const imp = ACTS[2].enemies.find((e) => e.name === "Ember Imp")!; // Fire
+  const sludge = ACTS[0].enemies.find((e) => e.name === "Sludge")!; // Earth, armored
+  const hit = async (lvl: number, template: typeof imp, spell: string | null, elite = false) => {
+    settings.level = lvl;
+    rolls();
+    const p = new Player();
+    p.equipWeapon(makeWeapon(await family("Sword"), 0, "Common")); // rolls 11
+    const foe = new Enemy({ ...template, maxHealth: 100 }, 1, elite);
+    if (spell) p.cast(await known(spell), [foe], [foe]);
+    else p.attack(foe, [foe]);
+    return { lost: 100 - foe.health, status: foe.statusText().filter((s) => !s.startsWith("Burning")) };
+  };
+  // level 1: nothing special. Fireball 13, Water Whip 14, a Sword 11
+  expect((await hit(1, imp, "Fireball")).lost).toBe(13);
+  expect((await hit(1, sludge, null)).lost).toBe(11);
+  expect((await hit(3, imp, "Fireball")).status).toEqual([]);
+  // level 4: its own element 35% less, the opposite 15% more, the rest unchanged
+  expect(await hit(4, imp, "Fireball")).toEqual({ lost: 8, status: ["Resists Fire, weak to Water"] }); // 13 × 0.65
+  expect((await hit(4, imp, "Water Whip")).lost).toBe(16); // 14 × 1.15
+  expect((await hit(4, imp, "Rock Throw")).lost).toBe(14);
+  expect((await hit(4, sludge, null)).lost).toBe(11); // not armored yet
+  // level 6: armored enemies take 30% less from weapons, spells are unchanged; level 8: every elite is armored
+  expect((await hit(6, sludge, null)).lost).toBe(8); // 11 × 0.7
+  expect((await hit(6, sludge, "Fireball")).lost).toBe(13);
+  expect((await hit(6, imp, null, true)).lost).toBe(11);
+  const elite = await hit(8, imp, null, true);
+  expect([elite.lost, elite.status]).toEqual([8, ["Resists Fire, weak to Water", "Armored: weapons deal 30% less"]]);
+
+  // health and damage follow the level's scale
+  settings.level = 10;
+  rolls(0, 0, 0);
+  expect(encounter(0, 1)[0].maxHealth).toBe(Math.round(11 * DIFFICULTY[0] * LEVELS[9].scale));
+  // two different bosses at level 10, one below
+  rolls(0, 0);
+  expect(bossesOf(1).map((b) => b.name)).toEqual([ACTS[1].bosses[0].name, ACTS[1].bosses[1].name]);
+  expect(bossesOf(1)[0].maxHealth).toBe(Math.round(128 * DIFFICULTY[1] * LEVELS[9].scale));
+  settings.level = 9;
+  expect(bossesOf(1)).toHaveLength(1);
+
+  // more Elite rooms: 15% at level 1, 30% at level 9
+  const share = (lvl: number) => {
+    settings.level = lvl;
+    vi.spyOn(Math, "random").mockImplementation(seeded(5));
+    const rooms = Array.from({ length: 60 }, generateMap).flat(2);
+    return (rooms.filter((r) => r.kind === "elite").length / rooms.length) * 100;
+  };
+  expect(share(1)).toBeGreaterThan(12);
+  expect(share(1)).toBeLessThan(18);
+  expect(share(9)).toBeGreaterThan(26);
+  expect(share(9)).toBeLessThan(34);
 });
 
 test("death screen names the floor and the killer (here: poison)", async () => {
@@ -254,7 +398,7 @@ test("stat roles: +1% per 2 points above 10 — STR Armor, AGI dodge, INT Ward, 
 });
 
 test("encounters: counts by floor, elites are 40% tougher with double XP, bosses per act, templates untouched", async () => {
-  const { encounter, bossOf, DIFFICULTY } = await import("./game");
+  const { encounter, bossesOf, DIFFICULTY } = await import("./game");
   const { ACTS } = await import("./enemy");
   const before = JSON.stringify(ACTS);
   rolls(0);
@@ -274,7 +418,7 @@ test("encounters: counts by floor, elites are 40% tougher with double XP, bosses
     expect(act.bosses).toHaveLength(3);
     for (const [i, roll] of [0, 0.5, 0.99].entries()) {
       rolls(roll); // each run meets one of the act's 3 bosses
-      expect(bossOf(a).name).toBe(act.bosses[i].name);
+      expect(bossesOf(a).map((b) => b.name)).toEqual([act.bosses[i].name]);
     }
   }
   expect(ACTS[2].name).toBe("Hell");
@@ -711,8 +855,9 @@ test("affixes: Rare has 1, Epic 2; thorns reflect, vampirism heals, regeneration
   await play([]);
   expect(makeArmor("ring", 0, "Rare").affixes).toHaveLength(1);
   expect(new Set(makeArmor("ring", 0, "Epic").affixes).size).toBe(2);
-  player.equipArmor(makeArmor("ring", 0, "Common", { affixes: ["thorns", "regeneration"] }));
-  player.equipArmor(makeArmor("ring", 0, "Common", { affixes: ["vampirism"] }));
+  // the stat is fixed: two random Strength rings would add 3% Armor and change the damage below
+  player.equipArmor(makeArmor("ring", 0, "Common", { stat: "perception", affixes: ["thorns", "regeneration"] }));
+  player.equipArmor(makeArmor("ring", 0, "Common", { stat: "perception", affixes: ["vampirism"] }));
   const ogre = new Enemy(dummy({ name: "Ogre", maxHealth: 100 }));
   rolls();
   player.takeDamage(50, ogre, false);
