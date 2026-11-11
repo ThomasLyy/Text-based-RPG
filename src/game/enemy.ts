@@ -45,12 +45,12 @@ export class Enemy {
   chilled = 0; // turns left dealing reduced damage
   cursed = 0; // turns left taking extra damage
 
-  // scale multiplies health and intent values; the template itself is never changed
-  constructor(t: EnemyTemplate, scale = 1) {
-    this.name = t.name;
+  // scale multiplies health and intent values; the template itself is never changed. An elite pays double XP.
+  constructor(t: EnemyTemplate, scale = 1, elite = false) {
+    this.name = elite ? `Elite ${t.name}` : t.name;
     this.maxHealth = this.health = Math.round(t.maxHealth * scale);
     this.speed = t.speed;
-    this.xpReward = Math.round(t.xp * scale);
+    this.xpReward = Math.round(t.xp * scale) * (elite ? 2 : 1);
     this.boss = t.boss ?? false;
     this.pattern = t.pattern.map((i) => ({ ...i, value: Math.round(i.value * scale) }));
     this.step = this.boss ? 0 : randint(0, this.pattern.length - 1); // so two goblins don't swing in sync
@@ -154,7 +154,7 @@ export const ACTS: Act[] = [
     boss: { name: "Bone Colossus", maxHealth: 170, speed: 7, xp: 60, boss: true, pattern: [attack("Stomp", 13), bolt("Grave curse", 13), heal("Gather bones", 20), attack("Earthshatter", 36)] },
   },
   {
-    name: "The Spire",
+    name: "Hell", // placeholder enemies until the enemies design
     enemies: [
       { name: "Wraith", maxHealth: 44, speed: 15, xp: 13, pattern: [bolt("Chill touch", 10), poison("Soul drain", 5, 3)] },
       { name: "Troll", maxHealth: 62, speed: 6, xp: 14, pattern: [attack("Club", 12), heal("Regenerate", 14), attack("Smash", 34)] },
@@ -164,6 +164,3 @@ export const ACTS: Act[] = [
     boss: { name: "Lich", maxHealth: 280, speed: 11, xp: 0, boss: true, pattern: [bolt("Death bolt", 16), poison("Plague", 6, 3), heal("Raise dead", 25), bolt("Doom", 58)] },
   },
 ];
-
-export const FLOORS_PER_ACT = 5; // the last floor of each act is its boss
-export const FLOORS = ACTS.length * FLOORS_PER_ACT;

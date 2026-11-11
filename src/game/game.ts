@@ -1,5 +1,6 @@
 ﻿import { io, randint, choices } from "./io";
-import { ACTS, Enemy, FLOORS, FLOORS_PER_ACT } from "./enemy";
+import { ACTS, Enemy } from "./enemy";
+import { ROOMS_PER_ACT } from "./map";
 import { combat, combatView } from "./combat";
 import { chooseReward, offer as button } from "./reward";
 import { FAMILIES, makeWeapon } from "./items";
@@ -7,21 +8,18 @@ import { SPELLS, describeSpell } from "./spell";
 import { actEvents, runEvent, type EventKind } from "./events";
 import type { Player } from "./player";
 
-const actOf = (floor: number) => ACTS[Math.floor((floor - 1) / FLOORS_PER_ACT)];
-const floorInAct = (floor: number) => ((floor - 1) % FLOORS_PER_ACT) + 1;
-
 // Enemy toughness (health and damage) per act, tuned with the balance test. Later acts outpace your gear less.
 export const DIFFICULTY = [1.4, 1.75, 1.85];
+export const ELITE_SCALE = 1.4;
+export const FLOORS = ACTS.length * (ROOMS_PER_ACT + 1); // 10 rooms and a boss per act
 
-// Floor 1 of an act: 1 enemy, floor 2: 1-2, floor 3: 2, floor 4: 2-3, each floor 5% tougher. Last floor: the boss.
-export function encounter(floor: number): Enemy[] {
-  const act = actOf(floor);
-  const f = floorInAct(floor);
-  const d = DIFFICULTY[ACTS.indexOf(act)];
-  if (f === FLOORS_PER_ACT) return [new Enemy(act.boss, d)];
-  const count = f === 1 ? 1 : f === 2 ? randint(1, 2) : f === 3 ? 2 : randint(2, 3);
-  return choices(act.enemies, count).map((t) => new Enemy(t, d * (1 + 0.05 * (f - 1))));
+// Floors 1-3 of an act: 1-2 enemies, 4-7: 2, 8-10: 2-3, each floor 3% tougher. Elites: 1-2 enemies, 40% tougher.
+export function encounter(act: number, floor: number, elite = false): Enemy[] {
+  const scale = DIFFICULTY[act] * (1 + 0.03 * (floor - 1)) * (elite ? ELITE_SCALE : 1);
+  const count = elite || floor <= 3 ? randint(1, 2) : floor <= 7 ? 2 : randint(2, 3);
+  return choices(ACTS[act].enemies, count).map((t) => new Enemy(t, scale, elite));
 }
+export const bossOf = (act: number) => new Enemy(ACTS[act].boss, DIFFICULTY[act]);
 
 const BOOSTS: { label: string; apply: (p: Player) => void }[] = [
   { label: "+4 Strength", apply: (p) => void (p.base.strength += 4) },

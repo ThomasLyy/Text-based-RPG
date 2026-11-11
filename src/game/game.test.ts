@@ -87,13 +87,22 @@ test("level-up: 3 different boosts offered, XP carries over, each level needs 5 
   expect([p.level, p.experience, p.xpToNextLevel, p.maxHealth, p.health]).toEqual([2, 5, 25, 120, 120]);
 });
 
-test("encounters: bosses on floors 5, 10, 15; floor 1 is a single enemy; templates untouched", async () => {
-  const { encounter } = await import("./game");
+test("encounters: counts by floor, elites are 40% tougher with double XP, bosses per act, templates untouched", async () => {
+  const { encounter, bossOf, DIFFICULTY } = await import("./game");
   const { ACTS } = await import("./enemy");
   const before = JSON.stringify(ACTS);
-  expect([5, 10, 15].map((f) => encounter(f)[0].name)).toEqual(ACTS.map((a) => a.boss.name));
-  expect(encounter(1)).toHaveLength(1);
-  encounter(4).forEach((e) => (e.health = 0));
+  rolls(0);
+  expect(encounter(0, 1)).toHaveLength(1);
+  rolls(0.99);
+  expect(encounter(0, 9)).toHaveLength(3);
+  rolls();
+  expect(encounter(0, 5)).toHaveLength(2);
+  rolls(0, 0, 0); // one elite, the first template (Rat)
+  const [elite] = encounter(0, 1, true);
+  expect([elite.name, elite.maxHealth, elite.xpReward]).toEqual(["Elite Rat", Math.round(14 * DIFFICULTY[0] * 1.4), 2 * Math.round(4 * DIFFICULTY[0] * 1.4)]);
+  expect([0, 1, 2].map((a) => bossOf(a).name)).toEqual(ACTS.map((a) => a.boss.name));
+  expect(ACTS[2].name).toBe("Hell");
+  encounter(1, 8).forEach((e) => (e.health = 0));
   expect(JSON.stringify(ACTS)).toBe(before);
 });
 
