@@ -16,7 +16,7 @@ type Bot = (question: string, options: string[], view: CombatView | null, disabl
 type Build = "STR" | "AGI" | "INT";
 const BUILD_STAT: Record<Build, Stat> = { STR: "strength", AGI: "agility", INT: "intelligence" };
 const BUILD_WEIGHT: Record<Build, string> = { STR: "heavy", AGI: "medium", INT: "light" };
-const BOOST: Record<Build, string> = { STR: "+4 Strength", AGI: "+4 Agility", INT: "+4 Intelligence" };
+const BOOST: Record<Build, string> = { STR: "+1 Strength", AGI: "+1 Agility", INT: "+1 Intelligence" };
 
 // Taps the first button every time: first starter, Attack, first target, first boost, first reward.
 const firstButton: Bot = (_q, _o, _v, disabled) => Math.max(0, disabled?.indexOf(false) ?? 0);
@@ -66,7 +66,7 @@ function sensibleBot(build: Build, shapes: Record<string, string>): Bot {
     if (q === "Choose a blessing") return build === "INT" && has("Pray") >= 0 ? has("Pray") : has("Meditate");
     if (q.startsWith("Your spellbook is full")) return options.length - 1; // keep
     if (q.startsWith("Equip the")) return 1; // dual-wield
-    if (q === "Choose a boost") return Math.max(0, options.findIndex((o) => o === [BOOST[build], "+20 Max Health", "+5 Perception", "+4 Agility"].find((p) => options.includes(p))));
+    if (q.startsWith("Spend a point")) return q.includes("(3 of") ? has("+5 Max Health") : has(BOOST[build]); // 2 into the build's stat, 1 into health
     if (q === "Your turn" && view) {
       const biggest = Math.max(0, ...view.enemies.map((e) => Number(/, (\d+) \w+ damage$/.exec(e.intent)?.[1] ?? 0)));
       const defend = !defendedLastTurn && biggest >= view.player.maxHealth * 0.2;

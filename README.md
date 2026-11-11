@@ -10,9 +10,10 @@ Designed for runs of about 20 minutes (not yet timed with real players): 3 acts 
 * **No healing between fights:** health comes back only from Rest rooms, potions, the merchant, events, level-ups (+10), and a full heal when you enter the next act.
 * **One hero who adapts:** each run starts with a choice of 3 random weapons, plus one random single-target spell. The rest of the build comes from rewards.
 * **Readable combat:** every enemy announces its next move (physical or magic attack, poison, heal, buff). Actions: Attack, Defend (blocks 75% of each hit this turn, 90% with a sword, and gives +10 mana), spells, potions, Flee (not against bosses).
-* **4 stats:** Strength (melee weapons, +3 max HP per point), Agility (daggers, throwing knives, bows, dodge, turn order), Intelligence (wands, staves, spell power), Perception (critical hit chance and damage).
+* **4 stats:** Strength (melee weapons, Armor), Agility (daggers, throwing knives, bows, dodge, turn order), Intelligence (wands, staves, spell power, Ward), Perception (critical hit chance and damage; from gear only). Each stat's role gives +1% per 2 points above 10.
+* **Level-ups:** +10 health and 3 points to spend: +1 Strength, Agility or Intelligence, or +5 max health.
 * **9 weapon families**, each with a scaling grade and a trait (Parry, Cleave, Crush, Stagger, Twin strike, Quick, Keen, Arcane, Channel). One-handed weapons can be dual-wielded.
-* **Armor:** heavy (Armor against physical hits, -2 Agility per piece), medium (dodge), light (mana and Ward against magic). 4-piece set bonuses; Rare and Epic items roll affixes.
+* **Armor:** heavy (Armor against physical hits, -1 Agility per piece), medium (dodge), light (mana and Ward against magic). 4-piece set bonuses; Rare and Epic items roll affixes.
 * **18 spells:** 6 elements × (single target, all enemies, powerful), each element with a signature effect (burn, chill, stun, chain, heal, curse). Ranks I to IV, and a 4-slot spellbook.
 * **Rewards:** pick 1 of 3 after every fight (weapons, armor, spells, potions), from Common to Epic. Every choice shows what it changes, before and after (attack damage, max HP, stats, crit, dodge, Armor, Ward); spells show their damage for you.
 * **Events:** shrine, stat trial, Strange brew (+3 or -2 to a random stat) and Locked chest (gold and a reward, or a trap). Enemies drop gold.

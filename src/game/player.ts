@@ -11,8 +11,7 @@ export const OFFHAND_POWER = 0.6; // dual-wielding: the off-hand weapon hits at 
 export const POUCH_SIZE = 5;
 export const MAX_REDUCTION = 50; // Armor and Ward cap, in %
 export const MAX_DODGE = 0.3;
-export const STR_HEALTH = 3; // max HP per Strength point above 10
-
+export const SPELL_GRADE = 0.07; // spell power per Intelligence point above 10
 // 4 body pieces of one weight
 export const SET_BONUS: Record<Weight, { name: string; text: string; bonuses: Partial<Record<BonusKey, number>> }> = {
   heavy: { name: "Bulwark", text: "+10 Armor", bonuses: { armor: 10 } },
@@ -75,17 +74,21 @@ export class Player {
     return Object.fromEntries(STATS.map((s) => [s, this.stat(s)])) as Record<Stat, number>;
   }
   get maxHealth() {
-    const raw = this.baseMaxHealth + this.bonus("maxHealth") + STR_HEALTH * Math.max(0, this.stat("strength") - 10); // strength makes you sturdier
-    return Math.round(raw * (1 + 0.1 * this.affixes("vitality")));
+    return Math.round((this.baseMaxHealth + this.bonus("maxHealth")) * (1 + 0.1 * this.affixes("vitality")));
   }
   get maxMana() {
     return this.baseMaxMana + this.bonus("maxMana");
   }
+  // Each stat's second role: +1% per 2 points above 10 (and -1% per 2 below). Strength Armor, Agility dodge,
+  // Intelligence Ward, Perception crit chance.
+  private rolePct(s: Stat) {
+    return Math.trunc((this.stat(s) - 10) / 2);
+  }
   armorPct() {
-    return Math.min(MAX_REDUCTION, this.bonus("armor"));
+    return Math.min(MAX_REDUCTION, Math.max(0, this.bonus("armor") + this.rolePct("strength")));
   }
   wardPct() {
-    return Math.min(MAX_REDUCTION, this.bonus("ward"));
+    return Math.min(MAX_REDUCTION, Math.max(0, this.bonus("ward") + this.rolePct("intelligence")));
   }
   manaRegen() {
     return MANA_REGEN + 2 * this.affixes("clarity") + (this.setWeight() === "light" ? 3 : 0);
@@ -98,19 +101,19 @@ export class Player {
     return this.weapons().some(([w]) => w.family.trait === t);
   }
 
-  // Each stat scales its weapons, plus one role: Strength max HP, Agility dodge, Intelligence spells, Perception crits.
+  // Each stat scales its weapons (Intelligence: spells too), plus its role above.
   critChance() {
-    return Math.min(0.6, Math.max(0, 0.05 + 0.01 * (this.stat("perception") - 10) + (this.hasTrait("keen") ? 0.1 : 0) + 0.05 * this.affixes("precision")));
+    return Math.min(0.6, Math.max(0, 0.05 + 0.01 * this.rolePct("perception") + (this.hasTrait("keen") ? 0.1 : 0) + 0.05 * this.affixes("precision")));
   }
   critMultiplier() {
     return 1.5 + Math.max(0, 0.02 * (this.stat("perception") - 10));
   }
   dodgeChance() {
-    return Math.min(MAX_DODGE, Math.max(0, 0.05 + 0.01 * (this.stat("agility") - 10) + this.bonus("dodge") / 100));
+    return Math.min(MAX_DODGE, Math.max(0, 0.05 + 0.01 * this.rolePct("agility") + this.bonus("dodge") / 100));
   }
   // same shape as weapons: Intelligence is the spells' grade B stat
   spellPower() {
-    return Math.max(0.5, 1 + 0.06 * (this.stat("intelligence") - 10)) * (this.hasTrait("channel") ? 1.2 : 1) * (1 + this.bonus("spellPower") / 100);
+    return Math.max(0.5, 1 + SPELL_GRADE * (this.stat("intelligence") - 10)) * (this.hasTrait("channel") ? 1.2 : 1) * (1 + this.bonus("spellPower") / 100);
   }
   spellCost(k: KnownSpell) {
     return Math.round(k.spell.cost * (this.hasTrait("arcane") ? 0.8 : 1));

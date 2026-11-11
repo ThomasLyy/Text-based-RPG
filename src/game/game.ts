@@ -21,13 +21,14 @@ export function encounter(act: number, floor: number, elite = false): Enemy[] {
 }
 export const bossOf = (act: number) => new Enemy(ACTS[act].boss, DIFFICULTY[act]);
 
-const BOOSTS: { label: string; apply: (p: Player) => void }[] = [
-  { label: "+4 Strength", apply: (p) => void (p.base.strength += 4) },
-  { label: "+4 Agility", apply: (p) => void (p.base.agility += 4) },
-  { label: "+4 Intelligence", apply: (p) => void (p.base.intelligence += 4) },
-  { label: "+5 Perception", apply: (p) => void (p.base.perception += 5) },
-  { label: "+20 Max Health", apply: (p) => void ((p.baseMaxHealth += 20), (p.health += 20)) },
-  { label: "+20 Max Mana", apply: (p) => void ((p.baseMaxMana += 20), (p.mana += 20)) },
+// Level-up points: each one is +1 to a stat, or +5 max health. Perception only comes from gear.
+export const LEVEL_POINTS = 3;
+export const HEALTH_PER_POINT = 5;
+const POINTS: { label: string; apply: (p: Player) => void }[] = [
+  { label: "+1 Strength", apply: (p) => void p.base.strength++ },
+  { label: "+1 Agility", apply: (p) => void p.base.agility++ },
+  { label: "+1 Intelligence", apply: (p) => void p.base.intelligence++ },
+  { label: `+${HEALTH_PER_POINT} Max Health`, apply: (p) => void ((p.baseMaxHealth += HEALTH_PER_POINT), (p.health += HEALTH_PER_POINT)) },
 ];
 
 // Start of run: pick one of 3 random Common weapons from different families, so each run starts differently.
@@ -48,7 +49,7 @@ export function grantStarterSpell(player: Player) {
   io.print(`You also know [cyan]${spell.name}[/] (${describeSpell(spell)}).`);
 }
 
-// Each level: +10 health and a choice of 3 different boosts out of 6. Each level needs 5 more XP.
+// Each level: +10 health and 3 points to spend. Each level needs 5 more XP.
 export async function levelUps(player: Player) {
   while (player.experience >= player.xpToNextLevel) {
     player.experience -= player.xpToNextLevel;
@@ -56,9 +57,7 @@ export async function levelUps(player: Player) {
     player.level++;
     player.health = Math.min(player.maxHealth, player.health + 10);
     io.print(`[panel bold cyan]Level ${player.level}![/]`);
-    const pool = [...BOOSTS];
-    const offer = [0, 1, 2].map(() => pool.splice(randint(0, pool.length - 1), 1)[0]);
-    offer[await io.ask("Choose a boost", offer.map((b) => b.label))].apply(player);
+    for (let n = 1; n <= LEVEL_POINTS; n++) POINTS[await io.ask(`Spend a point (${n} of ${LEVEL_POINTS})`, POINTS.map((b) => b.label))].apply(player);
   }
 }
 

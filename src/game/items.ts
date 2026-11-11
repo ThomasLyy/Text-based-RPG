@@ -1,4 +1,4 @@
-﻿import { randint } from "./io";
+import { randint } from "./io";
 import { describeSpell, RANK_NAME, type Spell } from "./spell";
 
 export type Stat = "strength" | "agility" | "intelligence" | "perception";
@@ -133,7 +133,7 @@ const BODY: Record<Weight, { stat: Stat; names: string[]; pieces: Record<BodySlo
     },
   },
 };
-export const HEAVY_AGILITY = -2; // per heavy piece
+export const HEAVY_AGILITY = -1; // per heavy piece
 
 const OTHER: Record<"amulet" | "ring" | "shield" | "focus", { names: string[]; bonuses: Bonuses; anyStat?: number }> = {
   amulet: { names: ["Bone Amulet", "Silver Amulet", "Star Amulet"], bonuses: { maxMana: 10 }, anyStat: 3 },

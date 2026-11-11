@@ -125,20 +125,31 @@ test("no healing between fights: health after a won fight stays as it was", asyn
   expect(next.health).toBe(reward.health);
 });
 
-test("level-up: 3 different boosts offered, XP carries over, each level needs 5 more", async () => {
-  await play(["+20 Max Health"]);
-  rolls();
+test("level-up: 3 points for STR, AGI, INT (+1) or Max HP (+5); XP carries over, each level needs 5 more", async () => {
+  await play(["+1 Strength", "+5 Max Health", "+5 Max Health"]);
   const { Player } = await import("./player");
   const { levelUps } = await import("./game");
   const { io } = await import("./io");
+  const questions: string[] = [];
   let offered: string[] = [];
   const ask = io.ask;
-  io.ask = (q, o) => ((offered = o), ask(q, o));
+  io.ask = (q, o) => (questions.push(q), (offered = o), ask(q, o));
   const p = new Player();
+  p.health = 80;
   p.experience = 25;
   await levelUps(p);
-  expect(offered).toEqual(["+5 Perception", "+4 Intelligence", "+20 Max Health"]);
-  expect([p.level, p.experience, p.xpToNextLevel, p.maxHealth, p.health]).toEqual([2, 5, 25, 120, 120]);
+  expect(questions).toEqual(["Spend a point (1 of 3)", "Spend a point (2 of 3)", "Spend a point (3 of 3)"]);
+  expect(offered).toEqual(["+1 Strength", "+1 Agility", "+1 Intelligence", "+5 Max Health"]);
+  expect([p.level, p.experience, p.xpToNextLevel, p.base.strength, p.maxHealth, p.health]).toEqual([2, 5, 25, 11, 110, 100]); // 80 + 10 + 5 + 5
+});
+
+test("stat roles: +1% per 2 points above 10 — STR Armor, AGI dodge, INT Ward, PER crit; Strength no longer adds max HP", async () => {
+  const { player } = await setup();
+  player.base = { strength: 20, agility: 16, intelligence: 13, perception: 30 };
+  expect([player.armorPct(), Math.round(player.dodgeChance() * 100), player.wardPct(), Math.round(player.critChance() * 100)]).toEqual([5, 8, 1, 15]);
+  expect(player.maxHealth).toBe(100);
+  player.base.agility = 4; // heavy armor can push Agility below 10
+  expect(Math.round(player.dodgeChance() * 100)).toBe(2); // 5% - 3%
 });
 
 test("encounters: counts by floor, elites are 40% tougher with double XP, bosses per act, templates untouched", async () => {
@@ -282,7 +293,7 @@ test("crits deal 1.5x; intelligence scales spells (grade B)", async () => {
   player.base.intelligence = 20; // +60%
   rolls(0.9);
   player.cast(fireball, [target], [target]);
-  expect(target.health).toBe(80 - 21); // 13 * 1.6
+  expect(target.health).toBe(80 - 22); // 13 * 1.7
   expect(player.mana).toBe(80);
 });
 
@@ -436,9 +447,10 @@ test("comparisons: gear shows what changes, before -> after; spells show their d
   const hammer = gearChanges(player, makeWeapon(await family("Hammer"), 0, "Common")); // 14-20
   expect(hammer.line).toBe("Attack 11 dmg → [green]17 dmg[/]");
   expect(hammer.full.split("\n")).toHaveLength(13); // every number, for the side panel
-  const chest = gearChanges(player, makeArmor("chest", 0, "Common", { weight: "heavy", affixes: [] })); // +18 HP, +4 Armor, +3 STR, -2 AGI
-  expect(chest.line).toContain("Max HP 100 → [green]127[/]"); // 18, plus 3 HP for each of the 3 Strength
-  expect(chest.line).toContain("AGI 10 → [red]8[/]");
+  const chest = gearChanges(player, makeArmor("chest", 0, "Common", { weight: "heavy", affixes: [] })); // +18 HP, +4 Armor, +3 STR, -1 AGI
+  expect(chest.line).toContain("Max HP 100 → [green]118[/]");
+  expect(chest.line).toContain("Armor 0% → [green]5%[/]"); // 4, plus 1 for the 3 Strength
+  expect(chest.line).toContain("AGI 10 → [red]9[/]");
   expect(chest.line).toContain("Attack 11 dmg → [green]13 dmg[/]"); // Strength scales the sword
   expect([player.maxHealth, player.armor.chest]).toEqual([100, undefined]); // only a preview
   player.spells = [await known("Fireball")];
@@ -559,15 +571,15 @@ test("Armor cuts physical hits, Ward cuts magic hits, both capped at 50%; heavy 
   const { player, Enemy } = await setup();
   const { makeArmor } = await import("./items");
   await play([]);
-  player.equipArmor(makeArmor("chest", 0, "Common", { weight: "heavy" })); // 4 Armor, -2 AGI
-  player.equipArmor(makeArmor("head", 0, "Common", { weight: "light" })); // 2 Ward
-  expect([player.armorPct(), player.wardPct(), player.stat("agility")]).toEqual([4, 2, 8]);
+  player.equipArmor(makeArmor("chest", 0, "Common", { weight: "heavy" })); // 4 Armor, +3 STR (+1 Armor), -1 AGI
+  player.equipArmor(makeArmor("head", 0, "Common", { weight: "light" })); // 2 Ward, +2 INT (+1 Ward)
+  expect([player.armorPct(), player.wardPct(), player.stat("agility")]).toEqual([5, 3, 9]);
   const ogre = new Enemy(dummy({ name: "Ogre" }));
   player.health = player.maxHealth; // gear raises max HP but does not heal
   rolls();
   player.takeDamage(50, ogre, false);
   player.takeDamage(50, ogre, true);
-  expect(player.health).toBe(player.maxHealth - 48 - 49); // 50 × 0.96, 50 × 0.98
+  expect(player.health).toBe(player.maxHealth - 48 - 49); // 50 × 0.95, 50 × 0.97, rounded up
 });
 
 test("4 pieces of one weight give the set bonus", async () => {
@@ -578,8 +590,8 @@ test("4 pieces of one weight give the set bonus", async () => {
   expect(player.setWeight()).toBeNull();
   player.equipArmor(makeArmor("feet", 0, "Common", { weight: "heavy" }));
   expect(player.setWeight()).toBe("heavy");
-  expect(player.armorPct()).toBe(2 + 4 + 3 + 2 + 10); // pieces + Bulwark
-  expect(player.stat("agility")).toBe(2); // 10 - 4 × 2
+  expect(player.armorPct()).toBe(2 + 4 + 3 + 2 + 10 + 4); // pieces + Bulwark + 8 STR from the pieces; Bulwark
+  expect(player.stat("agility")).toBe(6); // 10 - 4 × 1
 });
 
 test("affixes: Rare has 1, Epic 2; thorns reflect, vampirism heals, regeneration ticks", async () => {
@@ -720,7 +732,7 @@ test("forge quality: values grow, Rare and Epic gain affixes", async () => {
   expect([w.quality, w.min, w.max]).toEqual(["Uncommon", 10, 15]); // ×1.15
   const a = makeArmor("chest", 0, "Uncommon", { weight: "heavy" });
   upgradeQuality(a);
-  expect([a.quality, a.affixes.length, a.bonuses.agility]).toEqual(["Rare", 1, -2]); // the heavy penalty does not grow
+  expect([a.quality, a.affixes.length, a.bonuses.agility]).toEqual(["Rare", 1, -1]); // the heavy penalty does not grow
   upgradeQuality(a);
   expect([a.quality, new Set(a.affixes).size]).toEqual(["Epic", 2]);
   expect(upgradeQuality(a)).toBe(false);
@@ -896,11 +908,11 @@ test("brew: drinking gives +3 or -2 to a random stat; -2 Strength at full health
   rolls(0, 0); // good brew, first stat
   await EVENTS.brew(player, 0);
   expect(player.base.strength).toBe(13);
-  player.health = player.maxHealth; // 109: 3 HP per Strength point
+  player.health = player.maxHealth;
   rolls(0.9, 0); // bad brew, Strength
   await EVENTS.brew(player, 0);
   expect([player.base.strength, player.health]).toEqual([11, player.maxHealth]);
-  expect(player.maxHealth).toBe(103);
+  expect(player.maxHealth).toBe(100); // Strength no longer changes max HP
 });
 
 test("chest: 30% trap costs 15% max HP and never kills; otherwise gold 20 × (act + 1) and a reward", async () => {
@@ -940,7 +952,7 @@ test("shrine blood offering: costs 20% of max HP from current health, greyed out
   let disabled: boolean[] | undefined;
   let labels: string[] = [];
   io.ask = async (_q, o, d) => ((labels = o), (disabled = d), o.length - 1); // look, then meditate
-  player.health = 21; // 21 - 22 (20% of 109 max HP) < 1: not allowed
+  player.health = 20; // 20 - 20 (20% of 100 max HP) = 0: not allowed
   await EVENTS.shrine(player, 0);
   const blood = labels.findIndex((l) => l.startsWith("Blood"));
   expect(disabled?.[blood]).toBe(true);
