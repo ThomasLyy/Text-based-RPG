@@ -28,7 +28,7 @@ Overall difficulty is set by `DIFFICULTY` in `src/game/game.ts` (enemy health an
 
 ## Roadmap
 
-Everything left before the game is complete, in the agreed order. Items marked *(to decide)* need a decision first.
+Everything left before the game is complete, in the agreed order.
 
 ### Done
 
@@ -59,7 +59,10 @@ Everything left before the game is complete, in the agreed order. Items marked *
 * A currency earned per run; permanent upgrades and unlocks bought with it.
 * The first win should be relatively easy; harder content opens up after it.
 * Save progression on the device (web: browser storage; Android: app storage).
-* *(to decide)* What the store sells and what unlocks exist (new weapons, spells, events, starting options...).
+* The store sells two things:
+  * **Unlocks:** new content (weapon families, spells, events, enemies) that only appears in runs once bought.
+  * **Permanent boosts with levels:** each can be bought up to 5 times, each level costing more than the last (e.g. "+1 point per level-up" per level).
+* Still open: the exact list of unlocks and boosts, and their prices.
 
 ### 4. Difficulty levels 1 to 10
 
@@ -83,8 +86,8 @@ Everything left before the game is complete, in the agreed order. Items marked *
 * Pixel icons for the 5 room types (no emoji).
 * A short how-to-play for the first run (intents, Defend, the map).
 * Settings screen: animations on/off, reset progression, and sound volume if sound is added.
-* *(to decide)* Keyboard shortcuts (number keys for choices) on computers.
-* *(to decide)* Sound effects and music (chiptune would fit the 8-bit look).
+* Keyboard shortcuts on computers: number keys pick choices (the number shown on each button), Space continues.
+* Sound effects (hits, crits, level-ups, buying) and music (a track per act), chiptune to match the 8-bit look. Still open: making or licensing the tracks.
 
 ### 7. Balance and playtests
 
@@ -98,7 +101,7 @@ Everything left before the game is complete, in the agreed order. Items marked *
 * Play Store: listing (description, screenshots), signing key, content rating, data safety form, privacy policy.
 * Installable web version (PWA: works offline, can be added to the home screen) and hosting.
 * High scores / run history.
-* *(to decide)* Optional ads, and if so the consent screen they require in Europe. The game stays free.
+* No ads at release; reconsider afterwards (ads would also need the consent screen required in Europe). The game stays free.
 
 ## Code
 
