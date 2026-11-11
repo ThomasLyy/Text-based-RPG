@@ -1,4 +1,4 @@
-﻿import { io, type CombatView, type MapView } from "./io";
+﻿import { io, random, type CombatView, type MapView } from "./io";
 import { spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
 import { DEFEND_MANA, SET_BONUS, type Player } from "./player";
@@ -15,10 +15,11 @@ export async function handleTargeting(question: string, enemies: Enemy[]): Promi
 }
 
 // Built from live state on every render, so the screen never lags behind the game.
-export function combatView(player: Player, enemies: Enemy[], title: string, map: MapView | null = null): CombatView {
+export function combatView(player: Player, enemies: Enemy[], title: string, map: MapView | null = null, floor = 0): CombatView {
   const set = player.setWeight();
   return {
     title,
+    floor,
     enemies: enemies.map((e) => ({ name: e.name, health: e.health, maxHealth: e.maxHealth, intent: e.health > 0 ? e.intentText() : "", status: e.health > 0 ? e.statusText() : [] })),
     player: {
       health: player.health, maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
@@ -70,7 +71,7 @@ async function chooseAction(player: Player, enemies: Enemy[]): Promise<Turn | "f
     const potion = player.potions.splice(i, 1)[0];
     return { run: () => player.drink(potion) };
   }
-  if (Math.random() < 0.5) {
+  if (random() < 0.5) {
     io.print("[bold yellow]You successfully fled the battle![/]");
     return "fled";
   }

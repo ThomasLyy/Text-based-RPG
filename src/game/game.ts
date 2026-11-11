@@ -101,10 +101,10 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
   let enemies: Enemy[] = [];
   let title = "A new run begins";
   let view: () => MapView | null = () => null;
-  io.snapshot = () => combatView(player, enemies, title, view()); // the hero sheet from the start, no enemies left over from the last run
+  let floor = 0; // overall, 1-33
+  io.snapshot = () => combatView(player, enemies, title, view(), floor); // the hero sheet from the start, no enemies left over from the last run
   if (!player.mainHand) await chooseStarter(player); // already armed: a test set the build
   let kills = 0;
-  let floor = 0; // overall, 1-33
   let dead = false;
 
   // a fight room or the boss: fight, level up, and a reward unless you fled

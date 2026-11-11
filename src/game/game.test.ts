@@ -83,6 +83,68 @@ test("run stats: damage is counted per weapon family, element, spell and burn, n
   expect(damageReport({})).toEqual(["No damage dealt."]);
 });
 
+// Plays a seeded run with a "first allowed button" bot, recording it, and stops at the 6th turn of combat.
+async function runUntilSixthTurn(run: import("./save").RunSave) {
+  vi.resetModules();
+  const { io, seedRandom } = await import("./io");
+  const { record } = await import("./save");
+  const { Player } = await import("./player");
+  const { gameLoop } = await import("./game");
+  io.print = io.render = () => {};
+  io.sleep = async () => {};
+  let turns = 0;
+  io.ask = async (q, _o, disabled) => {
+    if (q === "Your turn" && ++turns === 6) throw new Error("stop");
+    return disabled?.findIndex((d) => !d) ?? 0;
+  };
+  seedRandom(run.seed);
+  let stored = 0;
+  const undo = record(run, () => stored++);
+  await expect(gameLoop(new Player())).rejects.toThrow("stop");
+  undo();
+  return { view: JSON.stringify(io.snapshot!()), stored };
+}
+
+test("save: a run continued from its seed and answers is in the same state, mid-fight", async () => {
+  const { newRun } = await import("./save");
+  const run = newRun(7);
+  const first = await runUntilSixthTurn(run); // stops at the 6th turn, with everything before it recorded
+  expect(run.answers.length).toBeGreaterThan(8);
+  expect(first.stored).toBe(run.answers.length);
+  expect(run.floor).toBeGreaterThan(0);
+  // "reload": new modules, the same save, as text
+  const saved = JSON.parse(JSON.stringify(run));
+  const { io, seedRandom } = (vi.resetModules(), await import("./io"));
+  const { record } = await import("./save");
+  const { Player } = await import("./player");
+  const { gameLoop } = await import("./game");
+  io.print = io.render = () => {};
+  let slept = 0;
+  io.sleep = async () => void slept++;
+  let asked = "";
+  io.ask = async (q) => {
+    asked = q;
+    throw new Error("stop");
+  };
+  seedRandom(saved.seed);
+  record(saved, () => {});
+  await expect(gameLoop(new Player())).rejects.toThrow("stop");
+  expect(asked).toBe("Your turn"); // handed over exactly where the first session stopped
+  expect(JSON.stringify(io.snapshot!())).toBe(first.view); // same enemies, health, gear, map
+  expect(slept).toBe(0); // the replay did not wait on any animation
+});
+
+test("save: unreadable or unknown saves give a new save; a saved answer that no longer fits is reported", async () => {
+  const { loadSave, newSave, record, SaveMismatch, SAVE_VERSION } = await import("./save");
+  const { io } = await import("./io");
+  for (const text of [null, "", "{", "{}", JSON.stringify({ version: SAVE_VERSION + 1 })]) expect(loadSave(text)).toEqual(newSave());
+  const save = { ...newSave(), run: { seed: 1, rules: 1, answers: [3], floor: 2 } };
+  expect(loadSave(JSON.stringify(save))).toEqual(save);
+  io.ask = async () => 0;
+  record(save.run, () => {});
+  await expect(io.ask("Pick", ["a", "b"])).rejects.toThrow(SaveMismatch);
+});
+
 test("death screen names the floor and the killer (here: poison)", async () => {
   await play(["[white]", "Elite", "Defend", "Defend"]); // starter weapon, a room, then defend; the poison ticks after the hero's second turn
   rolls(); // all rolls 0.5: every room is an Elite, and floor 1 holds Elite Sludges starting on their Acid move

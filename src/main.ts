@@ -1,4 +1,5 @@
-﻿import { io, type CombatView, type MapView } from "./game/io";
+﻿import { io, seedRandom, type CombatView, type MapView } from "./game/io";
+import { RULES, SaveMismatch, loadSave, newRun, record } from "./game/save";
 import { ROOMS_PER_ACT } from "./game/map";
 import { POUCH_SIZE, Player } from "./game/player";
 import { SPELLBOOK_SIZE } from "./game/spell";
@@ -144,15 +145,58 @@ io.render = (v: CombatView) => {
   stick();
 };
 
+// The save lives in localStorage. Where storage is refused (private windows), the game plays without saving.
+const KEY = "save";
+const stored = () => {
+  try {
+    return localStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+};
+const save = loadSave(stored());
+const store = () => {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(save));
+  } catch {
+    /* no storage: nothing to do */
+  }
+};
+
 async function runForever() {
+  let notice = "";
   for (;;) {
     for (const id of ["title", "log", "board", "hero", "gear", "map"]) $(id).replaceChildren();
-    await gameLoop(new Player());
+    if (notice) io.print(notice);
+    notice = "";
+    if (save.run && save.run.rules !== RULES) {
+      save.run = null;
+      io.print("[yellow]The game was updated: your run in progress could not be continued.[/]");
+    }
+    const run = (save.run ??= newRun((Math.random() * 2 ** 32) >>> 0));
+    store();
+    seedRandom(run.seed);
+    const undo = record(run, store); // every answer is stored at once: closing the tab loses nothing
+    try {
+      await gameLoop(new Player());
+    } catch (e) {
+      if (!(e instanceof SaveMismatch)) throw e;
+      save.run = null;
+      store();
+      notice = "[yellow]Your saved run could not be read. A new run begins.[/]";
+      continue;
+    } finally {
+      undo();
+    }
+    save.run = null;
+    store();
     await io.ask("Run over", ["Continue"]);
   }
 }
 
 runForever().catch((e: unknown) => {
+  save.run = null; // a run that crashes would crash again at the same place on every reload
+  store();
   io.print(`[bold red]Crash: ${e instanceof Error ? e.message : String(e)}[/]`);
   console.error(e);
   io.ask("The game crashed.", ["Restart"]).then(() => location.reload());

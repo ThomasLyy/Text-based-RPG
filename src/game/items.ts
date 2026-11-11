@@ -1,4 +1,4 @@
-import { randint } from "./io";
+import { randint, random } from "./io";
 import { describeSpell, RANK_NAME, type Spell } from "./spell";
 
 export type Stat = "strength" | "agility" | "intelligence" | "perception";
@@ -197,7 +197,7 @@ export type Item = Weapon | Armor | Potion | Scroll;
 const QUALITY_ODDS = [[60, 30, 9, 1], [40, 35, 20, 5], [25, 35, 28, 12]];
 export function rollQuality(act: number, boss = false, step = 0): Quality {
   const odds = boss ? [0, 0, 70, 30] : QUALITY_ODDS[act];
-  let r = Math.random() * 100;
+  let r = random() * 100;
   let i = 0;
   while (i < QUALITIES.length - 1 && (r -= odds[i]) >= 0) i++;
   return QUALITIES[Math.min(QUALITIES.length - 1, i + step)];

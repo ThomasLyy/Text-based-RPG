@@ -1,6 +1,7 @@
 // Seam between game logic and the outside world (UI in src/main.ts, or a test).
 export interface CombatView {
   title: string;
+  floor: number; // 1-33 over the whole run, 0 before the first room
   enemies: { name: string; health: number; maxHealth: number; intent: string; status: string[] }[];
   player: {
     health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; gold: number; status: string[];
@@ -34,8 +35,23 @@ export const io = {
   },
 };
 
+// Every random draw of the game goes through random(), so a run can be played again from its seed (see save.ts).
+// Unseeded it is Math.random, which the tests stub.
+let source: () => number = () => Math.random();
+export const random = () => source();
+// mulberry32: small, fast, and the same numbers on every device
+export function seedRandom(seed: number) {
+  let s = seed | 0;
+  source = () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 // random.randint(a, b): both ends included
-export const randint = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
+export const randint = (a: number, b: number) => a + Math.floor(random() * (b - a + 1));
 // k picks with replacement
 export const choices = <T>(list: T[], k: number) =>
-  Array.from({ length: k }, () => list[Math.floor(Math.random() * list.length)]);
+  Array.from({ length: k }, () => list[Math.floor(random() * list.length)]);

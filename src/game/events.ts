@@ -2,7 +2,7 @@
 import { describe, price, upgradeQuality, QUALITIES, STATS, type Armor, type Stat, type Weapon } from "./items";
 import { RANK_NAME, SPELLBOOK_SIZE, spellName } from "./spell";
 import { askHand, chooseReward, offer, rewardOffers, spellLine, take } from "./reward";
-import { io, randint } from "./io";
+import { io, randint, random } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
 
 export const HEAL_PRICE = 30;
@@ -123,7 +123,7 @@ async function trial(player: Player, act: number) {
   const options = [...t.ways.map((w, i) => `${w} (${TRIAL_STATS[i]}, ${Math.round(odds[i] * 100)}%)`), "Walk away"];
   const i = await io.ask("How do you get through?", options);
   if (i === 3) return io.print("You walk away.");
-  if (Math.random() < odds[i]) {
+  if (random() < odds[i]) {
     const gold = 20 * (act + 1);
     player.gold += gold;
     io.print(`[green]Success![/] You find a hidden cache with ${gold} gold.`);
@@ -137,7 +137,7 @@ async function trial(player: Player, act: number) {
 // Strange brew: a random stat, +3 or -2.
 async function brew(player: Player) {
   if ((await io.ask("A bubbling flask sits on a stone. Drink it?", ["Drink it", "Walk away"])) === 1) return io.print("You leave the flask alone.");
-  const good = Math.random() < 0.5;
+  const good = random() < 0.5;
   const stat = STATS[randint(0, STATS.length - 1)];
   player.base[stat] += good ? 3 : -2;
   player.health = Math.min(player.health, player.maxHealth); // less Strength, less max HP
@@ -147,7 +147,7 @@ async function brew(player: Player) {
 // Locked chest: 30% a trap (15% of max HP, never kills), otherwise gold and a reward.
 async function chest(player: Player, act: number) {
   if ((await io.ask("A locked chest. Open it?", ["Open it", "Leave it"])) === 1) return io.print("You leave the chest.");
-  if (Math.random() < 0.3) {
+  if (random() < 0.3) {
     player.health = Math.max(1, player.health - Math.round(player.maxHealth * 0.15));
     return io.print(`[red]A needle trap![/] Health ${player.health}/${player.maxHealth}.`);
   }

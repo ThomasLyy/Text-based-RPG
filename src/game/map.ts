@@ -1,5 +1,5 @@
 // One act's map: 10 floors of rooms on 4 lanes, each room linked to rooms on the floor above. The boss sits on top.
-import { randint } from "./io";
+import { randint, random } from "./io";
 
 export type RoomKind = "fight" | "elite" | "event" | "merchant" | "rest";
 export interface MapRoom {
@@ -15,7 +15,7 @@ export const ROOM_LABEL: Record<RoomKind | "boss", string> = { fight: "Fight", e
 const ODDS: [RoomKind, number][] = [["fight", 45], ["elite", 15], ["event", 20], ["merchant", 10], ["rest", 10]];
 
 function rollKind(): RoomKind {
-  let r = Math.random() * 100;
+  let r = random() * 100;
   for (const [kind, pct] of ODDS) if ((r -= pct) < 0) return kind;
   return "rest";
 }

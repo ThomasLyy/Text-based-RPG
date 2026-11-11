@@ -1,7 +1,7 @@
 ﻿import { BODY_SLOTS, FISTS, STATS, type AffixId, type Armor, type BonusKey, type Item, type Potion, type Stat, type Weapon, type Weight } from "./items";
 import { BURN_TURNS, CURSE, OVERCHARGE, RANK_MULT, spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
-import { io, randint } from "./io";
+import { io, randint, random } from "./io";
 
 export const DEFEND_TAKEN = 0.25; // Defend blocks 75% of each hit this round
 export const PARRY_TAKEN = 0.1; // 90% with a sword in hand
@@ -238,7 +238,7 @@ export class Player {
   }
 
   private strike(target: Enemy, base: number, sources: string[], extraCrit = 0) {
-    const crit = Math.random() < this.critChance() + extraCrit;
+    const crit = random() < this.critChance() + extraCrit;
     const damage = Math.max(1, Math.round(base * (crit ? this.critMultiplier() : 1) * (target.cursed > 0 ? CURSE : 1)));
     this.hurt(target, damage, ...sources);
     if (this.affixes("vampirism")) this.heal(damage * 0.05 * this.affixes("vampirism"));
@@ -258,7 +258,7 @@ export class Player {
         io.print(`Your cleave hits the ${other.name} for ${splash}.`);
       }
     }
-    if (w.family.trait === "stagger" && target.health > 0 && Math.random() < 0.2) {
+    if (w.family.trait === "stagger" && target.health > 0 && random() < 0.2) {
       target.stunned = true;
       io.print(`[yellow]The ${target.name} is staggered![/]`);
     }
@@ -289,7 +289,7 @@ export class Player {
       if (sp.element === "Fire" && target.health > 0) {
         target.burn = { damage: target.burn.damage + Math.round(sp.effect * m), turns: BURN_TURNS };
       } else if (sp.element === "Water") target.chilled = Math.max(target.chilled, sp.effect);
-      else if (sp.element === "Earth" && target.health > 0 && Math.random() < Math.min(1, sp.effect * m)) {
+      else if (sp.element === "Earth" && target.health > 0 && random() < Math.min(1, sp.effect * m)) {
         target.stunned = true;
         io.print(`[yellow]The ${target.name} is stunned![/]`);
       } else if (sp.element === "Lightning" && sp.effect) {
@@ -305,7 +305,7 @@ export class Player {
 
   // Dodge, then Armor (physical) or Ward (magic), then Defend. Thorns reflect part of what lands.
   takeDamage(amount: number, source: Enemy, magic: boolean) {
-    if (Math.random() < this.dodgeChance()) return io.print(`You dodge the ${source.name}'s attack!`);
+    if (random() < this.dodgeChance()) return io.print(`You dodge the ${source.name}'s attack!`);
     const reduced = amount * (1 - (magic ? this.wardPct() : this.armorPct()) / 100);
     const taken = this.hasTrait("parry") ? PARRY_TAKEN : DEFEND_TAKEN;
     const damage = Math.max(1, Math.ceil(this.defending ? reduced * taken : reduced));
@@ -322,7 +322,7 @@ export class Player {
 
   // Poison stacks its turns and keeps the stronger damage. Dodge avoids it; Armor, Ward and Defend do not.
   poison(damage: number, turns: number, source: string) {
-    if (Math.random() < this.dodgeChance()) return io.print(`You dodge the ${source}'s attack!`);
+    if (random() < this.dodgeChance()) return io.print(`You dodge the ${source}'s attack!`);
     this.poisoned = { damage: Math.max(damage, this.poisoned.damage), turns: this.poisoned.turns + turns, source };
     io.print(`The ${source} poisons you: ${damage} damage per turn for ${turns} turns.`);
   }

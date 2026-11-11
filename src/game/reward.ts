@@ -1,12 +1,12 @@
 ﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Armor, type Item, type Scroll, type Weapon } from "./items";
 import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName, type KnownSpell } from "./spell";
-import { io, randint } from "./io";
+import { io, randint, random } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
 
 // Half the time, upgrade a spell you know (if any is below rank IV); otherwise a random spell.
 function randomScroll(player: Player): Scroll {
   const upgradable = player.spells.filter((k) => k.rank < RANK_NAME.length);
-  if (upgradable.length && Math.random() < 0.5) {
+  if (upgradable.length && random() < 0.5) {
     const k = upgradable[randint(0, upgradable.length - 1)];
     return makeScroll(k.spell, k.rank + 1);
   }
@@ -18,8 +18,8 @@ function randomScroll(player: Player): Scroll {
 
 // Odds per offer: weapon 30%, armor 35%, spell 20%, potion 15%. Bosses: Rare+ gear or a spell upgrade, no potions.
 function randomItem(player: Player, act: number, boss: boolean, step: number): Item {
-  const r = Math.random();
-  if (!boss && r >= 0.85) return makePotion(act, Math.random() < 0.35);
+  const r = random();
+  if (!boss && r >= 0.85) return makePotion(act, random() < 0.35);
   if (r >= 0.65) return randomScroll(player);
   if (r < 0.3) return makeWeapon(FAMILIES[randint(0, FAMILIES.length - 1)], act, rollQuality(act, boss, step));
   const slots = ARMOR_SLOTS.filter((s) => (s !== "shield" || player.canHoldShield()) && (s !== "focus" || player.canHoldFocus()));
