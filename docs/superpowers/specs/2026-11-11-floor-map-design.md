@@ -20,23 +20,24 @@ Today every run walks the same line: fight, fight, event, fight, boss. The playe
   - **Rest:** choose exactly one of rest (health and mana) or forge (upgrade one item).
 - **No guaranteed rest before the boss.** At least one path has a Rest room close to the boss; riskier paths may skip it.
 - **No more 20% health back after every fight.** It's removed for now.
+- **Length:** 10 rooms, then the boss, per act: 30 rooms in all, with the bosses on top.
+- **No fixed rules for the first floors** (no "floor 1 is always a fight", no "no elites early"): meta-progression may change those later.
+- **Act 3 is renamed** from The Spire to Hell. The Sewers and The Catacombs stay.
+- **Room odds:** Fight 45%, Elite 15%, Event 20%, Merchant 10%, Rest 10%, on every floor.
+- **After a boss:** full heal as you enter the next act.
 
 ## My calls (the user can change any of them)
 
-- **Length:** 6 rooms, then the boss, per act: 21 floors in all. That's the same number of stops as today (4 fights + 2 events per act).
-- **Width:** 4 lanes. Each floor has 2 to 4 rooms.
-- **Links:** a room links to 1 to 3 rooms on the next floor, in its own lane or a neighbouring one. Links never cross, so the drawing stays readable. Every room can be reached and has a way out.
-- **Floor 1** of every act is always normal Fights. **No Elite on floors 1 and 2.**
-- **Rest near the boss:** at least one path has a Rest on floor 5 or 6.
-- **Room odds** (floors 2 to 6): Fight 45%, Elite 15%, Event 20%, Merchant 10%, Rest 10%. The Rest-near-boss rule and the floor 1 and 2 rules take priority over the odds. The balance test may adjust them.
+- **Width:** 4 lanes. Each floor has 2 to 4 rooms (approved).
+- **Links:** a room links to 1 to 3 rooms on the next floor, in its own lane or a neighbouring one. Links never cross, so the drawing stays readable. Every room can be reached and has a way out (approved).
+- **Rest near the boss:** at least one path has a Rest on floor 9 or 10. This rule takes priority over the room odds.
 - **Elite:** 1 or 2 of the act's normal enemies, 40% tougher (health and damage), with double XP and gold. The reward rolls one quality step up (Common becomes Uncommon, and so on, capped at Epic).
-- **Enemy count by floor:** floors 1-2 give 1 to 2 enemies, floors 3-4 give 2, floors 5-6 give 2 to 3. Each floor is 5% tougher, as today.
+- **Enemy count by floor:** floors 1-3 give 1 to 2 enemies, floors 4-7 give 2, floors 8-10 give 2 to 3. Each floor is 3% tougher (today it's 5% over 4 floors).
 - **Rest room:** Rest restores 40% of max health and all mana. Forge is today's forge event.
 - **Events:** today's shrine and trial, plus two new ones with real downside:
   - **Strange brew:** drink it for a random +3 or -2 to a stat, or walk away.
   - **Locked chest:** open it for gold and a reward, with a 30% chance it's a trap that costs 15% of max health. It never kills you.
 - **Fleeing:** works on Elites as on normal fights (no reward); still impossible against bosses.
-- **After a boss:** a full heal as you enter the next act. The user didn't object when I suggested it.
 - **The merchant and forge leave the fixed event list.** "Two events per act after floors 2 and 3" is removed.
 
 ## Screen
@@ -50,12 +51,17 @@ Today every run walks the same line: fight, fight, event, fight, boss. The playe
 ## Goals
 
 - Every act asks the player to plan a route and take risks.
-- A run still takes about 10 to 15 minutes (not yet timed with players).
+- **A run takes about 20 minutes** (the user's decision, replacing 10 to 15). With 33 stops, that's roughly 35 seconds per room, so fights must get shorter. When tuning, aim for about 3 turns per fight in the balance test's `turnsPerFight` (today it's 4 to 5), mainly by trimming enemy health, not by making the hero stronger. Not yet timed with players.
 - Balance stays in the current band: the first-button bot loses, the sensible bots win 20–50%, and builds stay within 15 points of each other.
 
-## Non-goals (for now)
+## Non-goals (for now): the next designs, in order
 
-- Meta-progression, the home screen and the end-of-run screen. Those are the next designs.
+1. **Enemies:** each act gets at least 4 enemy types with coherent lore, plus 3 bosses, one picked at random per run. Act 3 is Hell, so its enemies change.
+2. **End-of-run screen:** damage dealt by type, your best weapon and spell, what killed you, currency earned, and a Continue button back to the home screen.
+3. **Home screen and meta-progression:** start a run, a store of permanent upgrades, unlocks, and resetting progress. The first win should be relatively easy.
+4. **Difficulty levels 1 to 10,** unlocked through meta-progression. Higher levels add more elites, tougher enemies, and resistances (for example a Fire Rat takes 30-40% less from fire spells and 10-20% more from water). Some enemies, elites included, resist physical hits, which pushes you toward spells. Level 10 has 2 bosses per act.
+
+This map design only has to leave room for those.
 - Map secrets, keys, or rooms you can't see.
 - Saving a run in progress.
 
