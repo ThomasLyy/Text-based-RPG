@@ -2,7 +2,7 @@
 export interface CombatView {
   title: string;
   floor: number; // 1-33 over the whole run, 0 before the first room
-  enemies: { name: string; health: number; maxHealth: number; intent: string; status: string[] }[];
+  enemies: { id: number; name: string; boss: boolean; health: number; maxHealth: number; intent: string; status: string[] }[];
   player: {
     health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; gold: number; status: string[];
     gear: [string, string][]; // [slot, item description or ""]
@@ -20,8 +20,16 @@ export interface MapView {
   choosing: boolean; // the path question is open
 }
 
+// A hit that just landed, for the UI to animate: on an enemy (its id) or on the hero.
+export interface Fx {
+  on: number | "hero";
+  amount: number;
+  crit?: boolean;
+}
+
 export const io = {
   print(_msg: string): void {},
+  fx(_hit: Fx): void {},
   clear(): void {}, // wipe the log: a new room starts
   // disabled[i] = shown greyed out, cannot be picked; details[i] = the full comparison for that option (side panel)
   ask(_prompt: string, _options: string[], _disabled?: boolean[], _details?: string[]): Promise<number> {

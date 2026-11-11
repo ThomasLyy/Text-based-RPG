@@ -42,6 +42,18 @@ The spec is `docs/superpowers/specs/2026-11-11-saving-store-levels-design.md`; i
 - **Question:** with everything bought the bots win 71 to 92% at level 1 and 22 to 38% at level 10. What win rates do you want there? Level 10 also favours Intelligence (38% against 22%) because of armored enemies: is that the intent of "the player has to use spells", or should the 15-point parity hold at level 10 too?
 - **Yours:** playtests with real players (a run of about 20 minutes, the first win reachable). `docs/playtest.md` says what to time and ask.
 
+## Step 5: look and feel (built on `ui`, not finished)
+
+- **Check:** the 41 sprites are a first pass and nobody has looked at them. The 21 enemies are built from 9 base shapes, recoloured, with crowns or horns added; 7 of them share the hooded shape. Look at them in the browser and say which to redraw.
+- **Check:** the fight screen, the icons on the map and on choices, and the hit feedback (floating numbers, shake, critical pop, fade on death, red flash) compile and build, but were never seen in a browser: screenshots failed in the agent's session. Only the home screen was seen once.
+- **Call:** one palette of 18 colours for everything, in `src/sprites.ts`.
+- **Call:** until the settings screen exists, hit feedback follows the system's "reduce motion" setting.
+- **Not done:** step 5's spec, the README lines, and moving step 5 to Done in the roadmap.
+
+## Not started
+
+- Step 6a (UI review, phone layout, how-to-play, settings, keyboard shortcuts, bundled fonts), step 6b (sound and music), step 8 (name, Android build, icon, PWA, Play Store).
+
 ## Step 1: enemies
 
 - **Check:** the new names were not looked at in a browser when step 1 was built. They are checked with the UI review of step 6.

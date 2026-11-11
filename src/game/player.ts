@@ -1,4 +1,4 @@
-﻿import { BODY_SLOTS, FISTS, STATS, type AffixId, type Armor, type BonusKey, type Item, type Potion, type Stat, type Weapon, type Weight } from "./items";
+import { BODY_SLOTS, FISTS, STATS, type AffixId, type Armor, type BonusKey, type Item, type Potion, type Stat, type Weapon, type Weight } from "./items";
 import { BURN_TURNS, CURSE, OVERCHARGE, RANK_MULT, spellName, type Element, type KnownSpell } from "./spell";
 import { boost } from "./meta";
 import type { Enemy } from "./enemy";
@@ -232,7 +232,8 @@ export class Player {
 
   // Applies crit and curse, then Vampirism.
   // Takes health off an enemy and counts what was really lost (never more than it had) under each source.
-  hurt(target: Enemy, amount: number, ...sources: string[]) {
+  hurt(target: Enemy, amount: number, sources: string[], crit = false) {
+    io.fx({ on: target.id, amount, crit });
     const lost = Math.min(target.health, amount);
     target.health -= lost;
     for (const s of sources) this.dealt[s] = (this.dealt[s] ?? 0) + lost;
@@ -242,7 +243,7 @@ export class Player {
   private strike(target: Enemy, base: number, sources: string[], kind: Element | "weapon", extraCrit = 0) {
     const crit = random() < this.critChance() + extraCrit;
     const damage = Math.max(1, Math.round(base * (crit ? this.critMultiplier() : 1) * (target.cursed > 0 ? CURSE : 1) * target.taken(kind)));
-    this.hurt(target, damage, ...sources);
+    this.hurt(target, damage, sources, crit);
     if (this.affixes("vampirism")) this.heal(damage * 0.05 * this.affixes("vampirism"));
     return { damage, crit };
   }
@@ -256,7 +257,7 @@ export class Player {
       const other = enemies.find((e) => e !== target && e.health > 0);
       if (other) {
         const splash = Math.max(1, Math.round(damage * 0.3));
-        this.hurt(other, splash, w.family.name);
+        this.hurt(other, splash, [w.family.name]);
         io.print(`Your cleave hits the ${other.name} for ${splash}.`);
       }
     }
@@ -297,7 +298,7 @@ export class Player {
       } else if (sp.element === "Lightning" && sp.effect) {
         for (const other of enemies.filter((e) => e !== target && e.health > 0)) {
           const chain = Math.max(1, Math.round(damage * sp.effect));
-          this.hurt(other, chain, ...sources);
+          this.hurt(other, chain, sources);
           io.print(`The lightning chains to the ${other.name} for ${chain}.`);
         }
       } else if (sp.element === "Light") this.heal(damage * sp.effect);
@@ -312,12 +313,13 @@ export class Player {
     const taken = this.hasTrait("parry") ? PARRY_TAKEN : DEFEND_TAKEN;
     const damage = Math.max(1, Math.ceil(this.defending ? reduced * taken : reduced));
     this.health = Math.max(0, this.health - damage);
+    io.fx({ on: "hero", amount: damage });
     this.lastHitBy = source.name;
     io.print(`The ${source.name} hits you for ${damage} damage${this.defending ? " (blocked)" : ""}!`);
     const thorns = this.affixes("thorns");
     if (thorns && source.health > 0) {
       const back = Math.max(1, Math.round(damage * 0.2 * thorns));
-      this.hurt(source, back, "Thorns");
+      this.hurt(source, back, ["Thorns"]);
       io.print(`Thorns hit the ${source.name} for ${back}.`);
     }
   }
@@ -333,6 +335,7 @@ export class Player {
   endOfTurn() {
     if (this.poisoned.turns > 0) {
       this.health = Math.max(0, this.health - this.poisoned.damage);
+      io.fx({ on: "hero", amount: this.poisoned.damage });
       this.poisoned.turns--;
       this.lastHitBy = `${this.poisoned.source}'s poison`;
       io.print(`[green]Poison[/] deals ${this.poisoned.damage} damage.`);

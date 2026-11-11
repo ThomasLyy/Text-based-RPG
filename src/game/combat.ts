@@ -1,4 +1,4 @@
-﻿import { io, random, type CombatView, type MapView } from "./io";
+import { io, random, type CombatView, type MapView } from "./io";
 import { spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
 import { DEFEND_MANA, SET_BONUS, type Player } from "./player";
@@ -20,7 +20,7 @@ export function combatView(player: Player, enemies: Enemy[], title: string, map:
   return {
     title,
     floor,
-    enemies: enemies.map((e) => ({ name: e.name, health: e.health, maxHealth: e.maxHealth, intent: e.health > 0 ? e.intentText() : "", status: e.health > 0 ? e.statusText() : [] })),
+    enemies: enemies.map((e) => ({ id: e.id, name: e.name, boss: e.boss, health: e.health, maxHealth: e.maxHealth, intent: e.health > 0 ? e.intentText() : "", status: e.health > 0 ? e.statusText() : [] })),
     player: {
       health: player.health, maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
       level: player.level, xp: player.experience, xpNext: player.xpToNextLevel, gold: player.gold,

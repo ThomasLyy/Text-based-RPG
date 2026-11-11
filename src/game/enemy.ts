@@ -32,7 +32,10 @@ const buff = (name: string, value: number): Intent => ({ name, kind: "buff", val
 export const ENRAGE_TURN = 8; // bosses gain +10% damage per round from this round on
 export const ENRAGE_STEP = 0.1;
 
+let nextId = 0;
+
 export class Enemy {
+  id = nextId++; // tells the UI which enemy an effect is on
   name: string;
   health: number;
   maxHealth: number;
@@ -123,7 +126,7 @@ export class Enemy {
   private endOfTurn(player: Player) {
     if (this.health <= 0) return;
     if (this.burn.turns > 0) {
-      player.hurt(this, this.burn.damage, "Burn");
+      player.hurt(this, this.burn.damage, ["Burn"]);
       this.burn.turns--;
       io.print(`The ${this.name} burns for ${this.burn.damage}.`);
     }
