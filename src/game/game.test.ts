@@ -449,7 +449,9 @@ test("Fire burns over 3 turns, Water chills enemy damage, Shadow curses for +25%
   const e = new Enemy(dummy({ maxHealth: 200 }));
   rolls(0.9, 0.9, 0.9);
   player.cast(await known("Fireball"), [e], [e]); // 13, burn 4
-  e.endOfRound(1);
+  e.endOfRound(1); // burn counts the enemy's turns, not rounds
+  expect(e.health).toBe(200 - 13);
+  e.act(player, [e]);
   expect(e.health).toBe(200 - 13 - 4);
   player.cast(await known("Water Whip"), [e], [e]); // 14, chill 2
   expect(e.intentText()).toBe("Poke, 4 physical damage"); // 5 × 0.7
@@ -457,6 +459,19 @@ test("Fire burns over 3 turns, Water chills enemy damage, Shadow curses for +25%
   rolls(0.9);
   player.attack(e, [e]); // fists roll 5 × 1.25 = 6
   expect(e.health).toBe(183 - 14 - 13 - 6);
+});
+
+test("a 1-turn chill cast on a faster enemy still weakens its next move", async () => {
+  const { player, Enemy, combat } = await setup();
+  await play(["Tidal Wave"]);
+  player.spells = [await known("Tidal Wave")]; // chill 1
+  rolls(0, 0.9); // enemy pattern starts at step 0; no crit
+  const imp = new Enemy(dummy({ name: "Imp", speed: 20, maxHealth: 100 }));
+  await expect(combat(player, [imp])).rejects.toThrow("script ended");
+  expect(imp.intentText()).toBe("Poke, 4 physical damage"); // 5 × 0.7, the round is over and the chill is still there
+  imp.act(player, [imp]);
+  expect(player.health).toBe(100 - 5 - 4);
+  expect(imp.intentText()).toBe("Poke, 5 physical damage");
 });
 
 test("Earth stuns, Lightning chains, Light heals you", async () => {

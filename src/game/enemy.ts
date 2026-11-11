@@ -88,9 +88,8 @@ export class Enemy {
     this.step++;
     if (this.stunned) {
       this.stunned = false;
-      return io.print(`The ${this.name} is stunned and loses its ${i.name}.`);
-    }
-    if (i.kind === "attack") player.takeDamage(this.power(i.value), this, i.magic ?? false);
+      io.print(`The ${this.name} is stunned and loses its ${i.name}.`);
+    } else if (i.kind === "attack") player.takeDamage(this.power(i.value), this, i.magic ?? false);
     else if (i.kind === "poison") player.poison(this.power(i.value), i.turns!, this.name);
     else if (i.kind === "heal") {
       const target = allies.filter((a) => a.health > 0).sort((a, b) => a.health / a.maxHealth - b.health / b.maxHealth)[0];
@@ -101,10 +100,11 @@ export class Enemy {
       this.bonus += i.value;
       io.print(`The ${this.name} uses ${i.name}: its attacks now deal +${this.bonus} damage.`);
     }
+    this.endOfTurn();
   }
 
-  // burn ticks, statuses wear off, bosses enrage after ENRAGE_TURN rounds
-  endOfRound(round: number) {
+  // Effects count the enemy's own turns, so one cast after it moved still lasts through its next move.
+  private endOfTurn() {
     if (this.health <= 0) return;
     if (this.burn.turns > 0) {
       this.health = Math.max(0, this.health - this.burn.damage);
@@ -113,6 +113,11 @@ export class Enemy {
     }
     if (this.chilled > 0) this.chilled--;
     if (this.cursed > 0) this.cursed--;
+  }
+
+  // bosses enrage after ENRAGE_TURN rounds
+  endOfRound(round: number) {
+    if (this.health <= 0) return;
     if (this.boss && round >= ENRAGE_TURN) {
       this.rage += ENRAGE_STEP;
       io.print(`[red]The ${this.name} grows enraged![/]`);
