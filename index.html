@@ -11,12 +11,24 @@
   </head>
   <body>
     <main>
-      <section id="board"></section>
-      <section id="log" aria-live="polite"></section>
-      <section id="prompt">
-        <p id="question"></p>
-        <div id="options"></div>
+      <!-- left on wide screens: everything the hero carries -->
+      <details id="sheet">
+        <summary>Hero sheet</summary>
+        <div id="hero"></div>
+      </details>
+      <!-- center: the fight and the choices, close together -->
+      <section id="center">
+        <section id="board"></section>
+        <section id="prompt">
+          <p id="question"></p>
+          <div id="options"></div>
+        </section>
       </section>
+      <!-- right on wide screens: the hovered choice compared with your gear, then the log -->
+      <aside id="side">
+        <section id="compare"></section>
+        <section id="log" aria-live="polite"></section>
+      </aside>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

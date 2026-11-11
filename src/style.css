@@ -21,14 +21,39 @@ body {
   font: 15px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
+/* Phone: one column, one screen like an app; only the log (and an opened sheet) scroll. */
 main {
   max-width: 900px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  height: 100dvh; /* one screen, like an app: only the log scrolls */
+  gap: 10px;
+  height: 100dvh;
+}
+#center { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+#side { display: contents; }
+#compare { display: none; }
+#sheet { order: 3; flex-shrink: 0; }
+#sheet[open] #hero { max-height: 45dvh; overflow-y: auto; }
+#sheet summary { cursor: pointer; color: var(--muted); }
+
+/* Wide screens: hero sheet | fight and choices | comparison and log. Each column scrolls on its own. */
+@media (min-width: 1000px) {
+  main {
+    max-width: 1500px;
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(280px, 380px);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 16px;
+  }
+  main > * { min-height: 0; overflow-y: auto; }
+  #sheet summary { display: none; }
+  #sheet[open] #hero { max-height: none; }
+  #center { justify-content: safe center; }
+  #side { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  #compare { display: block; white-space: pre-line; flex-shrink: 0; max-height: 50%; overflow-y: auto; }
+  #compare:not(:empty) { border: 1px solid var(--blue); border-radius: 4px; padding: 8px 10px; }
 }
 
 fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 0 0 8px; padding: 6px 10px; min-width: 0; }
@@ -37,7 +62,8 @@ legend { padding: 0 4px; }
 h1 { font-size: 1rem; margin: 0 0 8px; }
 .unit { margin: 4px 0 8px; }
 .line { display: flex; justify-content: space-between; gap: 8px; }
-.stats { justify-content: flex-start; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+.item { margin: 3px 0; }
 .intent { color: var(--yellow); margin-top: 2px; }
 .track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 2px; }
 .fill { height: 100%; transition: width 0.25s; }
@@ -46,10 +72,9 @@ h1 { font-size: 1rem; margin: 0 0 8px; }
 .fill.blue { background: var(--blue); }
 .fill.cyan { background: var(--cyan); }
 
-#board { flex-shrink: 0; }
 #log { flex: 1; min-height: 4em; white-space: pre-wrap; overflow-y: auto; }
 
-#prompt { flex-shrink: 0; padding-bottom: 8px; }
+#prompt { padding-bottom: 8px; }
 #question:empty { display: none; }
 #options { display: flex; flex-wrap: wrap; gap: 8px; }
 button {
@@ -61,7 +86,10 @@ button {
   padding: 10px 14px;
   min-height: 44px;
   cursor: pointer;
+  white-space: pre-line; /* item choices: description, then what changes */
+  text-align: left;
 }
+button.wide { flex-basis: 100%; }
 button:hover:not(:disabled), button:focus-visible { border-color: var(--blue); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 

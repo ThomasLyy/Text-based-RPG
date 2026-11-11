@@ -2,7 +2,12 @@
 export interface CombatView {
   title: string;
   enemies: { name: string; health: number; maxHealth: number; intent: string; status: string[] }[];
-  player: { health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; gold: number; status: string[]; weapons: string };
+  player: {
+    health: number; maxHealth: number; mana: number; maxMana: number; level: number; xp: number; xpNext: number; gold: number; status: string[];
+    gear: [string, string][]; // [slot, item description or ""]
+    spells: string[];
+    potions: string[];
+  };
   stats: [string, string | number][];
 }
 

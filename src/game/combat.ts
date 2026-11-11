@@ -2,6 +2,8 @@
 import { spellName, type KnownSpell } from "./spell";
 import type { Enemy } from "./enemy";
 import { DEFEND_MANA, SET_BONUS, type Player } from "./player";
+import { describe } from "./items";
+import { sheet, spellLine } from "./reward";
 
 export const GOLD_PER_XP = 1.5;
 
@@ -14,8 +16,6 @@ export async function handleTargeting(question: string, enemies: Enemy[]): Promi
 
 // Built from live state on every render, so the screen never lags behind the game.
 export function combatView(player: Player, enemies: Enemy[], title: string): CombatView {
-  const t = player.stats();
-  const pct = (x: number) => `${Math.round(x * 100)}%`;
   const set = player.setWeight();
   return {
     title,
@@ -28,12 +28,15 @@ export function combatView(player: Player, enemies: Enemy[], title: string): Com
         ...(player.poisoned.turns > 0 ? [`Poisoned: ${player.poisoned.damage} for ${player.poisoned.turns} turn${player.poisoned.turns === 1 ? "" : "s"}`] : []),
         ...(set ? [`${SET_BONUS[set].name}: ${SET_BONUS[set].text}`] : []),
       ],
-      weapons: player.weapons().map(([w]) => `${w.name} ${w.min}–${w.max}`).join(" + "),
+      gear: [
+        ["Main hand", player.mainHand ? describe(player.mainHand) : "Fists"],
+        ["Off hand", player.offHand ? describe(player.offHand) : ""],
+        ...(["head", "chest", "legs", "feet", "amulet", "ring1", "ring2"] as const).map((s): [string, string] => [s === "ring1" || s === "ring2" ? "Ring" : s[0].toUpperCase() + s.slice(1), player.armor[s] ? describe(player.armor[s]) : ""]),
+      ],
+      spells: player.spells.map((k) => spellLine(player, k)),
+      potions: player.potions.map(describe),
     },
-    stats: [
-      ["STR", t.strength], ["AGI", t.agility], ["INT", t.intelligence], ["PER", t.perception],
-      ["Crit", pct(player.critChance())], ["Dodge", pct(player.dodgeChance())], ["Armor", `${player.armorPct()}%`], ["Ward", `${player.wardPct()}%`],
-    ],
+    stats: sheet(player).map(([label, value, unit]) => [label, `${value}${unit}`]), // the same numbers the comparisons use
   };
 }
 

@@ -73,7 +73,7 @@ export interface RunSummary {
 }
 
 export async function gameLoop(player: Player): Promise<RunSummary> {
-  io.snapshot = null; // no board until the first fight (and none left over from the last run)
+  io.snapshot = () => combatView(player, [], "A new run begins"); // the hero sheet from the start, no enemies left over from the last run
   if (!player.mainHand) await chooseStarter(player); // already armed: a test set the build
   let kills = 0;
   let floor = 1;
