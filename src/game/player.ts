@@ -233,9 +233,7 @@ export class Player {
 
   // Each element's signature effect, applied to every target hit.
   cast(k: KnownSpell, targets: Enemy[], enemies: Enemy[]) {
-    const cost = this.spellCost(k);
-    if (cost > this.mana) return io.print("Not enough mana!");
-    this.mana -= cost; // once per cast, however many targets
+    this.mana -= this.spellCost(k); // once per cast, however many targets; the menu only offers spells you can afford
     const sp = k.spell;
     const m = RANK_MULT[k.rank - 1];
     for (const chosen of targets) {
