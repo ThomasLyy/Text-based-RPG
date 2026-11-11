@@ -552,6 +552,34 @@ test("merchant: only affordable items are listed; buying costs gold and equips",
   expect([player.health, player.gold]).toEqual([player.maxHealth, 470]);
 });
 
+test("merchant: after buying a two-hander, the shield in stock is no longer for sale", async () => {
+  const { Player } = await import("./player");
+  const { makeWeapon } = await import("./items");
+  const { runEvent } = await import("./events");
+  const { io } = await play([]);
+  const sword = await family("Sword");
+  let checked = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    vi.spyOn(Math, "random").mockImplementation(seeded(seed));
+    const p = new Player();
+    p.gold = 1000;
+    p.equipWeapon(makeWeapon(sword, 0, "Common"));
+    let bought = false;
+    io.ask = async (_q, o) => {
+      const shield = o.findIndex((x) => x.includes("Shield"));
+      if (bought) expect(shield).toBe(-1);
+      const twoHanded = o.findIndex((x) => x.includes(" 2H "));
+      if (bought || shield < 0 || twoHanded < 0) return o.length - 1; // leave
+      bought = true;
+      checked++;
+      return twoHanded;
+    };
+    await runEvent("merchant", p, 0);
+    expect(p.offHand).toBeNull();
+  }
+  expect(checked).toBeGreaterThan(0); // some seed did stock both a shield and a two-hander
+});
+
 test("forge event upgrades the chosen item; shrine prays a spell up a rank", async () => {
   const { player } = await setup();
   const { runEvent } = await import("./events");

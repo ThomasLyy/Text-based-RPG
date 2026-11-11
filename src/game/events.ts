@@ -1,5 +1,5 @@
 ﻿// Events between fights: 2 per act (after floors 2 and 3), picked from 4 kinds.
-import { describe, price, upgradeQuality, QUALITIES, type Armor, type Stat, type Weapon } from "./items";
+import { describe, price, upgradeQuality, QUALITIES, type Armor, type Item, type Stat, type Weapon } from "./items";
 import { RANK_NAME, spellName } from "./spell";
 import { chooseReward, comparison, rewardOffers, take } from "./reward";
 import { io, randint } from "./io";
@@ -14,7 +14,9 @@ async function merchant(player: Player, act: number) {
   io.print("[panel bold yellow]A wandering merchant spreads out her wares.[/]");
   const stock = rewardOffers(player, act, false, 4);
   for (;;) {
-    const affordable = stock.filter((i) => price(i) <= player.gold);
+    // a purchase can change your hands, so a shield or focus may no longer fit
+    const fits = (i: Item) => i.kind !== "armor" || (i.slot !== "shield" || player.canHoldShield()) && (i.slot !== "focus" || player.canHoldFocus());
+    const affordable = stock.filter((i) => price(i) <= player.gold && fits(i));
     const heal = player.health < player.maxHealth && player.gold >= HEAL_PRICE;
     const options = [...affordable.map((i) => `${describe(i)} — ${comparison(player, i)} — ${price(i)} gold`), ...(heal ? [`Heal to full — ${HEAL_PRICE} gold`] : []), "Leave"];
     const i = await io.ask(`You have ${player.gold} gold`, options);
