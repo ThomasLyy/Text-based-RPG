@@ -1,7 +1,7 @@
 ﻿import { ARMOR_SLOTS, FAMILIES, bonusText, describe, makeArmor, makePotion, makeScroll, makeWeapon, rollQuality, type Item, type Scroll, type Weapon } from "./items";
 import { RANK_NAME, SPELLBOOK_SIZE, SPELLS, spellName } from "./spell";
 import { io, randint } from "./io";
-import type { Player } from "./player";
+import { POUCH_SIZE, type Player } from "./player";
 
 const avg = (w: Weapon | null) => (w ? Math.round((w.min + w.max) / 2) : 0);
 
@@ -39,7 +39,7 @@ export function rewardOffers(player: Player, act: number, boss = false, count = 
 
 // What picking this item would change, shown on its button.
 export function comparison(player: Player, item: Item): string {
-  if (item.kind === "potion") return player.potions.length >= 5 ? "pouch full" : `pouch ${player.potions.length}/5`;
+  if (item.kind === "potion") return player.potions.length >= POUCH_SIZE ? "pouch full" : `pouch ${player.potions.length}/${POUCH_SIZE}`;
   if (item.kind === "spell") {
     const known = player.knows(item.name);
     return known ? `you have rank ${RANK_NAME[known.rank - 1]}` : `spellbook ${player.spells.length}/${SPELLBOOK_SIZE}`;
