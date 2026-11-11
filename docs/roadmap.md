@@ -25,7 +25,7 @@ A turn-based roguelite: 3 acts, a branching map per act, one hero who adapts to 
 ## Git
 
 - `main` is stable. `develop` is where feature work happens. `fix` is for bug fixes, branched from `develop` and merged back, **one commit per fix**.
-- `ui` holds the 8-bit look and the fixed HUD; it is merged into `main`/`develop` only after the full UI review of step 6. Logic work (steps 1 to 4) goes on `develop`, then `develop` is merged into `ui`. Look and screen work (steps 5 and 6) goes on `ui`.
+- `ui` is for look and screen work (steps 5 and 6): branched from `develop`, merged back once the user approves it. Logic work (steps 1 to 4) goes on `develop`.
 - Commit when a coherent piece is done, with a message that says what changed. **Push only when the user says so.**
 
 ## How to run a step
@@ -46,7 +46,7 @@ A step is done when every "Done when" line of that step is true. Stop after one 
 - Variety: 9 weapon families, armor and sets, affixes, 18 spells, potions, rewards, 4 events, gold, the merchant (with warnings before losing gear or a spell).
 - A branching map per act (Fight, Elite, Event, Shop, Rest), clicked on directly; 33 floors; no healing between fights.
 - Before/after comparisons on every choice; hero sheet.
-- Screen: a room box titled with the act and the room ("The Sewers - Fight") that only holds the current room, with Continue between rooms. On `ui`: the 8-bit look and a fixed HUD on wide screens.
+- Screen: a room box titled with the act and the room ("The Sewers - Fight") that only holds the current room, with Continue between rooms. The 8-bit look and a fixed HUD on wide screens.
 - Balance bots on every test run (win rate, build parity, fight length).
 
 ## 1. Enemies
@@ -118,7 +118,7 @@ Done when: a test checks that every enemy, boss, weapon family, element and room
 
 On `ui`.
 
-- **Full UI review (mandatory, first):** go through every screen (weapon choice, map, fight, rewards, shop, rest, events, level-up, end of run, home, store) at computer width and at phone width, with screenshots, and judge it as a game HUD: where the eye goes, what moves, what is hard to read. Check a minimum text size on phones, and that each enemy intent can be told apart without its color (a word or an icon), for colorblind players. Write the findings as a list for the user, fix the ones they approve, then merge `ui`.
+- **Full UI review (mandatory, first):** go through every screen (weapon choice, map, fight, rewards, shop, rest, events, level-up, end of run, home, store) at computer width and at phone width, with screenshots, and judge it as a game HUD: where the eye goes, what moves, what is hard to read. Check a minimum text size on phones, and that each enemy intent can be told apart without its color (a word or an icon), for colorblind players. Write the findings as a list for the user and fix the ones they approve. (The 8-bit look and the fixed HUD were merged before this review, at the user's request.)
 - Phone layout: a fixed HUD on small screens too (for example tabs for Map, Hero and Gear, with the room, enemies and choices always visible). Today it is one scrolling column.
 - The comparison box shows only the stats that change, so it fits without scrolling.
 - Map: the boss tile shows as "current" when the hero is in it; the next floor's rooms show as reachable only once the current room is finished.
