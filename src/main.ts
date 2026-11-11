@@ -72,7 +72,7 @@ async function runForever() {
   for (;;) {
     $("log").replaceChildren();
     $("board").replaceChildren();
-    await gameLoop(new Player({ name: "Hero" }));
+    await gameLoop(new Player());
     await io.ask("Run over", ["New run"]);
   }
 }

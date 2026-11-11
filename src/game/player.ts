@@ -25,7 +25,6 @@ const UNARMED: Weapon = { kind: "weapon", name: "Fists", family: FISTS, quality:
 const isWeapon = (i: Item | null | undefined): i is Weapon => i?.kind === "weapon";
 
 export class Player {
-  name = "";
   level = 1;
   experience = 0;
   xpToNextLevel = 20; // experience counts toward the next level and resets on level-up
@@ -44,10 +43,6 @@ export class Player {
   armor: Partial<Record<ArmorKey, Armor>> = {};
   potions: Potion[] = [];
   spells: KnownSpell[] = [];
-
-  constructor(f: Partial<Pick<Player, "name">> = {}) {
-    Object.assign(this, f);
-  }
 
   // --- derived stats ---
 
