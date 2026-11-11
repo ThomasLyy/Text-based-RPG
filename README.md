@@ -74,7 +74,7 @@ Everything left before the game is complete, in the agreed order. Items marked *
 
 ### 6. Screen and controls
 
-* Merge the `ui` branch (8-bit look, fixed HUD) once checked in the browser.
+* **Full UI review (mandatory):** go through every screen (weapon choice, map, fight, rewards, shop, rest, events, level-up, death and victory) on a computer and on a phone, with screenshots, and judge it as a game HUD: where the eye goes, what moves, what is hard to read. Fix what it finds before merging the `ui` branch (8-bit look, fixed HUD).
 * Phone layout: a fixed HUD for small screens too (for example tabs for Map, Hero and Gear, with the room, enemies and choices always visible). Today it is one scrolling column.
 * Bundle the pixel fonts with the game (today they load from Google Fonts, so the Android app without internet falls back to a plain font).
 * A red flash when the hero is hit.
