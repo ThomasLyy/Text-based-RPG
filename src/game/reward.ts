@@ -67,21 +67,23 @@ async function learn(player: Player, scroll: Scroll) {
   io.print(`You learn ${scroll.name}.`);
 }
 
-export async function take(player: Player, item: Item) {
+// A one-hander next to a one-hander: ask which hand it goes in.
+export async function askHand(player: Player, item: Weapon): Promise<"main" | "off"> {
+  if (item.family.hands !== 1 || player.mainHand?.family.hands !== 1) return "main";
+  const off = player.offHand;
+  const hand = await io.ask(`Equip the ${item.name} in`, [
+    `Main hand (replaces ${player.mainHand.name})`,
+    `Off hand (${off ? `replaces ${off.name}` : "dual-wield"})`,
+  ]);
+  return hand === 0 ? "main" : "off";
+}
+
+export async function take(player: Player, item: Item, hand?: "main" | "off") {
   if (item.kind === "potion") {
     return io.print(player.addPotion(item) ? `You pack the ${item.name}.` : "Your pouch is full. You leave the potion behind.");
   }
   if (item.kind === "spell") return learn(player, item);
-  let removed: Item[];
-  if (item.kind === "armor") removed = player.equipArmor(item);
-  else if (item.family.hands === 1 && player.mainHand?.family.hands === 1) {
-    const off = player.offHand;
-    const hand = await io.ask(`Equip the ${item.name} in`, [
-      `Main hand (replaces ${player.mainHand.name})`,
-      `Off hand (${off ? `replaces ${off.name}` : "dual-wield"})`,
-    ]);
-    removed = player.equipWeapon(item, hand === 0 ? "main" : "off");
-  } else removed = player.equipWeapon(item);
+  const removed = item.kind === "armor" ? player.equipArmor(item) : player.equipWeapon(item, hand ?? (await askHand(player, item)));
   io.print(`You equip the ${item.name}.${removed.length ? ` (${removed.map((r) => r.name).join(", ")} left behind)` : ""}`);
 }
 

@@ -1,7 +1,7 @@
 ﻿// Events between fights: 2 per act (after floors 2 and 3), picked from 4 kinds.
 import { describe, price, upgradeQuality, QUALITIES, type Armor, type Stat, type Weapon } from "./items";
 import { RANK_NAME, spellName } from "./spell";
-import { chooseReward, comparison, rewardOffers, take } from "./reward";
+import { askHand, chooseReward, comparison, rewardOffers, take } from "./reward";
 import { io, randint } from "./io";
 import { POUCH_SIZE, type Player } from "./player";
 
@@ -21,9 +21,15 @@ async function merchant(player: Player, act: number) {
     const i = await io.ask(`You have ${player.gold} gold`, options);
     if (i < affordable.length) {
       const item = affordable[i];
+      const hand = item.kind === "weapon" ? await askHand(player, item) : "main";
+      const lost = item.kind === "weapon" || item.kind === "armor" ? player.wouldRemove(item, hand) : [];
+      if (lost.length) {
+        const names = new Intl.ListFormat("en").format(lost.map((l) => `your ${l.name}`));
+        if ((await io.ask(`"Oh, if you buy this, you'll lose ${names}. Are you sure?"`, ["Buy it", "Never mind"])) === 1) continue;
+      }
       player.gold -= price(item);
       stock.splice(stock.indexOf(item), 1);
-      await take(player, item);
+      await take(player, item, hand);
     } else if (heal && i === affordable.length) {
       player.gold -= HEAL_PRICE;
       player.health = player.maxHealth;

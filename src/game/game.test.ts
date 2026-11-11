@@ -288,6 +288,22 @@ test("hands: 2H clears the off hand; shields need a STR one-hander; a focus need
   expect(player.canHoldFocus()).toBe(true);
 });
 
+test("a shield or focus that does not fit pushes the weapon out; wouldRemove only previews", async () => {
+  const { player } = await setup();
+  const { makeWeapon, makeArmor } = await import("./items");
+  await play([]);
+  const hammer = makeWeapon(await family("Hammer"), 0, "Common");
+  player.equipWeapon(hammer);
+  const shield = makeArmor("shield", 0, "Common");
+  expect(player.wouldRemove(shield).map((r) => r.name)).toEqual(["Iron Hammer"]);
+  expect([player.mainHand, player.offHand]).toEqual([hammer, null]); // nothing changed
+  player.equipArmor(shield);
+  expect([player.mainHand, player.offHand]).toEqual([null, shield]); // fists and shield
+  player.equipWeapon(makeWeapon(await family("Staff"), 0, "Common"));
+  expect(player.equipArmor(makeArmor("focus", 0, "Common")).map((r) => r.name)).toEqual(["Ashwood Staff"]);
+  expect(player.mainHand).toBeNull();
+});
+
 test("traits: cleave splashes, crush hits bosses harder, stagger cancels the next move", async () => {
   const { player, Enemy } = await setup();
   const { makeWeapon } = await import("./items");
@@ -588,6 +604,36 @@ test("merchant: only affordable items are listed; buying costs gold and equips",
   await play(["Heal", "Leave"]);
   await runEvent("merchant", player, 0);
   expect([player.health, player.gold]).toEqual([player.maxHealth, 470]);
+});
+
+test("merchant: warns before a purchase that makes you drop gear; Never mind keeps your gold", async () => {
+  const { Player } = await import("./player");
+  const { ARMOR_SLOTS, makeArmor, makeWeapon } = await import("./items");
+  const { runEvent } = await import("./events");
+  const { io } = await play([]);
+  const sword = await family("Sword");
+  vi.spyOn(Math, "random").mockImplementation(seeded(1));
+  const p = new Player();
+  p.equipWeapon(makeWeapon(sword, 0, "Common"));
+  for (const slot of [...ARMOR_SLOTS, "ring" as const]) if (slot !== "focus") p.equipArmor(makeArmor(slot, 0, "Common")); // every slot full
+  p.gold = 1000;
+  const questions: string[] = [];
+  let pick = -1;
+  io.ask = async (q, o) => {
+    questions.push(q);
+    if (q.startsWith("Equip the")) return 0;
+    if (q.startsWith('"Oh, if you buy this')) return questions.filter((x) => x === q).length === 1 ? 1 : 0; // Never mind, then Buy it
+    if (pick === -1) pick = o.findIndex((x) => / — (avg|replaces)/.test(x)); // first piece of gear
+    expect(pick).toBeGreaterThanOrEqual(0);
+    const visits = questions.filter((x) => x.startsWith("You have")).length;
+    return visits <= 2 ? pick : o.length - 1; // try it twice, then leave
+  };
+  await runEvent("merchant", p, 0);
+  const warnings = questions.filter((q) => q.startsWith('"Oh, if you buy this'));
+  expect(warnings).toHaveLength(2);
+  expect(warnings[0]).toMatch(/you'll lose your .+\. Are you sure\?"$/);
+  expect(questions.filter((q) => q.startsWith("You have"))[1]).toBe("You have 1000 gold"); // Never mind cost nothing
+  expect(p.gold).toBeLessThan(1000);
 });
 
 test("merchant: no potions for sale when the pouch is full", async () => {

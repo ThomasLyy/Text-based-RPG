@@ -116,11 +116,13 @@ export class Player {
 
   // --- equipment. Each equip returns what it took off, so callers can report it. ---
 
+  // bare fists can hold either, so a shield or focus that does not fit pushes the weapon out instead
   canHoldShield() {
-    return this.mainHand?.family.hands === 1 && this.mainHand.family.stat === "strength";
+    const f = (this.mainHand ?? UNARMED).family;
+    return f.hands === 1 && f.stat === "strength";
   }
   canHoldFocus() {
-    return this.mainHand?.family.trait === "arcane";
+    return !this.mainHand || this.mainHand.family.trait === "arcane";
   }
 
   equipWeapon(w: Weapon, hand: "main" | "off" = "main"): Item[] {
@@ -149,6 +151,10 @@ export class Player {
     const removed: (Item | null)[] = [];
     if (a.slot === "shield" || a.slot === "focus") {
       removed.push(this.offHand);
+      if (!(a.slot === "shield" ? this.canHoldShield() : this.canHoldFocus())) {
+        removed.push(this.mainHand);
+        this.mainHand = null;
+      }
       this.offHand = a;
     } else {
       const key: ArmorKey = a.slot !== "ring" ? a.slot : !this.armor.ring1 ? "ring1" : !this.armor.ring2 ? "ring2" : "ring1";
@@ -156,6 +162,14 @@ export class Player {
       this.armor[key] = a;
     }
     return this.settle(removed);
+  }
+
+  // What equipping would take off, without changing anything: a dry run of the real equip, then a restore.
+  wouldRemove(item: Weapon | Armor, hand: "main" | "off" = "main"): Item[] {
+    const saved = { mainHand: this.mainHand, offHand: this.offHand, armor: { ...this.armor }, health: this.health, mana: this.mana };
+    const removed = item.kind === "weapon" ? this.equipWeapon(item, hand) : this.equipArmor(item);
+    Object.assign(this, saved);
+    return removed;
   }
 
   armorIn(slot: Armor["slot"]): Armor | undefined {
