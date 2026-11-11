@@ -19,6 +19,7 @@ Designed for runs of about 20 minutes (not yet timed with real players): 3 acts 
 * **Events:** shrine, stat trial, Strange brew (+3 or -2 to a random stat) and Locked chest (gold and a reward, or a trap). Enemies drop gold.
 * **Enemies:** 4 per act, fitting the place: vermin, outlaws and a drowned cult in The Sewers; the restless dead and their keepers in The Catacombs; ash, chains and fire in Hell.
 * **Bosses:** each act has 3 (for example the Gutter King, the Brood Mother and the Drowned Prophet in The Sewers) and a run meets one of them, picked at random. Bosses enrage from their 8th turn.
+* **End of run:** on death or victory, a screen lists the damage you dealt by type (each weapon family, each element, burn, thorns), your best weapon and your best spell, and what killed you.
 * **The room box:** titled with the act and the room ("The Sewers - Fight"), it shows only what happened in the current room; Continue moves on and clears it.
 
 ## Balance

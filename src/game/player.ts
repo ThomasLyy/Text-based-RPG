@@ -38,6 +38,8 @@ export class Player {
   poisoned = { damage: 0, turns: 0, source: "" };
   lastHitBy = "";
   gold = 0;
+  // Damage dealt this run, by source: a weapon family, an element, "spell:<name>", "Burn", "Thorns". A spell counts under its element and its name.
+  dealt: Record<string, number> = {};
 
   mainHand: Weapon | null = null;
   offHand: Weapon | Armor | null = null; // second 1H weapon, shield (with a STR 1H weapon) or focus (with a wand)
@@ -228,10 +230,17 @@ export class Player {
   }
 
   // Applies crit and curse, then Vampirism.
-  private strike(target: Enemy, base: number, extraCrit = 0) {
+  // Takes health off an enemy and counts what was really lost (never more than it had) under each source.
+  hurt(target: Enemy, amount: number, ...sources: string[]) {
+    const lost = Math.min(target.health, amount);
+    target.health -= lost;
+    for (const s of sources) this.dealt[s] = (this.dealt[s] ?? 0) + lost;
+  }
+
+  private strike(target: Enemy, base: number, sources: string[], extraCrit = 0) {
     const crit = Math.random() < this.critChance() + extraCrit;
     const damage = Math.max(1, Math.round(base * (crit ? this.critMultiplier() : 1) * (target.cursed > 0 ? CURSE : 1)));
-    target.health = Math.max(0, target.health - damage);
+    this.hurt(target, damage, ...sources);
     if (this.affixes("vampirism")) this.heal(damage * 0.05 * this.affixes("vampirism"));
     return { damage, crit };
   }
@@ -239,13 +248,13 @@ export class Player {
   // damage = roll(weapon) × (1 + grade × (stat − 10)) × hand power, then traits
   private weaponHit(w: Weapon, target: Enemy, power: number, enemies: Enemy[]) {
     const crush = w.family.trait === "crush" && target.boss ? 1.3 : 1;
-    const { damage, crit } = this.strike(target, randint(w.min, w.max) * this.weaponScale(w) * power * crush);
+    const { damage, crit } = this.strike(target, randint(w.min, w.max) * this.weaponScale(w) * power * crush, [w.family.name]);
     io.print(`${crit ? "[bold yellow]Critical![/] " : ""}You hit the ${target.name} for ${damage} damage!`);
     if (w.family.trait === "cleave") {
       const other = enemies.find((e) => e !== target && e.health > 0);
       if (other) {
         const splash = Math.max(1, Math.round(damage * 0.3));
-        other.health = Math.max(0, other.health - splash);
+        this.hurt(other, splash, w.family.name);
         io.print(`Your cleave hits the ${other.name} for ${splash}.`);
       }
     }
@@ -274,7 +283,8 @@ export class Player {
       // a target can die before the spell goes off (thorns): a single-target spell moves on, like an attack
       const target = chosen.health > 0 ? chosen : targets.length === 1 ? enemies.find((e) => e.health > 0) : undefined;
       if (!target) continue;
-      const { damage, crit } = this.strike(target, this.spellDamage(k),sp.element === "Lightning" ? OVERCHARGE : 0);
+      const sources = [sp.element, `spell:${sp.name}`];
+      const { damage, crit } = this.strike(target, this.spellDamage(k), sources, sp.element === "Lightning" ? OVERCHARGE : 0);
       io.print(`${crit ? "[bold yellow]Critical![/] " : ""}Your ${spellName(k)} hits the ${target.name} for ${damage}!`);
       if (sp.element === "Fire" && target.health > 0) {
         target.burn = { damage: target.burn.damage + Math.round(sp.effect * m), turns: BURN_TURNS };
@@ -285,7 +295,7 @@ export class Player {
       } else if (sp.element === "Lightning" && sp.effect) {
         for (const other of enemies.filter((e) => e !== target && e.health > 0)) {
           const chain = Math.max(1, Math.round(damage * sp.effect));
-          other.health = Math.max(0, other.health - chain);
+          this.hurt(other, chain, ...sources);
           io.print(`The lightning chains to the ${other.name} for ${chain}.`);
         }
       } else if (sp.element === "Light") this.heal(damage * sp.effect);
@@ -305,7 +315,7 @@ export class Player {
     const thorns = this.affixes("thorns");
     if (thorns && source.health > 0) {
       const back = Math.max(1, Math.round(damage * 0.2 * thorns));
-      source.health = Math.max(0, source.health - back);
+      this.hurt(source, back, "Thorns");
       io.print(`Thorns hit the ${source.name} for ${back}.`);
     }
   }

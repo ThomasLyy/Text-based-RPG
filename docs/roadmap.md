@@ -43,7 +43,9 @@ A turn-based roguelite: 3 acts, a branching map per act, one hero who adapts to 
 7. **Check:** `npm test` and `npm run build` both pass, and for anything visible, run `npm run dev` and look at it in a browser at computer width and at phone width (360 px). Report the bots' numbers next to the baseline; do not re-tune before step 7 (see **Balance** below).
 8. **Close:** update the README's "The game" section to describe the new behaviour, move the step's items into **Done** below (one line), commit, and tell the user what was done and what is left.
 
-A step is done when every "Done when" line of that step is true. Stop after one step and wait for the user before starting the next.
+A step is done when every "Done when" line of that step is true.
+
+**Changed by the user on 2026-11-11: do not stop between steps.** Build every step in order. Where this file says to ask, wait or get approval, make the call yourself, build on it, and write it in `docs/questions.md` (what you decided, or what only the user can check or do). The user goes through that file at the end. Specs are still written, with "My calls" in place of an approval. Things that cannot be undone or that leave the machine (pushing, publishing, the Play Store) are never done without the user: they go in `docs/questions.md` too.
 
 ## Balance
 
@@ -73,6 +75,8 @@ Numbers at 600 runs, 2026-11-11:
 - Screen: a room box titled with the act and the room ("The Sewers - Fight") that only holds the current room, with Continue between rooms. The 8-bit look and a fixed HUD on wide screens.
 - Balance bots on every test run (win rate, build parity, fight length).
 - Step 1, enemies: 4 enemies per act with lore, act 3's placeholders replaced, 3 bosses per act with one picked at random per run (spec: `docs/superpowers/specs/2026-11-11-enemies-design.md`, which also records each enemy's element for step 4). Enemy behaviours are to be revisited later, at the user's request.
+
+- Step 2, end-of-run screen: the run counts damage dealt per weapon family, element, spell, burn and thorns (`Player.dealt`); the Victory or Defeat screen lists it with the best weapon and spell.
 
 ## 1. Enemies (done, kept for reference)
 
@@ -112,7 +116,7 @@ Open questions: the lore of each act; the enemy and boss names; whether to add a
 
 Done when: every act has at least 4 non-placeholder enemies and 3 bosses; a test shows the boss is picked among the act's 3; the victory line names the boss that was beaten; `npm test` passes apart from the parity check (see **Balance**).
 
-## 2. End-of-run screen
+## 2. End-of-run screen (done, kept for reference)
 
 Shown on death and on victory.
 

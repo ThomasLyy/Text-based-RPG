@@ -67,6 +67,22 @@ export interface RunSummary {
   level: number;
   kills: number;
   killedBy: string;
+  dealt: Record<string, number>; // see Player.dealt
+}
+
+// The end-of-run lines about damage: the total, one line per type (weapon family, element, Burn, Thorns), then the best weapon and spell.
+export function damageReport(dealt: Record<string, number>): string[] {
+  const sorted = Object.entries(dealt).sort((a, b) => b[1] - a[1]);
+  const spells = sorted.filter(([k]) => k.startsWith("spell:"));
+  const types = sorted.filter(([k]) => !k.startsWith("spell:"));
+  const weapon = types.find(([k]) => k === "Fists" || FAMILIES.some((f) => f.name === k));
+  if (!types.length) return ["No damage dealt."];
+  return [
+    `[bold]Damage dealt: ${types.reduce((sum, [, v]) => sum + v, 0)}[/]`,
+    ...types.map(([k, v]) => `${k}: ${v}`),
+    ...(weapon ? [`Best weapon: [yellow]${weapon[0]}[/] (${weapon[1]})`] : []),
+    ...(spells.length ? [`Best spell: [cyan]${spells[0][0].slice(6)}[/] (${spells[0][1]})`] : []),
+  ];
 }
 
 const LANE_NAME = ["far left", "left", "right", "far right"];
@@ -150,10 +166,15 @@ export async function gameLoop(player: Player): Promise<RunSummary> {
   }
 
   const won = !dead;
-  const summary = { won, floor, level: player.level, kills, killedBy: won ? "" : player.lastHitBy };
+  const summary: RunSummary = { won, floor, level: player.level, kills, killedBy: won ? "" : player.lastHitBy, dealt: player.dealt };
   const actName = ACTS[Math.floor((floor - 1) / (ROOMS_PER_ACT + 1))].name;
+  // the end-of-run screen: its own room box, nothing left over from the last fight
+  io.clear();
+  enemies = [];
+  title = won ? "Victory" : "Defeat";
   if (won) io.print(`[panel bold green]The ${lastBoss} falls. You have survived all three acts![/]`);
   else io.print(`[panel bold red]You died on floor ${floor} of ${FLOORS} (${actName}), slain by the ${summary.killedBy}.[/]`);
   io.print(`Level ${summary.level} · ${kills} enemies defeated.`);
+  for (const line of damageReport(player.dealt)) io.print(line);
   return summary;
 }

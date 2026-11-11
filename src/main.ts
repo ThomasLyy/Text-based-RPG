@@ -148,7 +148,7 @@ async function runForever() {
   for (;;) {
     for (const id of ["title", "log", "board", "hero", "gear", "map"]) $(id).replaceChildren();
     await gameLoop(new Player());
-    await io.ask("Run over", ["New run"]);
+    await io.ask("Run over", ["Continue"]);
   }
 }
 

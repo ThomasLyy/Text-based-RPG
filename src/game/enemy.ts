@@ -100,14 +100,14 @@ export class Enemy {
       this.bonus += i.value;
       io.print(`The ${this.name} uses ${i.name}: its attacks now deal +${this.bonus} damage.`);
     }
-    this.endOfTurn();
+    this.endOfTurn(player);
   }
 
   // Effects count the enemy's own turns, so one cast after it moved still lasts through its next move.
-  private endOfTurn() {
+  private endOfTurn(player: Player) {
     if (this.health <= 0) return;
     if (this.burn.turns > 0) {
-      this.health = Math.max(0, this.health - this.burn.damage);
+      player.hurt(this, this.burn.damage, "Burn");
       this.burn.turns--;
       io.print(`The ${this.name} burns for ${this.burn.damage}.`);
     }

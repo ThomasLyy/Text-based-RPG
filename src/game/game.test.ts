@@ -60,7 +60,27 @@ test("smoke: a seeded run plays to the end (win or game over) without crashing",
   p.equipWeapon((await import("./items")).makeWeapon(await family("Hammer"), 2, "Epic")); // strong enough to walk several rooms
   const summary = await gameLoop(p);
   expect(summary.floor).toBeGreaterThan(3);
-  expect(log.at(-1)).toMatch(/^Level \d+ · \d+ enemies defeated\.$/);
+  expect(log.some((l) => /^Level \d+ · \d+ enemies defeated\.$/.test(l))).toBe(true);
+  expect(log.some((l) => l.startsWith("Best weapon: [yellow]Hammer[/]"))).toBe(true); // the end-of-run screen
+  expect(summary.dealt.Hammer).toBeGreaterThan(0);
+});
+
+test("run stats: damage is counted per weapon family, element, spell and burn, never more than the enemy had", async () => {
+  const { player, Enemy } = await setup();
+  const { makeWeapon } = await import("./items");
+  const { damageReport } = await import("./game");
+  rolls(); // 0.5 everywhere: no crit, no dodge, a Common Sword (9–13) rolls 11
+  player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common"));
+  player.spells = [await known("Fireball")];
+  const foe = new Enemy(dummy({ maxHealth: 35 }));
+  player.attack(foe, [foe]); // 11
+  player.cast(player.spells[0], [foe], [foe]); // 13, and a burn of 4 per turn
+  foe.act(player, [foe]); // its turn ends: burns for 4
+  expect(player.dealt).toEqual({ Sword: 11, Fire: 13, "spell:Fireball": 13, Burn: 4 });
+  player.attack(foe, [foe]); // 7 health left: only 7 counts
+  expect(foe.health).toBe(0);
+  expect(damageReport(player.dealt)).toEqual(["[bold]Damage dealt: 35[/]", "Sword: 18", "Fire: 13", "Burn: 4", "Best weapon: [yellow]Sword[/] (18)", "Best spell: [cyan]Fireball[/] (13)"]);
+  expect(damageReport({})).toEqual(["No damage dealt."]);
 });
 
 test("death screen names the floor and the killer (here: poison)", async () => {
