@@ -95,6 +95,7 @@ io.ask = (question, options, disabled, details) =>
         b.onmouseenter = b.onfocus = () => showCompare(details?.[i]);
         b.onmouseleave = b.onblur = () => showCompare();
         b.onclick = () => {
+          sfx("click");
           $("question").textContent = "";
           $("options").replaceChildren();
           showCompare();
@@ -299,7 +300,10 @@ async function runForever() {
     }
     if (!save.run) {
       io.snapshot = null; // no hero on the home screen
-      $("title").textContent = "Home";
+      $("title").textContent = "8-bit Descent";
+      // the home screen shows who waits at the end of each act
+      $("board").classList.remove("idle");
+      $("board").innerHTML = `<fieldset><legend>What waits below</legend><div class="parade">${ACTS.flatMap((a) => a.bosses).map((b) => svg(enemySprite(b.name)!, 64)).join("")}</div></fieldset>`;
       $("status").textContent = "";
       music(null);
       let ash = save.profile.ash;

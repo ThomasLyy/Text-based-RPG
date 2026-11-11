@@ -32,6 +32,29 @@ body {
   font-smooth: never;
 }
 
+/* An old screen: a 4-pixel checkerboard behind everything, and scanlines over everything. Neither moves. */
+body { background-image: conic-gradient(#161326 25%, transparent 0 50%, #161326 0 75%, transparent 0); background-size: 8px 8px; }
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, rgb(0 0 0 / 0.16) 2px 4px);
+}
+
+/* The title on the home screen: big pixel letters with a hard two-colour shadow. */
+.logo {
+  display: block;
+  font: clamp(22px, 6vw, 44px) / 1.3 var(--pixel);
+  text-transform: uppercase;
+  color: var(--yellow);
+  text-shadow: 4px 4px 0 var(--red), 8px 8px 0 #3a1030;
+  padding: 14px 0 18px;
+}
+.parade { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; }
+.parade .sprite { width: min(64px, 14vw); height: auto; }
+
 /* Phone, a fixed HUD that never scrolls as a page: a status line with tabs, one panel (the room, the map, the
    hero or the gear), then the enemies and the choices, always visible. Each part scrolls inside itself if it
    must. The comparison panel needs hover, so it only exists on wide screens. */
@@ -101,7 +124,7 @@ kbd { display: none; }
 }
 
 /* Boxes: a hard 3px frame; the title is an inverted tab sitting on it. */
-fieldset { border: 3px solid var(--border); background: var(--panel); margin: 0 0 8px; padding: 8px 12px 10px; min-width: 0; }
+fieldset { border: 4px solid var(--border); background: var(--panel); margin: 0 0 8px; padding: 8px 12px 10px; min-width: 0; box-shadow: 4px 4px 0 #07060c; }
 legend {
   font: 10px/1 var(--pixel);
   text-transform: uppercase;

@@ -8,7 +8,8 @@ export async function home(p: Profile, o: Options, changed: () => void): Promise
   let lvl = p.level;
   for (;;) {
     io.clear();
-    io.print("[panel bold]Home[/]");
+    io.print("[logo]8-bit Descent[/]");
+    io.print("[dim]Three acts down. One hero. No way back up.[/]");
     io.print(`${CURRENCY}: [yellow]${p.ash}[/]`);
     const wins = Object.entries(p.wins).map(([l, n]) => `level ${l}: ${n}`);
     io.print(p.bestFloor ? `Furthest floor: ${p.bestFloor} · Wins: ${wins.join(", ") || "none yet"}` : "No run yet.");

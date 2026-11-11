@@ -1,74 +1,55 @@
 # Questions and calls waiting for the user
 
-On 2026-11-11 the user asked the agent to build every remaining step without stopping, and to keep here everything that needs an answer or a validation. Each entry says what was done meanwhile, so the game is never blocked. Answer them in order at the end; the agent then applies the answers and deletes the entry.
+The agent builds without stopping and keeps here everything that needs an answer or a validation. Each entry says what was done meanwhile. Kinds: **Question** (the agent could not decide), **Call** (the agent decided; say if you want it changed), **Check** (only you can verify it), **Yours** (only you can do it). An entry is deleted once answered and applied.
 
-Kinds: **Question** (the agent could not decide), **Call** (the agent decided; say if you want it changed), **Check** (only you can verify it), **Yours** (only you can do it).
+## Answered on 2026-11-11 (applied, kept here until you have seen the result)
 
-## Git
+- **Git:** push and merge only when everything is validated. Nothing is pushed; `main` is untouched.
+- **Training boost:** now +1 point at every level-up per level (8 points per level-up at level 5 of the boost).
+- **Level 10:** it was too hard at 22%. With everything bought the bots now win about 50% (Strength 50%, Agility 50%, Intelligence 62%).
+- **Parity:** 10 points on a new profile at level 1 (measured 8.3). At level 10 the gap measures 11 to 13 points, so level 10 uses your fallback of 15.
+- **Name:** 8-bit Descent, in the page title, the home screen, the web manifest and `package.json`.
+- **Web only:** the Android project, Capacitor and the Play Store drafts are removed. They are in the git history before commit `c2dc651`.
+- **Storage:** when Android comes back, use the safer option (`@capacitor/preferences`). On the web the game uses `localStorage`.
 
-- **Yours:** nothing is pushed. `develop` holds steps 1 to 4 and the bots' part of 7; `ui` holds steps 5, 6 and 8 on top of them. `main` is untouched. Say when to push, when to merge `ui` into `develop`, and when to merge `develop` into `main`.
-- **Call:** step 8's files (offline version, icon, store texts) were made on `ui`, because they touch `index.html` and the screens.
+## Balance
 
-## Process
+- **Call:** to reach level-10 parity, difficulty levels now add health and only half as much damage (level 10: twice the health, 50% harder hits). Fights get longer at high levels, not deadlier.
+- **Call:** armored enemies take 10% less from weapons (it was 30%). At 30% Strength and Agility could not keep up at level 10.
+- **Call:** Staff gives +10% spell power (it was 20%); the Focus boost gives +6 mana per level (it was 10); Bow and Wand hit a little harder.
+- **Question:** parity is checked by the tests at level 1 (new profile) and level 10 (everything bought) only. Level 5 with everything bought was measured once: 90%, 94%, 90%. Levels 2 to 9 with partly-bought profiles are not measured, because the agent does not know what a typical profile is at each level. Is checking the two ends enough?
+- **Question:** with everything bought, level 1 is won 95% of the time and level 5 about 90%. Is that the reward you want for a maxed profile, or should the middle levels bite harder?
+- **Yours:** playtests with real players; `docs/playtest.md` says what to time and ask.
 
-- **Call:** small steps (2, 7) have no spec file; their decisions are listed here. Steps 3 to 6 each have a spec in `docs/superpowers/specs/`.
+## The look and the sound (steps 5 and 6)
 
-## Step 2: end-of-run screen
+In plain words: the agent drew and composed these without being able to judge them. Three things need your eyes and ears.
 
-- **Call:** damage counts what the enemy really lost: a 30-damage hit on an enemy with 7 health counts 7.
-- **Call:** "best weapon" is a weapon family (Sword), not one item, because items are replaced during a run. "Best spell" is a spell by name.
-- **Call:** Thorns has its own line next to Burn. A fist fight counts as "Fists".
-- **Call:** the screen is the room box, titled "Victory" or "Defeat", with a Continue button.
+- **Check, sprites:** start the game (`npm run dev`). The home screen shows the 9 bosses in a row; fights show the enemies. Seven enemies share one hooded shape with different colours. Which ones do you want redrawn as their own creature? Do the weapon, element and room icons read at a glance?
+- **Check, sound:** click anything once, then play a fight. Do the hit, critical, level-up and click sounds fit? Each act has its own short music loop: is any of them tiring, too loud or wrong for its act? The agent cannot hear, so this has never been listened to.
+- **Check, screens not seen by the agent:** shop, rest, events, level-up, end of run, settings. Play through them once on a computer and once on a phone.
+- **Question, "big 8-bit vibe":** the first pass added a big pixel title with a two-colour shadow, the row of bosses on the home screen, scanlines over the whole screen, a checkered background, thicker frames with hard shadows, and a blip on every button. What else do you picture: a full title screen with "Press Start", larger sprites, a smaller colour palette, text typed out letter by letter?
+- **Question:** small things the agent noticed and left: text looks small on very wide monitors; map labels are about 8 px on a phone; each choice is echoed in the log ("> Attack"); the box title stays "8-bit Descent" inside the store and the settings.
+- **Call:** music and effects are made in code, so there is no licence to find and nothing to credit.
+- **Call:** scanlines are always on. Say if you want them in the settings.
 
-## Steps 3 and 4: saving, store, difficulty levels
+## The name
 
-The spec is `docs/superpowers/specs/2026-11-11-saving-store-levels-design.md`; it has the full lists and tables.
+- **Check:** no game called "8-bit Descent" turned up in a web search. "Descent" alone is a well-known 1995 shooter series and there are small "Descent" games on itch.io. Different genre, and the full name is not taken as far as the agent could see; your call under your "original names" rule.
 
-- **Call:** saving works by replay (seed and answers), as recommended. An update that changes the rules ends a run in progress and pays it for the floor it reached.
-- **Call:** the currency is called Ash.
-- **Call:** the 11 unlocks and their prices: Hammers, Bows and Staves (40 each), the six powerful spells (30 each), the Strange brew and Locked chest events (25 each).
-- **Call:** the 5 boosts: Vigor, Focus, Purse, Might, Training, at 20 / 40 / 70 / 110 / 160 Ash per level.
-- **Question:** your example boost was "+1 point per level-up" per level. With 5 levels that is 8 points per level-up in place of 3, which I judged too strong, so Training gives +1 point at the start of a run per level. Do you want the per-level-up version, perhaps with fewer levels?
-- **Call:** no enemies are sold in the store, because each act has exactly 4. Selling enemies needs a 5th and 6th enemy per act.
-- **Call:** the table of what each difficulty level adds (see the spec).
+## Hosting
+
+- **Question:** the agent recommends GitHub Pages: free, HTTPS (needed for the offline install), and the code is already on GitHub. It publishes on its own each time `main` is pushed, through one workflow file. It needs the repository to be public, or a paid GitHub plan for a private one. If the repository must stay private, Cloudflare Pages is the free alternative. itch.io is worth adding later as the place players find the game. Which do you want? The agent sets it up on your yes.
+
+## Steps 2, 3, 4: calls you have not commented on
+
+- **Call:** damage on the end screen counts what the enemy really lost; "best weapon" is a weapon family; Thorns has its own line.
+- **Call:** the currency is called Ash. Unlocks: Hammers, Bows and Staves (40 each), the six powerful spells (30 each), two events (25 each). Boosts cost 20 / 40 / 70 / 110 / 160 Ash per level.
+- **Call:** no enemies are sold in the store, because each act has exactly 4.
 - **Call:** at level 10 the two bosses are fought one after the other, not together.
-- **Call:** with a run in progress the game opens on the run. There is no "abandon run" button.
-- **Question:** storage on Android. The game uses `localStorage`; Android can clear it when the phone is short of space. `@capacitor/preferences` is safer and adds one dependency. Which do you want?
-- **Check:** play a run, close the tab mid-fight, reopen: the fight must be where you left it. (It was, each time the agent reloaded the page in its browser.)
+- **Call:** with a run in progress the game opens on the run; there is no "abandon run" button.
+- **Call:** an update that changes the rules ends a run in progress and pays it for the floor it reached.
 
-## Step 7: balance
+## Step 1: enemies (you said: check after)
 
-- **Call:** re-tuned after the store locked content: enemies are about 14% weaker (`DIFFICULTY` 1.2 / 1.5 / 1.6), Sword, Axe and Mace hit for 1 more, Dagger and Throwing Knives scale slightly less. Six rule tests had their expected numbers updated to match.
-- **Call:** the balance contract is now measured on a new profile at level 1: Strength 37.7%, Agility 41.5%, Intelligence 30.5% wins for the sensible bot.
-- **Question:** with everything bought the bots win 71 to 92% at level 1 and 22 to 38% at level 10. What win rates do you want there? Level 10 also favours Intelligence (38% against 22%) because of armored enemies: is that the intent of "the player has to use spells", or should the 15-point parity hold at level 10 too?
-- **Yours:** playtests with real players (a run of about 20 minutes, the first win reachable). `docs/playtest.md` says what to time and ask.
-
-## Steps 5 and 6: look, screens, sound (on `ui`)
-
-The spec is `docs/superpowers/specs/2026-11-11-look-screens-sound-design.md`; it has the UI review's findings.
-
-- **Check:** the sprites. The 21 enemies are built from 9 shapes, recoloured, with a crown, horns or extra eyes; 7 share the hooded figure. The agent saw only the Rat, the Gutter Thief and the Drowned Cultist on screen. Say which enemies deserve their own drawing, and whether the 20 icons read well.
-- **Check:** the music and the sound effects. They are made in code and were never heard: the agent cannot listen. Tell the agent what sounds wrong (too loud, too repetitive, wrong mood per act).
-- **Check:** the screens the agent did not see in a browser: shop, rest, events, level-up, end of run, settings.
-- **Question:** the five points "left for the user to judge" in the spec's UI review (empty home screen on computers, small text on very wide monitors, small map labels, the "> choice" echo in the log, the title "Home" inside the store).
-- **Call:** music is made in code, so there is no licence to find and no credit to show.
-- **Call:** one palette of 18 colours for all sprites.
-- **Call:** on phones, four tabs (Room, Map, Hero, Gear) above the enemies and the choices; the Map tab opens by itself when you must choose a path.
-- **Call:** Reset progression stays on the home screen only, not in the settings as well. Settings survive a reset.
-- **Call:** volume buttons go up 20% per press, then back to 0, because every screen is made of buttons and there is no slider.
-
-## Step 8: release (partly done, on `ui`)
-
-Done by the agent: the installable web version (it started with the server stopped, in the agent's browser), relative paths so one build works on any host and in the Android app, the app icon as `public/icon.svg`, drafts of the store texts and the privacy policy in `docs/store-listing.md`, and `npx cap sync android`, which ran without error.
-
-- **Question:** the game's name. "Text-based RPG" is still everywhere. Ideas, all to be checked against existing games before use: Ashbound Descent, Three Depths, Cinder Road, Below the Graves.
-- **Yours:** the first Android build. This machine has the Android SDK but only Java 8 on the path, and the build needs JDK 21 (Android Studio brings its own). Open the project with `npm run android` and run it on your phone.
-- **Yours:** PNG launcher icons and the splash screen: in Android Studio, "Image Asset", from `public/icon.svg`.
-- **Yours:** where to host the web version and the privacy policy.
-- **Yours:** the Play Store account steps: listing, screenshots, signing key, content rating, data safety. The drafts are in `docs/store-listing.md`.
-- **Check:** install the web version on a phone ("Add to home screen"), switch to airplane mode, and start it.
-
-## Step 1: enemies
-
-- **Check:** the enemy names fit their boxes for the three seen in the browser (the longest, "Elite Drowned Cultist", fits on a computer). The others were not seen.
-- **Call:** enemy behaviours were left as they were, as you asked. To revisit: Rat, Gutter Thief and Skeleton share one pattern shape (two light hits, then a heavy one).
+- **Call:** enemy behaviours were left as they were. Rat, Gutter Thief and Skeleton share one pattern shape (two light hits, then a heavy one).

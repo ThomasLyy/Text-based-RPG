@@ -56,7 +56,7 @@ function noise(at: number, length: number, level = 1) {
   src.start(at);
 }
 
-export type Sound = "hit" | "crit" | "hurt" | "level" | "buy" | "win" | "lose";
+export type Sound = "hit" | "crit" | "hurt" | "level" | "buy" | "win" | "lose" | "click";
 
 export function sfx(name: Sound) {
   if (!ctx || !soundGain || volumes.sound === 0) return;
@@ -68,6 +68,7 @@ export function sfx(name: Sound) {
   else if (name === "hurt") tone(out, "square", 220, 80, t, 0.2, 0.6);
   else if (name === "level") notes([72, 76, 79, 84], 0.08);
   else if (name === "buy") notes([88, 95], 0.06, 0.15);
+  else if (name === "click") tone(out, "square", 520, 780, t, 0.04, 0.25);
   else if (name === "win") notes([72, 76, 79, 84, 79, 84, 88], 0.12);
   else notes([64, 60, 57, 52], 0.18, 0.3);
 }
