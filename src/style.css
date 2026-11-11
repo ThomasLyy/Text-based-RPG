@@ -21,7 +21,8 @@ body {
   font: 15px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
-/* Phone: one column, one screen like an app; only the log (and an opened sheet) scroll. */
+/* Phone: one scrolling column. Hero, then the fight and the choices, then the map (it takes the path clicks),
+   the log, and gear. The comparison panel needs hover, so it only exists on wide screens. */
 main {
   max-width: 900px;
   margin: 0 auto;
@@ -29,30 +30,30 @@ main {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100dvh;
 }
-#center { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
-#side { display: contents; }
+#left, #center, #right { display: contents; }
+#hero { order: 1; }
+#board { order: 2; }
+#prompt { order: 3; }
+#mapbox { order: 4; }
+#log { order: 5; max-height: 30dvh; }
+#gear { order: 6; }
 #compare { display: none; }
-#sheet { order: 3; flex-shrink: 0; }
-#sheet[open] #hero { max-height: 45dvh; overflow-y: auto; }
-#sheet summary { cursor: pointer; color: var(--muted); }
 
-/* Wide screens: hero sheet | fight and choices | comparison and log. Each column scrolls on its own. */
+/* Wide screens: map and hero | log, fight and choices | comparison and gear. Each column scrolls on its own. */
 @media (min-width: 1000px) {
   main {
-    max-width: 1500px;
+    max-width: 1600px;
+    height: 100dvh;
     display: grid;
-    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(280px, 380px);
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(280px, 380px);
     grid-template-rows: minmax(0, 1fr);
     gap: 16px;
   }
-  main > * { min-height: 0; overflow-y: auto; }
-  #sheet summary { display: none; }
-  #sheet[open] #hero { max-height: none; }
-  #center { justify-content: safe center; }
-  #side { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
-  #compare { display: block; white-space: pre-line; flex-shrink: 0; max-height: 50%; overflow-y: auto; }
+  #left, #right { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
+  #center { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  #log { max-height: none; flex: 1; }
+  #compare { display: block; white-space: pre-line; flex-shrink: 0; }
   #compare:not(:empty) { border: 1px solid var(--blue); border-radius: 4px; padding: 8px 10px; }
 }
 
@@ -72,23 +73,25 @@ h1 { font-size: 1rem; margin: 0 0 8px; }
 .fill.blue { background: var(--blue); }
 .fill.cyan { background: var(--cyan); }
 
-#mapbox summary { cursor: pointer; color: var(--muted); }
-#map svg { display: block; width: 100%; max-height: 60dvh; margin: 6px auto; }
+#map svg { display: block; width: 100%; max-height: 55dvh; margin: 0 auto; }
 #map .link { stroke: var(--border); stroke-width: 2; }
 #map .link.walked { stroke: var(--fg); }
 #map .node rect { fill: #1b1f27; stroke: var(--border); stroke-width: 1.5; }
-#map .node text { fill: var(--muted); font: 13px ui-monospace, Consolas, monospace; text-anchor: middle; }
+#map .node text { fill: var(--muted); font: 15px ui-monospace, Consolas, monospace; text-anchor: middle; pointer-events: none; }
 #map .reachable rect { stroke: var(--blue); stroke-width: 2.5; }
 #map .reachable text { fill: var(--fg); font-weight: bold; }
+#map [data-i] { cursor: pointer; outline: none; }
+#map [data-i]:hover rect, #map [data-i]:focus-visible rect { fill: #23324a; stroke-width: 3.5; }
 #map .current rect { stroke: var(--yellow); stroke-width: 2.5; }
 #map .current text { fill: var(--yellow); }
-#map .visited text { fill: var(--fg); }
+#map .visited { opacity: 0.6; }
 #map .boss rect { stroke: var(--red); }
 #map .boss text { fill: var(--red); font-weight: bold; }
 
-#log { flex: 1; min-height: 4em; white-space: pre-wrap; overflow-y: auto; }
+#log { min-height: 4em; white-space: pre-wrap; overflow-y: auto; }
 
-#prompt { padding-bottom: 8px; }
+#prompt { padding-bottom: 8px; flex-shrink: 0; }
+#board { flex-shrink: 0; }
 #question:empty { display: none; }
 #options { display: flex; flex-wrap: wrap; gap: 8px; }
 button {

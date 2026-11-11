@@ -4,35 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Text-based RPG</title>
-    <meta name="description" content="A turn-based text roguelike: 15 floors, 3 bosses, one hero who adapts to what each run gives him." />
+    <meta name="description" content="A turn-based text roguelike: 3 acts, a branching map, one hero who adapts to what each run gives him." />
     <meta name="theme-color" content="#0d0f12" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <main>
-      <!-- left on wide screens: everything the hero carries -->
-      <details id="sheet">
-        <summary>Hero sheet</summary>
-        <div id="hero"></div>
-      </details>
-      <!-- center: the fight and the choices, close together -->
+      <!-- left: the act map (click a highlighted room to move), then the hero -->
+      <aside id="left">
+        <section id="mapbox" hidden><div id="map"></div></section>
+        <section id="hero"></section>
+      </aside>
+      <!-- center: what happened, where you are and who you face, then your choices -->
       <section id="center">
-        <!-- opens for the path choice, folds away during fights -->
-        <details id="mapbox" hidden>
-          <summary>Map</summary>
-          <div id="map"></div>
-        </details>
+        <section id="log" aria-live="polite"></section>
         <section id="board"></section>
         <section id="prompt">
           <p id="question"></p>
           <div id="options"></div>
         </section>
       </section>
-      <!-- right on wide screens: the hovered choice compared with your gear, then the log -->
-      <aside id="side">
+      <!-- right: the hovered choice compared with your gear, then gear, spells and potions -->
+      <aside id="right">
         <section id="compare"></section>
-        <section id="log" aria-live="polite"></section>
+        <section id="gear"></section>
       </aside>
     </main>
     <script type="module" src="/src/main.ts"></script>
