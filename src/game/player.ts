@@ -116,7 +116,7 @@ export class Player {
   }
   // same shape as weapons: Intelligence is the spells' grade B stat
   spellPower() {
-    return Math.max(0.5, 1 + SPELL_GRADE * (this.stat("intelligence") - 10)) * (this.hasTrait("channel") ? 1.2 : 1) * (1 + this.bonus("spellPower") / 100) * (1 + boost("might") / 100);
+    return Math.max(0.5, 1 + SPELL_GRADE * (this.stat("intelligence") - 10)) * (this.hasTrait("channel") ? 1.1 : 1) * (1 + this.bonus("spellPower") / 100) * (1 + boost("might") / 100);
   }
   spellCost(k: KnownSpell) {
     return Math.round(k.spell.cost * (this.hasTrait("arcane") ? 0.8 : 1));

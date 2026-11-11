@@ -8,7 +8,7 @@ import { newProfile, type Profile } from "./meta";
 
 export const SAVE_VERSION = 3;
 // Bump whenever a change would make an old run play out differently: new or changed enemies, items, odds, or the order of random draws.
-export const RULES = 2;
+export const RULES = 3;
 
 export interface RunSave {
   seed: number;

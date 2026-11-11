@@ -1,7 +1,7 @@
 import type { Player } from "./player";
 import { CHILL, OPPOSITE, type Element } from "./spell";
 import { io, randint } from "./io";
-import { ARMORED, RESIST, WEAK, level } from "./meta";
+import { ARMORED, RESIST, WEAK, hits, level } from "./meta";
 
 // What an enemy will do on its next turn. Shown to the player in advance.
 export interface Intent {
@@ -59,11 +59,11 @@ export class Enemy {
     this.element = lvl.elements ? (t.element ?? null) : null;
     this.armored = lvl.armored !== "none" && (!!t.armored || (elite && lvl.armored === "elites"));
     this.name = elite ? `Elite ${t.name}` : t.name;
-    this.maxHealth = this.health = Math.round(t.maxHealth * scale);
+    this.maxHealth = this.health = Math.round(t.maxHealth * scale * lvl.scale);
     this.speed = t.speed;
-    this.xpReward = Math.round(t.xp * scale) * (elite ? 2 : 1);
+    this.xpReward = Math.round(t.xp * scale * lvl.scale) * (elite ? 2 : 1);
     this.boss = t.boss ?? false;
-    this.pattern = t.pattern.map((i) => ({ ...i, value: Math.round(i.value * scale) }));
+    this.pattern = t.pattern.map((i) => ({ ...i, value: Math.round(i.value * scale * hits(lvl)) }));
     this.step = this.boss ? 0 : randint(0, this.pattern.length - 1); // so two rats don't bite in sync
   }
 
@@ -94,7 +94,7 @@ export class Enemy {
   statusText(): string[] {
     return [
       ...(this.element ? [`Resists ${this.element}, weak to ${OPPOSITE[this.element]}`] : []),
-      ...(this.armored ? ["Armored: weapons deal 30% less"] : []),
+      ...(this.armored ? ["Armored: weapons deal 10% less"] : []),
       ...(this.burn.turns > 0 ? [`Burning ${this.burn.damage} (${this.burn.turns})`] : []),
       ...(this.chilled > 0 ? [`Chilled (${this.chilled})`] : []),
       ...(this.cursed > 0 ? [`Cursed (${this.cursed})`] : []),

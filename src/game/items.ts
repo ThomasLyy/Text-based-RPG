@@ -43,9 +43,9 @@ export const FAMILIES: Family[] = [
   { name: "Hammer", hands: 2, stat: "strength", grade: 0.1, min: 14, max: 20, trait: "stagger", traitText: "Stagger: 20% to cancel the enemy's move", materials: METAL },
   { name: "Dagger", hands: 1, stat: "agility", grade: 0.06, min: 7, max: 11, trait: "twin", traitText: "Twin strike: hits twice at 60%", materials: METAL },
   { name: "Throwing Knives", hands: 1, stat: "agility", grade: 0.06, min: 8, max: 12, trait: "quick", traitText: "Quick: attacking acts first", materials: METAL },
-  { name: "Bow", hands: 2, stat: "agility", grade: 0.1, min: 12, max: 18, trait: "keen", traitText: "Keen: +10% crit chance", materials: WOOD },
-  { name: "Wand", hands: 1, stat: "intelligence", grade: 0.06, min: 6, max: 9, trait: "arcane", traitText: "Arcane: spells cost 20% less", materials: ARCANE },
-  { name: "Staff", hands: 2, stat: "intelligence", grade: 0.08, min: 9, max: 14, trait: "channel", traitText: "Channel: +20% spell power", materials: ARCANE },
+  { name: "Bow", hands: 2, stat: "agility", grade: 0.1, min: 14, max: 20, trait: "keen", traitText: "Keen: +10% crit chance", materials: WOOD },
+  { name: "Wand", hands: 1, stat: "intelligence", grade: 0.06, min: 7, max: 10, trait: "arcane", traitText: "Arcane: spells cost 20% less", materials: ARCANE },
+  { name: "Staff", hands: 2, stat: "intelligence", grade: 0.08, min: 9, max: 14, trait: "channel", traitText: "Channel: +10% spell power", materials: ARCANE },
 ];
 
 export const FISTS: Family = { name: "Fists", hands: 1, stat: "strength", grade: 0.06, min: 3, max: 5, trait: "none", traitText: "", materials: [] };

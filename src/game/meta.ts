@@ -9,7 +9,7 @@ export const CURRENCY = "Ash";
 export const UNLOCKS: { id: string; name: string; text: string; price: number }[] = [
   { id: "family:Hammer", name: "Hammers", text: "two-handed Strength weapons that can stagger", price: 40 },
   { id: "family:Bow", name: "Bows", text: "two-handed Agility weapons with more critical hits", price: 40 },
-  { id: "family:Staff", name: "Staves", text: "two-handed Intelligence weapons with +20% spell power", price: 40 },
+  { id: "family:Staff", name: "Staves", text: "two-handed Intelligence weapons with +10% spell power", price: 40 },
   { id: "spell:Inferno", name: "Inferno", text: "the powerful Fire spell", price: 30 },
   { id: "spell:Glacial Spike", name: "Glacial Spike", text: "the powerful Water spell", price: 30 },
   { id: "spell:Landslide", name: "Landslide", text: "the powerful Earth spell", price: 30 },
@@ -24,16 +24,16 @@ export const UNLOCKS: { id: string; name: string; text: string; price: number }[
 export const BOOST_PRICES = [20, 40, 70, 110, 160];
 export const BOOSTS: { id: string; name: string; text: string; per: number }[] = [
   { id: "vigor", name: "Vigor", text: "max health", per: 8 },
-  { id: "focus", name: "Focus", text: "max mana", per: 10 },
+  { id: "focus", name: "Focus", text: "max mana", per: 6 },
   { id: "purse", name: "Purse", text: "gold at the start of a run", per: 15 },
   { id: "might", name: "Might", text: "% damage dealt", per: 3 },
-  { id: "training", name: "Training", text: "stat point to spend at the start of a run", per: 1 },
+  { id: "training", name: "Training", text: "point to spend at every level-up", per: 1 },
 ];
 
 // --- difficulty levels ---
 
 export interface Level {
-  scale: number; // enemy health and damage, on top of DIFFICULTY
+  scale: number; // enemy health, on top of DIFFICULTY; their damage grows half as much (see hits)
   elites: number; // % of rooms that are Elite fights
   elements: boolean; // enemies resist their own element and are weak to its opposite
   armored: "none" | "some" | "elites"; // who takes less weapon damage: nobody, the armored enemies, or those and every elite
@@ -41,21 +41,25 @@ export interface Level {
   adds: string; // what this level adds to the one before, for the home screen
 }
 
+// Enemy damage at a level: half of what the level adds to their health. Longer fights, not deadlier ones,
+// so that no build is left behind at the top levels.
+export const hits = (l: Level) => 1 + (l.scale - 1) / 2;
+
 export const RESIST = 0.65; // damage taken from the enemy's own element
 export const WEAK = 1.15; // damage taken from the opposite element
-export const ARMORED = 0.7; // weapon damage taken by an armored enemy
+export const ARMORED = 0.9; // weapon damage taken by an armored enemy
 
 export const LEVELS: Level[] = [
   { scale: 1, elites: 15, elements: false, armored: "none", bosses: 1, adds: "the base game" },
-  { scale: 1.1, elites: 15, elements: false, armored: "none", bosses: 1, adds: "enemies have 10% more health and damage" },
+  { scale: 1.1, elites: 15, elements: false, armored: "none", bosses: 1, adds: "enemies have 10% more health and hit 5% harder" },
   { scale: 1.1, elites: 20, elements: false, armored: "none", bosses: 1, adds: "more Elite rooms" },
   { scale: 1.1, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies resist their own element (35% less) and are weak to its opposite (15% more)" },
-  { scale: 1.2, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies have 20% more health and damage" },
-  { scale: 1.2, elites: 20, elements: true, armored: "some", bosses: 1, adds: "some enemies are armored: weapons deal 30% less to them" },
-  { scale: 1.3, elites: 25, elements: true, armored: "some", bosses: 1, adds: "30% more health and damage, and more Elite rooms" },
-  { scale: 1.3, elites: 25, elements: true, armored: "elites", bosses: 1, adds: "every Elite is armored" },
-  { scale: 1.4, elites: 30, elements: true, armored: "elites", bosses: 1, adds: "40% more health and damage, and more Elite rooms" },
-  { scale: 1.4, elites: 30, elements: true, armored: "elites", bosses: 2, adds: "two bosses at the end of each act, one after the other" },
+  { scale: 1.25, elites: 20, elements: true, armored: "none", bosses: 1, adds: "enemies have 25% more health and hit 12% harder" },
+  { scale: 1.25, elites: 20, elements: true, armored: "some", bosses: 1, adds: "some enemies are armored: weapons deal 10% less to them" },
+  { scale: 1.6, elites: 25, elements: true, armored: "some", bosses: 1, adds: "enemies have 60% more health and hit 30% harder, and more Elite rooms" },
+  { scale: 1.6, elites: 25, elements: true, armored: "elites", bosses: 1, adds: "every Elite is armored" },
+  { scale: 2, elites: 30, elements: true, armored: "elites", bosses: 1, adds: "enemies have twice the health of level 1 and hit 50% harder, and more Elite rooms" },
+  { scale: 2, elites: 30, elements: true, armored: "elites", bosses: 2, adds: "two bosses at the end of each act, one after the other" },
 ];
 
 // --- the run's settings ---

@@ -16,14 +16,14 @@ export const FLOORS = ACTS.length * (ROOMS_PER_ACT + 1); // 10 rooms and a boss 
 
 // Floors 1-3 of an act: 1-2 enemies, 4-7: 2, 8-10: 2-3, each floor 3% tougher. Elites: 1-2 enemies, 40% tougher.
 export function encounter(act: number, floor: number, elite = false): Enemy[] {
-  const scale = DIFFICULTY[act] * level().scale * (1 + 0.03 * (floor - 1)) * (elite ? ELITE_SCALE : 1);
+  const scale = DIFFICULTY[act] * (1 + 0.03 * (floor - 1)) * (elite ? ELITE_SCALE : 1);
   const count = elite || floor <= 3 ? randint(1, 2) : floor <= 7 ? 2 : randint(2, 3);
   return choices(ACTS[act].enemies, count).map((t) => new Enemy(t, scale, elite));
 }
 // The act's boss, picked among its 3; at the last difficulty level, two different ones, fought one after the other.
 export function bossesOf(act: number): Enemy[] {
   const pool = [...ACTS[act].bosses];
-  return Array.from({ length: level().bosses }, () => new Enemy(pool.splice(randint(0, pool.length - 1), 1)[0], DIFFICULTY[act] * level().scale));
+  return Array.from({ length: level().bosses }, () => new Enemy(pool.splice(randint(0, pool.length - 1), 1)[0], DIFFICULTY[act]));
 }
 
 // Level-up points: each one is +1 to a stat, or +5 max health. Perception only comes from gear.
@@ -44,10 +44,9 @@ export async function chooseStarter(player: Player) {
   const buttons = offer.map((w) => button(player, w));
   player.equipWeapon(offer[await io.ask("Choose your starting weapon", buttons.map((b) => b.label), undefined, buttons.map((b) => b.detail))]);
   grantStarterSpell(player);
-  await spendPoints(player, boost("training"));
 }
 
-// The store's boosts that change the hero at the start of a run. Might is read where damage is computed.
+// The store's boosts that change the hero at the start of a run. Might is read where damage is computed, Training at each level-up.
 function applyBoosts(player: Player) {
   player.baseMaxHealth += boost("vigor");
   player.health += boost("vigor");
@@ -76,7 +75,7 @@ export async function levelUps(player: Player) {
     player.level++;
     player.health = Math.min(player.maxHealth, player.health + 10);
     io.print(`[panel bold cyan]Level ${player.level}![/]`);
-    await spendPoints(player, LEVEL_POINTS);
+    await spendPoints(player, LEVEL_POINTS + boost("training"));
   }
 }
 

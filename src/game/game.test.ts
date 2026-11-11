@@ -236,18 +236,22 @@ test("a new profile: 2-handed weapons, powerful spells and two events are locked
   expect(more.some((o) => o.name === "Inferno")).toBe(true);
   expect(more.some((o) => o.name.endsWith("Staff") || o.name === "Soul Rend")).toBe(false);
 
-  // boosts: Vigor 2 (+16 health), Focus 1 (+10 mana), Purse 3 (+45 gold), Might 5 (+15% damage), Training 2 (2 points at the start)
+  // boosts: Vigor 2 (+16 health), Focus 1 (+6 mana), Purse 3 (+45 gold), Might 5 (+15% damage), Training 2 (5 points per level-up, not 3)
   settings.bought = { vigor: 2, focus: 1, purse: 3, might: 5, training: 2 };
+  await play([""]); // the starting weapon, then the script ends at the first path choice
+  const p = new Player();
+  expect(p.spellPower()).toBeCloseTo(1.15);
+  await expect(gameLoop(p)).rejects.toThrow("script ended");
+  expect([p.maxHealth, p.health, p.maxMana, p.gold]).toEqual([116, 116, 106, 45]);
+  const { levelUps } = await import("./game");
   const asked: string[] = [];
-  const { io } = await play(["", "+1 Strength", "+5 Max Health"]);
+  const { io } = await play(["+1 Strength", "+1 Strength", "+1 Strength", "+1 Agility", "+5 Max Health"]);
   const script = io.ask;
   io.ask = (q, o, d) => (asked.push(q), script(q, o, d));
-  const p = new Player();
-  const before = p.spellPower();
-  await expect(gameLoop(p)).rejects.toThrow("script ended");
-  expect(asked.slice(0, 3)).toEqual(["Choose your starting weapon", "Spend a point (1 of 2)", "Spend a point (2 of 2)"]);
-  expect([p.maxHealth, p.health, p.maxMana, p.gold, p.base.strength]).toEqual([121, 121, 110, 45, 11]);
-  expect(before).toBeCloseTo(1.15);
+  p.experience = p.xpToNextLevel;
+  await levelUps(p);
+  expect(asked).toEqual([1, 2, 3, 4, 5].map((n) => `Spend a point (${n} of 5)`));
+  expect([p.level, p.base.strength, p.base.agility, p.maxHealth]).toEqual([2, 13, 11, 121]);
 });
 
 test("difficulty levels: tougher enemies, more Elites, resistances and weaknesses, armored enemies, two bosses at level 10", async () => {
@@ -268,7 +272,7 @@ test("difficulty levels: tougher enemies, more Elites, resistances and weaknesse
     const foe = new Enemy({ ...template, maxHealth: 100 }, 1, elite);
     if (spell) p.cast(await known(spell), [foe], [foe]);
     else p.attack(foe, [foe]);
-    return { lost: 100 - foe.health, status: foe.statusText().filter((s) => !s.startsWith("Burning")) };
+    return { lost: foe.maxHealth - foe.health, status: foe.statusText().filter((s) => !s.startsWith("Burning")) };
   };
   // level 1: nothing special. Fireball 13, Water Whip 14, a Sword 12
   expect((await hit(1, imp, "Fireball")).lost).toBe(13);
@@ -279,17 +283,19 @@ test("difficulty levels: tougher enemies, more Elites, resistances and weaknesse
   expect((await hit(4, imp, "Water Whip")).lost).toBe(16); // 14 × 1.15
   expect((await hit(4, imp, "Rock Throw")).lost).toBe(14);
   expect((await hit(4, sludge, null)).lost).toBe(12); // not armored yet
-  // level 6: armored enemies take 30% less from weapons, spells are unchanged; level 8: every elite is armored
-  expect((await hit(6, sludge, null)).lost).toBe(8); // 12 × 0.7
+  // level 6: armored enemies take 10% less from weapons, spells are unchanged; level 8: every elite is armored
+  expect((await hit(6, sludge, null)).lost).toBe(11); // 12 × 0.9 = 10.8
   expect((await hit(6, sludge, "Fireball")).lost).toBe(13);
   expect((await hit(6, imp, null, true)).lost).toBe(12);
   const elite = await hit(8, imp, null, true);
-  expect([elite.lost, elite.status]).toEqual([8, ["Resists Fire, weak to Water", "Armored: weapons deal 30% less"]]);
+  expect([elite.lost, elite.status]).toEqual([11, ["Resists Fire, weak to Water", "Armored: weapons deal 10% less"]]);
 
-  // health and damage follow the level's scale
+  // health follows the level's scale; damage grows half as much (level 10: twice the health, 50% harder hits)
   settings.level = 10;
   rolls(0, 0, 0);
-  expect(encounter(0, 1)[0].maxHealth).toBe(Math.round(11 * DIFFICULTY[0] * LEVELS[9].scale));
+  const rat = encounter(0, 1)[0]; // a Rat on its first Bite (4)
+  expect(rat.maxHealth).toBe(Math.round(11 * DIFFICULTY[0] * LEVELS[9].scale));
+  expect(rat.intentText()).toBe(`Bite, ${Math.round(4 * DIFFICULTY[0] * 1.5)} physical damage`);
   // two different bosses at level 10, one below
   rolls(0, 0);
   expect(bossesOf(1).map((b) => b.name)).toEqual([ACTS[1].bosses[0].name, ACTS[1].bosses[1].name]);
@@ -776,7 +782,7 @@ test("traits: quick acts before faster enemies; keen adds crit; wand cuts spell 
   player.equipWeapon(makeWeapon(await family("Wand"), 0, "Common"));
   expect(player.spellCost(fireball)).toBe(8);
   player.equipWeapon(makeWeapon(await family("Staff"), 0, "Common"));
-  expect(player.spellPower()).toBeCloseTo(1.2);
+  expect(player.spellPower()).toBeCloseTo(1.1);
 
   player.equipWeapon(makeWeapon(await family("Sword"), 0, "Common"));
   player.defending = true;

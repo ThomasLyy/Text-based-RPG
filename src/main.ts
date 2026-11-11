@@ -265,8 +265,8 @@ const store = () => {
 };
 
 // The installable web version: a service worker keeps the game's files so it starts with no network.
-// Not in development (it would serve old code) and not inside the Android app (its files are already on the phone).
-if (import.meta.env.PROD && "serviceWorker" in navigator && !("Capacitor" in window)) {
+// Not in development: it would serve old code.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
   addEventListener("load", async () => {
     await navigator.serviceWorker.register("./sw.js");
     await navigator.serviceWorker.ready;
